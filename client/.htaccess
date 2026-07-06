@@ -1,0 +1,24 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+#    RewriteBase /
+    RewriteBase /rtest/
+
+    # Don't rewrite /api requests (let Apache Alias handle them)
+#    RewriteCond %{REQUEST_URI} ^/api/
+#    RewriteCond %{REQUEST_URI} ^/rtest/api/
+#    RewriteRule ^ - [L]
+
+    # CRITICAL: Don't rewrite /api/ requests at all — let them pass through to the symlink
+    RewriteRule ^api/ - [L]
+
+    # Client SPA: if file/dir doesn't exist, serve index.html
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.html [QSA,L]
+</IfModule>
+
+<IfModule mod_dir.c>
+    DirectoryIndex index.html
+</IfModule>
+
+Options +FollowSymLinks

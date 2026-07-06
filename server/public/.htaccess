@@ -1,0 +1,43 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Allow real files and directories
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Append the path to index.php so Apache sets PATH_INFO automatically
+    RewriteRule ^(.*)$ index.php/$1 [QSA,L]
+</IfModule>
+
+Options -Indexes
+DirectoryIndex index.php
+
+#<IfModule mod_rewrite.c>
+#    RewriteEngine On
+    # Allow real files and directories
+#    RewriteCond %{REQUEST_FILENAME} -f [OR]
+#    RewriteCond %{REQUEST_FILENAME} -d
+#    RewriteRule ^ - [L]
+    # Rewrite everything else to index.php
+#    RewriteCond %{REQUEST_FILENAME} !-f
+#    RewriteCond %{REQUEST_FILENAME} !-d
+#    RewriteRule ^(.*)$ index.php [L]
+#</IfModule>
+#Options -Indexes
+#DirectoryIndex index.php
+
+
+#Options +FollowSymLinks
+#<IfModule mod_dir.c>
+#    DirectoryIndex index.php
+#</IfModule>
+#<IfModule mod_rewrite.c>
+#    RewriteEngine On
+    # Don't rewrite actual files or directories
+#    RewriteCond %{REQUEST_FILENAME} -f [OR]
+#    RewriteCond %{REQUEST_FILENAME} -d
+#    RewriteRule ^ - [L]
+    # Capture the path and pass it as a query parameter
+#    RewriteRule ^(.*)$ /index.php?_path=$1 [QSA,L]
+#</IfModule>

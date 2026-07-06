@@ -1,0 +1,358 @@
+# API Contract — Reflexometr
+
+**Owner:** ServerTeam. Golden copy — ClientTeam reads this file directly; never copy it into `client/`.
+Any change lands here first (version bump + changelog entry below), then the ProductOwner briefs
+ClientTeam on the diff (PRODUCT_OWNER_PROCESS.md § Contract Change Workflow).
+
+**Version:** v1.0 (Sprint 1) — first real content, replacing the v0.1 skeleton.
+
+**Note for ClientTeam:** `client/js/mock-api.js` / `SPRINT1_REPORT.md` (ClientTeam's) list several
+assumed field names and behaviors made against the still-empty v0.1 contract. This document is now
+the source of truth — see "Reconciliation notes for ClientTeam" at the end for a direct diff against
+those assumptions.
+
+---
+
+## Conventions
+
+- Base path: none assumed — routes below are relative to wherever `server/public/index.php` is
+  deployed (e.g. HostGator document root or subdirectory).
+- All requests/responses are `application/json` unless noted (admin import optionally accepts
+  `multipart/form-data` for file upload).
+- **Success envelope:** `{ "data": <payload> }`
+- **Error envelope:** `{ "error": { "code": "SOME_CODE", "details": {...} | omitted } }` — **never**
+  a hardcoded English string (CR-UI-02). `details`, when present, is structural data only (field
+  names, numeric ids, enumerated reason codes) — the client maps `code`/`details.reason` to
+  localized copy itself.
+- All error codes are listed in `server/src/Http/ErrorCode.php` (kept in sync with this doc).
+
+## Auth / session mechanism
+
+Bearer-token session auth (not tied to a specific CR this sprint — no AUTH-area CR was scheduled,
+but every task from SI-1.1 onward assumes "the logged-in user" and D7's single hardcoded admin, so
+this is required groundwork; see SPRINT1_REPORT.md "Deviations/assumptions"). Chosen over
+cookie+CSRF to keep this a plain stateless-header JSON API.
+
+- Client sends `Authorization: Bearer <token>` on every authenticated request.
+- Token is opaque (32 random bytes, base64url), returned by register/login, stored server-side in a
+  `sessions` table (never a JWT — revocable by deleting the row).
+- **Session lifetime:** 14 days (1,209,600 seconds), sliding — renewed on every authenticated
+  request. Configured via `SESSION_LIFETIME_SECONDS` (server `.env`).
+- Logout deletes the session row server-side (best-effort; client should also discard its copy of
+  the token).
+- A single hardcoded admin account (D7): the user whose email matches the server's `ADMIN_EMAIL`
+  config is flagged `is_admin` at registration time (or via `bin/seed.php`). No role system.
+
+### `POST /auth/register`
+Body: `{ "email": string, "password": string (>=8 chars) }`
+201: `{ "user": UserProfile, "token": string }`
+Errors: `VALIDATION_ERROR` (400), `AUTH_EMAIL_TAKEN` (409)
+
+### `POST /auth/login`
+Body: `{ "email": string, "password": string }`
+200: `{ "user": UserProfile, "token": string }`
+Errors: `AUTH_INVALID_CREDENTIALS` (401)
+
+### `POST /auth/logout`
+Auth: bearer token (optional — no-ops if absent/invalid).
+200: `{ "logged_out": true }`
+
+### `GET /auth/me`
+Auth: required.
+200: `UserProfile`
+Errors: `AUTH_REQUIRED` (401, no/malformed token), `AUTH_SESSION_EXPIRED` (401, token unknown/expired)
+
+**`UserProfile`:** `{ "id": int, "email": string, "is_admin": bool, "dominant_hand": "left"|"right"|"none-recorded", "preferred_locale": string|null }`
+
+### `PATCH /profile`
+Auth: required. Self-service only — no id param; always the authenticated user (D3 privacy rule).
+Body (at least one of): `{ "dominant_hand"?: "left"|"right"|"none-recorded", "preferred_locale"?: one of the 5 supported codes }`
+200: `UserProfile`
+Errors: `VALIDATION_ERROR` (400, bad `dominant_hand` or neither field given), `UNSUPPORTED_LOCALE` (400)
+
+`dominant_hand` (CR-TEST-04) and `preferred_locale` (CR-UI-02, default unset/`null`) both live here.
+Editing either is a metadata-only change — see CR-TEST-04: results already submitted keep the
+`dominant_hand` value **captured at their own submission time**, never re-derived from the current
+profile.
+
+---
+
+## Public r-test browsing (CR-TEST-01, CR-TEST-05)
+
+Read-only, no auth required. The test-taking client selects/displays an r-test's **current
+version** from this data — never hardcoded client-side. Never exposes a version's raw imported
+description (D11) — only metadata (version number, active flag).
+
+### `GET /r-tests?category_id={id}`
+200: `[ { "id", "slug", "name", "description", "category_id", "current_version": int|null, "current_version_id": int|null }, ... ]`
+`category_id` query param is optional (filters the list).
+
+### `GET /r-tests/{slug}`
+200: same shape as above plus `"packages": [{ "id", "name" }, ...]`
+Errors: `RTEST_NOT_FOUND` (404)
+
+### `GET /categories`
+200: `[ { "id", "name" }, ... ]`
+
+### `GET /packages`
+200: `[ { "id", "name", "description", "r_tests": [{ "id", "slug", "name" }, ...] }, ... ]`
+
+---
+
+## Admin r-test import/export (CR-TEST-01)
+
+Auth: admin required on every endpoint in this section (403 `ADMIN_REQUIRED` for any non-admin
+session; 401 `AUTH_REQUIRED`/`AUTH_SESSION_EXPIRED` if not authenticated at all).
+
+The imported description is opaque textual/JSON data (D11) — this API stores/versions it; the
+admin never hand-edits its content, only `r_tests` metadata (name/description/category). See
+"Description JSON format" below for what ServerTeam expects inside it.
+
+### `GET /admin/r-tests`
+200: `[ { "id", "slug", "name", "description", "category_id", "category_name", "versions": [{ "id", "version", "is_active", "created_at" }, ...] }, ... ]`
+(Raw description content is *not* included here — use the export endpoint.)
+
+### `POST /admin/r-tests`
+Creates a new r-test + its v1 version in one call.
+Body (JSON or `multipart/form-data`): `{ "slug": string (lowercase, hyphen-separated), "name": string, "description"?: string (human-readable r_tests metadata text), "category_id"?: int, "content": string (the version's raw JSON description) }`. Multipart alternative: send the description file as field `description_file` instead of inline `content`.
+201: `{ "r_test": { "id", "slug", "name" }, "version": 1 }`
+Errors: `VALIDATION_ERROR` (400, malformed slug/description JSON), `RTEST_SLUG_TAKEN` (409)
+
+### `POST /admin/r-tests/{slug}/versions`
+Imports a new version of an existing r-test. It automatically becomes the "current" (active)
+version; prior versions' description/version-number/results/created_at are never modified — only
+their `is_active` pointer flips off (CR-TEST-01 acceptance 3: importing a version never alters
+prior versions or their results).
+Body: `{ "content": string }` or multipart `description_file`.
+201: `{ "version": int }`
+Errors: `RTEST_NOT_FOUND` (404), `VALIDATION_ERROR` (400)
+
+### `GET /admin/r-tests/{slug}/versions/{version}/export`
+200: `{ "slug", "version", "description": string }` (the raw imported content, verbatim)
+Errors: `RTEST_NOT_FOUND` (404), `RTEST_VERSION_NOT_FOUND` (404)
+
+### `PATCH /admin/r-tests/{slug}`
+Metadata-only edit (name/description/category) — never touches version content.
+Body: `{ "name"?, "description"?, "category_id"?: int|null }`
+200: `{ "updated": true }`
+
+## Admin categories & packages (CR-TEST-05)
+
+Auth: admin required (same 403/401 rules as above).
+
+- `POST /admin/categories` `{ "name": string }` → 201 `{ "id", "name" }` (409 `CATEGORY_NAME_TAKEN` on duplicate)
+- `PATCH /admin/categories/{id}` `{ "name": string }` → 200 (404 `CATEGORY_NOT_FOUND`)
+- `DELETE /admin/categories/{id}` → 200 `{ "deleted": true }`
+- `POST /admin/packages` `{ "name": string, "description"?: string }` → 201
+- `PATCH /admin/packages/{id}` `{ "name"?, "description"? }` → 200 (404 `PACKAGE_NOT_FOUND`)
+- `DELETE /admin/packages/{id}` → 200
+- `POST /admin/packages/{id}/r-tests` `{ "r_test_id": int }` → 201 `{ "added": true }` (many-to-many; a package can span categories, an r-test can belong to multiple packages)
+- `DELETE /admin/packages/{id}/r-tests/{rTestId}` → 200 `{ "removed": true }`
+
+---
+
+## Run-token issuance + submission (CR-TEST-02, CR-TEST-06, D9, D11)
+
+Auth: required (the logged-in user).
+
+### `POST /r-tests/{slug}/runs`
+Starts one run against the r-test's current (or explicitly requested) version. Issues a
+single-use, short-lived **run token** and a **compiled trial schedule** — concrete, already-
+resolved values for this run only. **Never the version's raw description or its general
+parameter ranges** (D11) — e.g. the resolved per-trial delay is sent, never the configured
+min/max range it was drawn from.
+
+Body: `{ "version"?: int (defaults to the r-test's current active version), "mode"?: "single" (default) | "count:{N}" | "until-quit" (CR-TEST-06), "series_id"?: string (client-generated, opaque, only for the client's own between-runs grouping/tally — the server does not need to know in advance how many runs an "until-quit" series will contain) }`
+
+201:
+```json
+{
+  "token": "string",
+  "expires_at_ms": 1234567890123,
+  "r_test_id": 1,
+  "r_test_version_id": 7,
+  "version": 1,
+  "schedule": {
+    "trial_count": 10,
+    "buffer_trials": 6,
+    "response_channels": ["primary"],
+    "timeout_ms": null,
+    "trials": [ { "index": 0, "delay_ms": 1720 }, ... ]
+  }
+}
+```
+Errors: `RTEST_NOT_FOUND` (404), `RTEST_VERSION_NOT_FOUND` (404), `SERIES_MODE_INVALID` (400)
+
+**Reading `schedule`:** `response_channels` names the input channel(s) this trial needs a response
+from (`["primary"]` for a single-response test like `simple-reaction`; `["left","right"]` for
+`two-hand-reaction`). `trials` has **`trial_count` + `buffer_trials` entries** — deliberately more
+than `trial_count`. A false start (input before the stimulus — CR-TEST-03 acceptance 3) doesn't
+count as a valid trial: discard that attempt and re-run the slot using the **next** unused
+`trials[]` entry's `delay_ms` (never invent a delay client-side — that would defeat D11). Once
+`trial_count` valid trials are collected, stop and submit exactly that many, renumbered
+`0..trial_count-1` in the submitted log; unused buffer entries are simply discarded. `timeout_ms`,
+when non-null, is the per-response deadline (ms after the stimulus) — a response can be omitted
+(`null`) for a channel once its timeout elapses (used by `two-hand-reaction`; see submit shape
+below). Each `delay_ms` is the gap before that trial's stimulus, relative to the previous trial's
+stimulus for the client's own run-relative clock (`performance.now()`-based, not wall-clock/epoch).
+
+Each run within a series (CR-TEST-06) is issued its own independent token via this same endpoint —
+no different semantics from a `single` run. No partial-run submission: quitting mid-run simply
+never calls submit for that run.
+
+### `POST /r-tests/runs/{token}/submit`
+Body:
+```json
+{
+  "trials": [
+    { "index": 0, "stimulus_at": 1720, "responses": { "primary": 1970 } }
+  ],
+  "client_started_at_ms"?: 1234567890000,
+  "dominant_hand"?: "left" | "right" | "none-recorded"
+}
+```
+- `trials`: exactly `trial_count` entries (per the schedule from run-start), `index` 0-based
+  sequential, `stimulus_at`/response values in the same client-relative time unit the client used
+  throughout the run (`performance.now()`-style ms, monotonic — **not** wall-clock/epoch).
+  `responses` has exactly the schedule's `response_channels` as keys; a value is either a number
+  (reaction timestamp) or `null` (only allowed if the schedule's `timeout_ms` is non-null, meaning
+  that channel timed out on this trial).
+- `dominant_hand` (two-hand tests only, CR-TEST-04): the value to record **on this result**,
+  captured now — a later profile edit never retroactively changes it. Omit to fall back to
+  whatever value the profile carries at submission time.
+
+201:
+```json
+{ "result_id": 42, "r_test_id": 1, "r_test_version_id": 7, "primary_metric_ms": 231.4, "summary": { "overall": {...}, "channels": {...}, "dominant_minus_nondominant_ms"?: -18.2 } }
+```
+
+**Validation (D9 — injection prevention only, no statistical/outlier filtering):**
+1. Token must exist and belong to the requesting session's user — otherwise `RUN_TOKEN_INVALID`
+   (400). Same code for "doesn't exist" and "belongs to someone else" (never leaks which).
+2. Token must not be expired (`now > expires_at`) — `RUN_TOKEN_EXPIRED` (410).
+3. Token must not already be used — `RUN_TOKEN_ALREADY_USED` (409). Marked used **transactionally**
+   on first accepted submission (DB row update guarded by `used = 0`, checked via affected-row
+   count) — a concurrent replay attempt loses the race and also gets `RUN_TOKEN_ALREADY_USED`.
+4. Structural trial-log checks — all surface as `TRIAL_LOG_INVALID` (400) with
+   `details.reason` (and often `details.index`) set to one of: `TRIAL_COUNT_MISMATCH`,
+   `MALFORMED_TRIAL`, `INDEX_OUT_OF_ORDER`, `NON_MONOTONIC_TIMESTAMPS`, `CHANNEL_MISMATCH`,
+   `MISSING_RESPONSE`, `MALFORMED_RESPONSE`, `REACTION_BEFORE_STIMULUS`, `RESPONSE_AFTER_TIMEOUT`,
+   `WALLCLOCK_TOO_FAST`.
+   - Every response must be at or after its own trial's `stimulus_at` (never before).
+   - Consecutive trials' `stimulus_at` gap must be at least the schedule's smallest resolved
+     `delay_ms` (minus a small timer-jitter tolerance) — catches "instant" fabricated logs.
+   - Server-side wall-clock (its own `issued_at → received_at`, never trusting client timestamps
+     for this check) must be at least `trial_count × (schedule's minimum delay + ~50ms human-
+     reaction floor)` — rejects instantaneous bulk submissions regardless of what the trial log's
+     own numbers claim.
+5. No statistical/outlier filtering — a structurally valid submission is stored exactly as
+   received (D9's explicit scope boundary).
+
+---
+
+## Stats (CR-STATS-01, CR-STATS-02, D12)
+
+Auth: required. Every query below is scoped to one exact `(r_test_id, r_test_version_id)` pair —
+**never** `r_test_id` alone, and no response ever mixes two different `r_test_version_id`s under
+one aggregate figure (CR-STATS-01).
+
+### `GET /r-tests/{slug}/versions/{version}/history`
+The requesting user's own past results for this exact r-test + version (trend view).
+200: `{ "r_test_id", "r_test_version_id", "entries": [ { "result_id", "created_at", "primary_metric_ms", "summary" }, ... ] }`
+An empty `entries` array (not an error) if the user has no prior results for this exact version.
+Errors: `RTEST_NOT_FOUND` (404), `RTEST_VERSION_NOT_FOUND` (404)
+
+### `GET /results/{id}/comparison`
+Anonymized aggregate comparison for one specific completed run (call right after submit, using its
+`result_id`). **Never** another user's identity, handle, or raw value (D12) — only this user's own
+value plus an aggregate percentile/rank/count.
+200: `{ "r_test_id", "r_test_version_id", "your_value_ms", "percentile": float|null, "rank": int, "total_participants": int }`
+`percentile` = share of *other* participants (self excluded from the denominator) this result is
+faster than (lower ms = faster); `null` if there are no other participants yet in this exact
+version's distribution. `rank` = 1-based position (1 = fastest) across the full distribution
+(self included).
+Errors: `NOT_FOUND` (404 — unknown result id, **or** a result belonging to another user; same code
+for both, an IDOR guard per D3's privacy rule)
+
+---
+
+## Description JSON format (imported via CR-TEST-01, compiled at run-start per D11)
+
+This is what ServerTeam expects inside an imported version's content (the `content` /
+`description_file` payload on the admin import endpoints) — generic across every r-test type, so a
+newly imported r-test needs **no new server code**:
+
+```json
+{
+  "trial_count": 10,
+  "inter_stimulus_delay_ms": { "min": 1000, "max": 3000 },
+  "response_channels": ["primary"],
+  "timeout_ms": null,
+  "false_start_buffer": 6
+}
+```
+
+- `trial_count` (int > 0, required): number of valid trials the compiled schedule guarantees.
+- `inter_stimulus_delay_ms.min`/`.max` (int, required): the range the server randomizes each
+  trial's delay from — **never sent to the client**; only the resolved per-trial values are.
+- `response_channels` (array of >=1 non-empty strings, required): `["primary"]` for a
+  single-response test, `["left","right"]` for a two-hand test, extensible for future r-test
+  types with more inputs.
+- `timeout_ms` (int > 0, or `null`, required key): per-response deadline; `null` means every
+  channel must respond (no timeout path).
+- `false_start_buffer` (int >= 0, optional, defaults to 6): how many extra resolved delays the
+  compiled schedule over-provisions for false-start retries (see run-start above).
+
+Seeded at Sprint 1 (`server/database/seeds/`): `simple-reaction` v1 (`trial_count: 10`, delay
+1000–3000ms, one channel, no timeout — CR-TEST-03) and `two-hand-reaction` v1 (`trial_count: 10`,
+delay 1500–3500ms, two channels, 2000ms per-hand timeout — CR-TEST-04).
+
+---
+
+## Reconciliation notes for ClientTeam
+
+ClientTeam's Sprint 1 work (`client/js/mock-api.js`) was built against the still-empty v0.1
+contract in parallel with this implementation — see `client/requirements/SPRINT1_REPORT.md`
+"Assumptions made about unconfirmed API shapes." Direct answers to each flagged item:
+
+1. **Schedule over-provisioning for false starts** — confirmed and implemented, matching
+   ClientTeam's own mock design almost exactly: the compiled schedule includes spare resolved
+   entries (`buffer_trials`, default 6, not the mock's field name `scheduleBufferTrials` — rename
+   on integration) beyond `trial_count`. No separate "re-issue one trial" endpoint was needed.
+2. **Run-token TTL** — not a fixed constant; computed per-run from the schedule (worst case: every
+   buffer slot consumed) with a floor of 5 minutes (`RUN_TOKEN_TTL_SECONDS`, server `.env`). Client
+   should use the returned `expires_at_ms`, not assume a constant.
+3. **Field names** — this document is the byte-for-byte contract now; ClientTeam's placeholder
+   names (`requiredTrialCount`, `perHandTimeoutMs`, `rTestId`/`versionId` camelCase) differ from
+   the real snake_case field names above (`trial_count`, `timeout_ms`, `r_test_id`/
+   `r_test_version_id`) — a mapping/rename pass in `client/js/api.js` is expected, exactly as that
+   file's own header comment anticipated.
+4. **Two-hand comparison metric** — `primary_metric_ms` (used for percentile/rank) is the **mean
+   reaction time across all channels' valid responses**, not the slower-hand completion time
+   ClientTeam's mock assumed. Flagging this specific difference for ProductOwner/Tester
+   reconciliation, as ClientTeam requested.
+5. **Admin enforcement** — real and server-side now (403 `ADMIN_REQUIRED` per D7); ClientTeam's
+   `localStorage` dev toggle should be replaced with a real login + this API's `is_admin` flag
+   (from `GET /auth/me`) once ClientTeam's own AUTH-dependent screens are scheduled.
+6. **Category model** — implemented as a table (`r_test_categories`), admin-CRUD via
+   `/admin/categories`, not a fixed enum — matches the mock's "admin-extendable list" shape.
+7. **`dominant_hand` / `preferred_locale` sync** — both are real profile fields now
+   (`PATCH /profile`); `Reflx.api.syncPreferredLocale()`'s no-op stub can be wired to it once
+   ClientTeam has a login flow to obtain a session token.
+
+**New, not previously anticipated by the mock:** there was no login/register system in
+ClientTeam's Sprint 1 build (no AUTH CR was scheduled to either team this sprint) — every
+authenticated endpoint above requires a real bearer token from `POST /auth/register` or
+`POST /auth/login`, both implemented this sprint as necessary groundwork (see
+`server/requirements/SPRINT1_REPORT.md`). ClientTeam has no task yet to build login UI; the
+ProductOwner should schedule one before any of the above can be wired up for real.
+
+---
+
+## Changelog
+
+- v1.0 (2026-07-05) — Sprint 1: all endpoints above added (auth/session groundwork; CR-TEST-01
+  import/export; CR-TEST-05 categories/packages; CR-TEST-02 run-token issuance/submission;
+  CR-TEST-06 series mode; CR-STATS-01/02 history + anonymized comparison; CR-UI-02 structured
+  error codes + `preferred_locale`; CR-TEST-04 `dominant_hand`). Replaces the v0.1 skeleton.
+- v0.1 (2026-07-05) — initial skeleton, no endpoints yet.

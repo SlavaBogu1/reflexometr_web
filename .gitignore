@@ -1,0 +1,43 @@
+# ============================================================
+# SDLC process & coordination files — NOT part of the shipped
+# product. Excluded by default per DECISIONS.md D4 (see
+# REQUIREMENTS/PRODUCT_OWNER_PROCESS.md § Version Control &
+# Publishing). Versioning some/all of this instead is a recorded
+# exception, not a silent edit — see D4.
+# ============================================================
+CLAUDE.md
+.claude/
+REQUIREMENTS/
+ProductOwner_records/
+/PRODUCT_OWNER_INBOX.md
+**/requirements/
+tester/SECURITY_CHECKLIST.md
+
+# ============================================================
+# SDLC package's own authoring/reference material (this repo was
+# bootstrapped from the SDLC template package) — not a product
+# deliverable either.
+# ============================================================
+/README.md
+/PRODUCT_OWNER_PROCESS.md
+/roles/
+/templates/
+
+# ============================================================
+# Common OS / editor cruft
+# ============================================================
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+*.log
+.env
+.env.*
+
+# ============================================================
+# Stack-specific ignores (PHP + MySQL, per D1)
+# ============================================================
+vendor/
+server/storage/*.sqlite
+server/.phpunit.cache/

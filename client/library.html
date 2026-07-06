@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="library.title">R-test Library</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="container">
+    <h1 data-i18n="library.title">R-test Library</h1>
+    <p class="notice warn" data-i18n="library.admin_only"></p>
+
+    <div id="login-required-notice" class="notice danger" data-i18n="library.login_required" style="display:none;"></div>
+    <div id="not-admin-notice" class="notice danger" data-i18n="library.not_admin_notice" style="display:none;"></div>
+
+    <div id="admin-area" style="display:none;">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="tests" data-i18n="library.tab.tests">R-tests</button>
+        <button class="tab-btn" data-tab="packages" data-i18n="library.tab.packages">Packages</button>
+      </div>
+
+      <div class="tab-panel active" id="tab-tests">
+        <div class="btn-row" style="margin-top:0; margin-bottom:1rem;">
+          <button class="btn" id="btn-open-import" data-i18n="library.import">Import file…</button>
+        </div>
+
+        <div class="card">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="library.col.name">Name</th>
+                <th data-i18n="library.col.category">Category</th>
+                <th data-i18n="library.col.version">Current version</th>
+                <th data-i18n="library.col.actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rtests-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h3 data-i18n="library.detail.title">Version detail</h3>
+          <div id="version-detail">
+            <p class="field-desc" data-i18n="library.detail.select_hint"></p>
+          </div>
+        </div>
+
+        <div class="card" id="import-panel" style="display:none;">
+          <h3 data-i18n="library.import.title">Import r-test description</h3>
+          <div class="field-row">
+            <label><input type="radio" name="import-mode" value="new" checked> <span data-i18n="library.import.as_new">Import as a new r-test</span></label>
+          </div>
+          <div class="field-row">
+            <label><input type="radio" name="import-mode" value="version"> <span data-i18n="library.import.as_version">Import as a new version of:</span></label>
+            <select id="import-existing-select"></select>
+          </div>
+          <div id="import-new-fields">
+            <div class="field-row">
+              <label data-i18n="library.import.slug">Slug</label>
+              <input type="text" id="import-slug" placeholder="e.g. peripheral-vision">
+            </div>
+            <div class="field-row">
+              <label data-i18n="library.import.name">Name</label>
+              <input type="text" id="import-name" placeholder="e.g. Peripheral Vision Reaction">
+            </div>
+            <div class="field-row">
+              <label data-i18n="library.import.category">Category</label>
+              <span>
+                <select id="import-category"></select>
+                <input type="text" id="new-category-name" data-i18n-attr="placeholder:library.category.new" style="width:8em;">
+                <button class="btn secondary" id="btn-add-category" data-i18n="library.category.add">Add category</button>
+              </span>
+            </div>
+          </div>
+          <div class="field-row">
+            <label data-i18n="library.import.file">Description file</label>
+            <input type="file" id="import-file" accept=".json">
+          </div>
+          <div class="btn-row">
+            <button class="btn" id="btn-do-import" data-i18n="library.import.submit">Import</button>
+            <button class="btn secondary" id="btn-cancel-import" data-i18n="common.cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-packages">
+        <div class="card">
+          <h3 data-i18n="library.packages.create">Create package</h3>
+          <div class="field-row">
+            <label data-i18n="library.packages.name">Package name</label>
+            <input type="text" id="package-name">
+          </div>
+          <div class="field-row">
+            <label data-i18n="library.packages.description">Description</label>
+            <input type="text" id="package-description">
+          </div>
+          <div class="btn-row">
+            <button class="btn" id="btn-create-package" data-i18n="common.create">Create</button>
+          </div>
+        </div>
+        <div id="packages-list"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/util.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/locales/en.js"></script>
+  <script src="js/locales/es.js"></script>
+  <script src="js/locales/de.js"></script>
+  <script src="js/locales/fr.js"></script>
+  <script src="js/locales/zh-Hans.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/session.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/library.js"></script>
+</body>
+</html>

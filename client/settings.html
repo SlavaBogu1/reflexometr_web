@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="settings.title">Platform Settings</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="container">
+    <h1 data-i18n="settings.title">Platform Settings</h1>
+    <p class="notice info" data-i18n="settings.intro"></p>
+
+    <div class="card">
+      <h2 data-i18n="settings.section.devices">Input devices</h2>
+
+      <div class="field-row">
+        <div>
+          <label data-i18n="settings.keyboard.label">Keyboard key</label>
+          <div class="field-desc" data-i18n="settings.keyboard.desc"></div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <span id="keyboard-value" class="chip"></span>
+          <button class="btn secondary" id="btn-rebind-keyboard" data-i18n="common.change">Change</button>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label data-i18n="settings.gamepad.label">Gamepad button</label>
+          <div class="field-desc" data-i18n="settings.gamepad.desc"></div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <span id="gamepad-value" class="chip"></span>
+          <button class="btn secondary" id="btn-rebind-gamepad" data-i18n="common.change">Change</button>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label data-i18n="settings.mouse.label">Mouse</label>
+          <div class="field-desc" data-i18n="settings.mouse.desc"></div>
+        </div>
+        <span class="chip" data-i18n="settings.mouse.value">Left-click (fixed)</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="settings.section.twohand">Two-hand mapping</h2>
+      <div class="field-row">
+        <label data-i18n="settings.lefthand.label">Left-hand key</label>
+        <div class="btn-row" style="margin-top:0;">
+          <span id="lefthand-value" class="chip"></span>
+          <button class="btn secondary" id="btn-rebind-left" data-i18n="common.change">Change</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <label data-i18n="settings.righthand.label">Right-hand key</label>
+        <div class="btn-row" style="margin-top:0;">
+          <span id="righthand-value" class="chip"></span>
+          <button class="btn secondary" id="btn-rebind-right" data-i18n="common.change">Change</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="settings.section.profile">Profile</h2>
+      <div class="field-row">
+        <div>
+          <label data-i18n="settings.dominant.label">Dominant hand</label>
+          <div class="field-desc" data-i18n="settings.dominant.desc"></div>
+        </div>
+        <select id="dominant-hand-select">
+          <option value="" data-i18n="settings.dominant.unset">Not set</option>
+          <option value="left" data-i18n="settings.dominant.left">Left</option>
+          <option value="right" data-i18n="settings.dominant.right">Right</option>
+          <option value="none-recorded" data-i18n="settings.dominant.none">No preference</option>
+        </select>
+      </div>
+      <p class="notice warn" id="login-note" data-i18n="settings.login_note"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="settings.section.language">Language</h2>
+      <div class="field-row">
+        <div>
+          <label data-i18n="settings.language.label">Language</label>
+          <div class="field-desc" data-i18n="settings.language.desc"></div>
+        </div>
+        <select id="language-select"></select>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn secondary" id="btn-reset" data-i18n="settings.reset">Reset to defaults</button>
+      <span id="saved-flag" class="notice info" style="display:none;" data-i18n="settings.saved"></span>
+    </div>
+  </main>
+
+  <script src="js/util.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/locales/en.js"></script>
+  <script src="js/locales/es.js"></script>
+  <script src="js/locales/de.js"></script>
+  <script src="js/locales/fr.js"></script>
+  <script src="js/locales/zh-Hans.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/session.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/settings-page.js"></script>
+</body>
+</html>

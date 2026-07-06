@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="browse.title">Take a test</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="container">
+    <h1 data-i18n="browse.title">Take a test</h1>
+    <p class="field-desc" data-i18n="browse.intro"></p>
+    <div id="test-list" class="grid"></div>
+  </main>
+
+  <script src="js/util.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/locales/en.js"></script>
+  <script src="js/locales/es.js"></script>
+  <script src="js/locales/de.js"></script>
+  <script src="js/locales/fr.js"></script>
+  <script src="js/locales/zh-Hans.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/session.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/test-registry.js"></script>
+  <script>
+    (function () {
+      var t = Reflx.i18n.t;
+      // GET /r-tests is public (no auth) — browsing needs no login (CONTRACT.md
+      // "Public r-test browsing"). Only starting a run (CR-TEST-02) requires auth.
+      function render() {
+        Reflx.api.listRTests().then(function (res) {
+          var list = document.getElementById("test-list");
+          list.innerHTML = "";
+          if (!res.ok) { list.appendChild(Reflx.util.el("p", { class: "notice danger" }, [Reflx.api.messageFor(res.code)])); return; }
+          var items = (res.data || []).filter(function (r) { return r.current_version; });
+          if (!items.length) {
+            list.appendChild(Reflx.util.el("p", { class: "field-desc" }, [t("browse.empty")]));
+            return;
+          }
+          items.forEach(function (item) {
+            // Test name/description are UI-owned i18n content keyed by slug, not
+            // server data (D11: server never sends raw test content, only metadata).
+            var reg = Reflx.testRegistry[item.slug];
+            var displayName = reg ? t(reg.prefix + ".name") : item.name;
+            var card = Reflx.util.el("div", { class: "card" }, [
+              Reflx.util.el("h3", {}, [displayName]),
+              Reflx.util.el("span", { class: "chip" }, [item.category_name || t("browse.uncategorized")]),
+              Reflx.util.el("span", { class: "chip version" }, [t("browse.current_version") + " v" + item.current_version]),
+              Reflx.util.el("div", { class: "btn-row" }, [
+                Reflx.util.el("a", {
+                  class: "btn", href: "runner.html?slug=" + encodeURIComponent(item.slug) + "&entry=library",
+                  onclick: function (e) {
+                    if (!Reflx.session.isLoggedIn()) {
+                      e.preventDefault();
+                      var dest = "runner.html?slug=" + encodeURIComponent(item.slug) + "&entry=library";
+                      location.href = "auth.html?returnTo=" + encodeURIComponent(dest);
+                    }
+                  }
+                }, [t("browse.start")])
+              ])
+            ]);
+            if (!Reflx.session.isLoggedIn()) {
+              card.appendChild(Reflx.util.el("p", { class: "field-desc" }, [t("browse.login_required")]));
+            }
+            list.appendChild(card);
+          });
+        });
+      }
+      Reflx.i18n.init();
+      Reflx.nav.render("browse");
+      Reflx.i18n.applyToDocument();
+      render();
+      document.addEventListener("reflx:localechange", function () { Reflx.i18n.applyToDocument(); render(); });
+      document.addEventListener("reflx:sessionchange", render);
+    })();
+  </script>
+</body>
+</html>

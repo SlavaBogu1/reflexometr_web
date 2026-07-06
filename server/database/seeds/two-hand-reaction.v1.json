@@ -1,0 +1,6 @@
+{
+  "trial_count": 10,
+  "inter_stimulus_delay_ms": { "min": 1500, "max": 3500 },
+  "response_channels": ["left", "right"],
+  "timeout_ms": 2000
+}

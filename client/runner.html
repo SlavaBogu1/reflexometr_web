@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="nav.tests">Reflexometr</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="container">
+    <div id="not-found" class="notice danger" data-i18n="runner.not_found" style="display:none;"></div>
+
+    <!-- Page 1: Description (CR-TEST-02) — shown only when entering from the library this session -->
+    <section class="page" id="page-description">
+      <h1 id="desc-name"></h1>
+      <p id="desc-description"></p>
+
+      <div class="card">
+        <h3 data-i18n="runner.description.expected_actions">What you'll do</h3>
+        <ul id="desc-expected"></ul>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="runner.description.guidance">Interpreting your results</h3>
+        <p id="desc-guidance"></p>
+      </div>
+
+      <div class="card" id="dominant-hand-prompt" style="display:none;">
+        <p data-i18n="test.twohand.dominant_prompt"></p>
+        <select id="dominant-hand-inline-select">
+          <option value="" disabled selected data-i18n="settings.dominant.unset">Not set</option>
+          <option value="left" data-i18n="settings.dominant.left">Left</option>
+          <option value="right" data-i18n="settings.dominant.right">Right</option>
+          <option value="none-recorded" data-i18n="settings.dominant.none">No preference</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <div class="field-row">
+          <label data-i18n="runner.description.mode">Mode</label>
+          <div class="segmented" id="mode-segmented">
+            <button data-mode="single" class="active" data-i18n="runner.description.mode_single">Single test</button>
+            <button data-mode="series" data-i18n="runner.description.mode_series">Series</button>
+          </div>
+        </div>
+        <div class="field-row" id="series-options" style="display:none;">
+          <label><input type="radio" name="series-kind" value="count" checked> <span data-i18n="runner.description.series_count">Number of runs</span></label>
+          <input type="number" id="series-count" min="2" max="50" value="5" style="width:5em;">
+          <label><input type="radio" name="series-kind" value="until-quit"> <span data-i18n="runner.description.series_until_quit">Run until I quit</span></label>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="btn-start" data-i18n="runner.description.start">Start test</button>
+      </div>
+    </section>
+
+    <!-- Page 2: Test (CR-TEST-02 / CR-TEST-06) -->
+    <section class="page" id="page-test">
+      <div class="btn-row" style="justify-content: space-between;">
+        <span id="trial-progress" class="field-desc"></span>
+        <button class="btn danger" id="btn-quit" data-i18n="runner.test.quit">Quit test</button>
+      </div>
+      <div id="test-content"></div>
+      <div class="stage-status" id="stage-status"></div>
+    </section>
+
+    <!-- Page 3: Result (CR-TEST-02, extended by CR-STATS-02) -->
+    <section class="page" id="page-result">
+      <h1 data-i18n="runner.result.title">Result</h1>
+
+      <div class="card" id="series-tally-card" style="display:none;">
+        <h3 data-i18n="runner.series.tally_title">Series so far</h3>
+        <ul class="tally-list" id="series-tally"></ul>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="runner.result.summary">Run summary</h3>
+        <div id="result-summary"></div>
+      </div>
+
+      <div class="card" id="compare-card">
+        <h3 data-i18n="compare.title">How you compare</h3>
+        <div id="compare-content"></div>
+      </div>
+
+      <div class="card" id="trend-card">
+        <h3 data-i18n="compare.trend.title">Your trend</h3>
+        <div id="trend-content"></div>
+      </div>
+
+      <div class="btn-row" id="result-actions"></div>
+    </section>
+  </main>
+
+  <script src="js/util.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/locales/en.js"></script>
+  <script src="js/locales/es.js"></script>
+  <script src="js/locales/de.js"></script>
+  <script src="js/locales/fr.js"></script>
+  <script src="js/locales/zh-Hans.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/session.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/test-registry.js"></script>
+  <script src="js/input-capture.js"></script>
+  <script src="js/tests/simple-reaction.js"></script>
+  <script src="js/tests/two-hand-reaction.js"></script>
+  <script src="js/runner.js"></script>
+</body>
+</html>
