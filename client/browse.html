@@ -22,6 +22,7 @@
   <script src="js/locales/de.js"></script>
   <script src="js/locales/fr.js"></script>
   <script src="js/locales/zh-Hans.js"></script>
+  <script src="js/locales/ru.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/session.js"></script>
   <script src="js/api.js"></script>
@@ -33,41 +34,55 @@
       // GET /r-tests is public (no auth) — browsing needs no login (CONTRACT.md
       // "Public r-test browsing"). Only starting a run (CR-TEST-02) requires auth.
       function render() {
-        Reflx.api.listRTests().then(function (res) {
-          var list = document.getElementById("test-list");
-          list.innerHTML = "";
-          if (!res.ok) { list.appendChild(Reflx.util.el("p", { class: "notice danger" }, [Reflx.api.messageFor(res.code)])); return; }
-          var items = (res.data || []).filter(function (r) { return r.current_version; });
-          if (!items.length) {
-            list.appendChild(Reflx.util.el("p", { class: "field-desc" }, [t("browse.empty")]));
-            return;
+        Reflx.api.listCategories().then(function (catRes) {
+          // Build a category_id → category_name mapping
+          var categoryMap = {};
+          if (catRes.ok && catRes.data) {
+            catRes.data.forEach(function (cat) {
+              categoryMap[cat.id] = cat.name;
+            });
           }
-          items.forEach(function (item) {
-            // Test name/description are UI-owned i18n content keyed by slug, not
-            // server data (D11: server never sends raw test content, only metadata).
-            var reg = Reflx.testRegistry[item.slug];
-            var displayName = reg ? t(reg.prefix + ".name") : item.name;
-            var card = Reflx.util.el("div", { class: "card" }, [
-              Reflx.util.el("h3", {}, [displayName]),
-              Reflx.util.el("span", { class: "chip" }, [item.category_name || t("browse.uncategorized")]),
-              Reflx.util.el("span", { class: "chip version" }, [t("browse.current_version") + " v" + item.current_version]),
-              Reflx.util.el("div", { class: "btn-row" }, [
-                Reflx.util.el("a", {
-                  class: "btn", href: "runner.html?slug=" + encodeURIComponent(item.slug) + "&entry=library",
-                  onclick: function (e) {
-                    if (!Reflx.session.isLoggedIn()) {
-                      e.preventDefault();
-                      var dest = "runner.html?slug=" + encodeURIComponent(item.slug) + "&entry=library";
-                      location.href = "auth.html?returnTo=" + encodeURIComponent(dest);
-                    }
-                  }
-                }, [t("browse.start")])
-              ])
-            ]);
-            if (!Reflx.session.isLoggedIn()) {
-              card.appendChild(Reflx.util.el("p", { class: "field-desc" }, [t("browse.login_required")]));
+
+          Reflx.api.listRTests().then(function (res) {
+            var list = document.getElementById("test-list");
+            list.innerHTML = "";
+            if (!res.ok) { list.appendChild(Reflx.util.el("p", { class: "notice danger" }, [Reflx.api.messageFor(res.code)])); return; }
+            var items = (res.data || []).filter(function (r) { return r.current_version; });
+            if (!items.length) {
+              list.appendChild(Reflx.util.el("p", { class: "field-desc" }, [t("browse.empty")]));
+              return;
             }
-            list.appendChild(card);
+            items.forEach(function (item) {
+              // Test name/description are UI-owned i18n content keyed by slug, not
+              // server data (D11: server never sends raw test content, only metadata).
+              var reg = Reflx.testRegistry[item.slug];
+              var displayName = reg ? t(reg.prefix + ".name") : item.name;
+              // Use the category mapping to resolve category_id to category_name
+              var categoryName = item.category_id !== null && item.category_id !== undefined
+                ? (categoryMap[item.category_id] || t("browse.uncategorized"))
+                : t("browse.uncategorized");
+              var card = Reflx.util.el("div", { class: "card" }, [
+                Reflx.util.el("h3", {}, [displayName]),
+                Reflx.util.el("span", { class: "chip" }, [categoryName]),
+                Reflx.util.el("span", { class: "chip version" }, [t("browse.current_version") + " v" + item.current_version]),
+                Reflx.util.el("div", { class: "btn-row" }, [
+                  Reflx.util.el("a", {
+                    class: "btn", href: "runner.html?slug=" + encodeURIComponent(item.slug) + "&entry=library",
+                    onclick: function (e) {
+                      if (!Reflx.session.isLoggedIn()) {
+                        e.preventDefault();
+                        var dest = "runner.html?slug=" + encodeURIComponent(item.slug) + "&entry=library";
+                        location.href = "auth.html?returnTo=" + encodeURIComponent(dest);
+                      }
+                    }
+                  }, [t("browse.start")])
+                ])
+              ]);
+              if (!Reflx.session.isLoggedIn()) {
+                card.appendChild(Reflx.util.el("p", { class: "field-desc" }, [t("browse.login_required")]));
+              }
+              list.appendChild(card);
+            });
           });
         });
       }

@@ -30,7 +30,13 @@
   })();
 
   function apiBase() {
-    return localStorage.getItem(API_BASE_KEY) || "/api";
+    var override = localStorage.getItem(API_BASE_KEY);
+    if (override) return override;
+
+    // Auto-detect API base from current location (supports subdirectory deployments like /rtest/)
+    var path = window.location.pathname;
+    if (path.includes('/rtest/')) return '/rtest/api';
+    return '/api';
   }
 
   function messageFor(code, params) {

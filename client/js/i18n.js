@@ -17,7 +17,7 @@
   "use strict";
 
   var Reflx = global.Reflx = global.Reflx || {};
-  var SUPPORTED = ["en", "es", "de", "fr", "zh-Hans"];
+  var SUPPORTED = ["en", "es", "de", "fr", "zh-Hans", "ru"];
   var FALLBACK = "en";
 
   var locales = {}; // populated by js/locales/*.js via registerLocale()

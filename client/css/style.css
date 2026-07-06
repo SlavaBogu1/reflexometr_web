@@ -232,6 +232,7 @@ tr.selectable:hover { background: var(--color-surface-alt); }
   display: flex; align-items: center; justify-content: space-between;
   gap: 1rem; height: 320px; background: var(--color-bg-alt);
   border: 1px solid var(--color-border); border-radius: var(--radius); padding: 0 2rem;
+  position: relative;
 }
 .hand-zone {
   flex: 1; text-align: center; padding: 1.5rem; border-radius: var(--radius);

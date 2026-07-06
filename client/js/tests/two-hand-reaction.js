@@ -37,6 +37,10 @@
         Reflx.util.el("div", { class: "hand-zone", id: "hand-left" }, [t("test.twohand.left_status")]),
         Reflx.util.el("div", { class: "hand-zone", id: "hand-right" }, [t("test.twohand.right_status")])
       ]);
+      // Add centered stimulus element (CR-TEST-07)
+      var orb = Reflx.util.el("div", { class: "orb idle", style: "position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 1;" });
+      stage.appendChild(orb);
+      var orbEl = orb;
       container.innerHTML = "";
       container.appendChild(stage);
       var leftZone = stage.querySelector("#hand-left");
@@ -54,12 +58,14 @@
         leftZone.className = "hand-zone"; rightZone.className = "hand-zone";
         leftZone.textContent = t("test.twohand.left_status");
         rightZone.textContent = t("test.twohand.right_status");
+        orbEl.className = "orb armed"; // CR-TEST-07: update stimulus on arm
         statusEl.textContent = t("test.simple.armed");
         handlers.onProgress(trials.length, trialCount);
 
         armTimer = setTimeout(function () {
           if (stopped) return;
           stimulusAt = performance.now();
+          orbEl.className = "orb go"; // CR-TEST-07: change stimulus color on stimulus onset
           statusEl.textContent = t("test.simple.go");
           stopWatchers();
           watchers.push(Reflx.inputCapture.watch({ type: "keyboard", code: settings.leftHandKey }, function (at) { onHand("left", at); }));
@@ -91,6 +97,7 @@
         responses[leftChannel] = leftAt; // number or null (timeout — only valid when timeout_ms is non-null)
         responses[rightChannel] = rightAt;
         trials.push({ index: trials.length, stimulus_at: stimulusAt, responses: responses });
+        orbEl.className = "orb idle"; // CR-TEST-07: reset stimulus to idle
         statusEl.textContent = "";
         setTimeout(armTrial, 400);
       }

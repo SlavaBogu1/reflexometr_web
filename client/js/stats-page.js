@@ -60,7 +60,7 @@
 
       var perTestVersionChecks = [];
       rtests.forEach(function (r) {
-        for (var v = 1; v <= r.current_version; v++) {
+        for (let v = 1; v <= r.current_version; v++) {
           perTestVersionChecks.push(
             api.getHistory(r.slug, v).then(function (histRes) {
               return { r: r, version: v, ok: histRes.ok, entries: histRes.ok ? (histRes.data.entries || []) : [] };

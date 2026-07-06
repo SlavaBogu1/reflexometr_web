@@ -11,7 +11,11 @@ REQUIREMENTS/
 ProductOwner_records/
 /PRODUCT_OWNER_INBOX.md
 **/requirements/
-tester/SECURITY_CHECKLIST.md
+TASKS.md
+
+# Tester (QA) sub-team: validates only, never ships production code —
+# entire directory is SDLC tooling (router.php is local dev infra, not a deliverable).
+/tester/
 
 # ============================================================
 # SDLC package's own authoring/reference material (this repo was
@@ -22,6 +26,12 @@ tester/SECURITY_CHECKLIST.md
 /PRODUCT_OWNER_PROCESS.md
 /roles/
 /templates/
+
+# ============================================================
+# Local scratch / ad hoc dev artifacts — not part of the shipped product
+# ============================================================
+/archive/
+/ccc.bat
 
 # ============================================================
 # Common OS / editor cruft

@@ -13,7 +13,7 @@
 
   // Locales are always shown by their own native name, regardless of the current UI
   // locale (standard language-picker UX) — not run through i18n.t().
-  var LOCALE_NAMES = { en: "English", es: "Español", de: "Deutsch", fr: "Français", "zh-Hans": "简体中文" };
+  var LOCALE_NAMES = { en: "English", es: "Español", de: "Deutsch", fr: "Français", "zh-Hans": "简体中文", ru: "Русский" };
 
   var gamepadPollHandle = null;
 
