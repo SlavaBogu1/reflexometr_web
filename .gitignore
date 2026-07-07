@@ -20,9 +20,9 @@ TASKS.md
 # ============================================================
 # SDLC package's own authoring/reference material (this repo was
 # bootstrapped from the SDLC template package) — not a product
-# deliverable either.
+# deliverable either. (Root README.md was replaced with a project-specific
+# one and is intentionally NOT excluded here.)
 # ============================================================
-/README.md
 /PRODUCT_OWNER_PROCESS.md
 /roles/
 /templates/
