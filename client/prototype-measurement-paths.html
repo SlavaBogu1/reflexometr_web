@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Design prototype — Measurement Paths (CR-UI-08)</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!--
+    CR-UI-08 — Sprint 3 static, unwired HTML/CSS prototype only.
+
+    Not part of the shipped product: makes NO real API calls, reads/writes no
+    real user data, and is deliberately kept out of `js/nav.js` (no link points
+    here from any live page) so it's unreachable through normal navigation.
+    All content below is short, generic, illustrative placeholder copy — an
+    adapted paraphrase, never verbatim text lifted from the private research KB
+    (`KB/`, gitignored) — standing in for the real content CR-TEST-17 will
+    eventually author once CR-TEST-15/16 (Measurement Path Runner + package
+    metadata) actually exist server-side. This file established the approved
+    layout only; it is not required to become the permanent implementation
+    (BACKLOG.md CR-UI-08 acceptance criterion 4).
+
+    Page-switching below is plain local JS (`.page`/`.page.active`, the same
+    convention runner.js already uses) — no Reflx.api / Reflx.session involved.
+  -->
+</head>
+<body>
+  <div class="notice warn" style="margin:1.25rem 1.25rem 0;">
+    Design prototype (CR-UI-08) — not part of the live site. No real API calls; all data below is
+    illustrative placeholder content, not wired to any test-run or account.
+  </div>
+
+  <main class="container">
+    <h1>Measurement Paths</h1>
+
+    <!-- Page 1: Browse -->
+    <section class="page active" id="page-browse">
+      <p class="field-desc">Choose a guided sequence of tests instead of picking one at a time.</p>
+      <div id="path-list">
+        <div class="card path-card">
+          <div class="path-main">
+            <h3>Quick Check</h3>
+            <p class="path-for">General public — a fast daily check-in. Not profession-specific.</p>
+            <p class="path-steps">Simple Visual Reaction Time</p>
+          </div>
+          <div class="path-side">
+            <span class="chip path-duration">~2 min</span>
+            <button class="btn secondary" type="button" onclick="showPage('page-detail-quick')">View path</button>
+          </div>
+        </div>
+
+        <div class="card path-card">
+          <div class="path-main">
+            <h3>Driver / Vehicle Operator Readiness</h3>
+            <p class="path-for">Suited for a before-shift or before-driving self-check.</p>
+            <p class="path-steps">Simple Visual Reaction Time<span class="arrow">→</span>Go/No-Go Reaction Time<span class="arrow">→</span>Tapping Test</p>
+          </div>
+          <div class="path-side">
+            <span class="chip path-duration">~7 min</span>
+            <button class="btn secondary" type="button" onclick="showPage('page-detail-driver')">View path</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Page 2a: Detail — Quick Check -->
+    <section class="page" id="page-detail-quick">
+      <button class="btn secondary" type="button" onclick="showPage('page-browse')">&larr; Back to paths</button>
+      <h2 style="margin-top:1rem;">Quick Check</h2>
+      <p class="field-desc">A single fast test of how quickly you react to a visual change — the simplest possible check-in.</p>
+      <p class="path-for">General public; a good default for a first-time visitor or a daily one-off check.</p>
+      <div class="disclaimer">
+        This is a self-guided reflex/reaction-time screening tool, not a medical or
+        occupational-certification diagnostic instrument. Results reflect a snapshot influenced by
+        device, environment, and personal state (sleep, mood, attention) as well as underlying
+        ability — see the research notes for context.
+      </div>
+      <ol class="steps-list">
+        <li>Simple Visual Reaction Time</li>
+      </ol>
+      <div style="text-align:right;">
+        <button class="btn" type="button" onclick="showPage('page-summary')">Start Path</button>
+      </div>
+    </section>
+
+    <!-- Page 2b: Detail — Driver / Vehicle Operator Readiness -->
+    <section class="page" id="page-detail-driver">
+      <button class="btn secondary" type="button" onclick="showPage('page-browse')">&larr; Back to paths</button>
+      <h2 style="margin-top:1rem;">Driver / Vehicle Operator Readiness</h2>
+      <p class="field-desc">Checks basic reaction speed, the ability to withhold a response to a non-target, and sustained motor readiness.</p>
+      <p class="path-for">Suited for a before-shift or before-driving self-check.</p>
+      <div class="disclaimer">
+        This is a self-guided reflex/reaction-time screening tool, not a medical or
+        occupational-certification diagnostic instrument. Results reflect a snapshot influenced by
+        device, environment, and personal state (sleep, mood, attention) as well as underlying
+        ability — see the research notes for context.
+      </div>
+      <ol class="steps-list">
+        <li>Simple Visual Reaction Time</li>
+        <li>Go/No-Go Reaction Time</li>
+        <li>Tapping Test</li>
+      </ol>
+      <div style="text-align:right;">
+        <button class="btn" type="button" onclick="showPage('page-summary')">Start Path</button>
+      </div>
+    </section>
+
+    <!-- Page 3: Result summary -->
+    <section class="page" id="page-summary">
+      <div class="card">
+        <div class="summary-total">
+          <span class="field-desc">Path complete — Driver / Vehicle Operator Readiness</span>
+          <span class="value">6:42</span>
+        </div>
+        <div class="result-row">
+          <span class="name">Simple Visual Reaction Time</span>
+          <span><span class="val">211 ms</span><button class="btn secondary" type="button" disabled title="Illustrative only in this prototype">Details</button></span>
+        </div>
+        <div class="result-row">
+          <span class="name">Go/No-Go Reaction Time</span>
+          <span><span class="val">2 errors</span><button class="btn secondary" type="button" disabled title="Illustrative only in this prototype">Details</button></span>
+        </div>
+        <div class="result-row">
+          <span class="name">Tapping Test</span>
+          <span><span class="val">38 taps/5s</span><button class="btn secondary" type="button" disabled title="Illustrative only in this prototype">Details</button></span>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn secondary" type="button" onclick="showPage('page-browse')">Back to paths</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Plain local page-switcher — mirrors runner.js's .page/.page.active convention.
+    // No Reflx.* modules loaded: this prototype makes no real API calls by construction.
+    function showPage(id) {
+      document.querySelectorAll(".page").forEach(function (p) { p.classList.remove("active"); });
+      document.getElementById(id).classList.add("active");
+      window.scrollTo(0, 0);
+    }
+  </script>
+</body>
+</html>

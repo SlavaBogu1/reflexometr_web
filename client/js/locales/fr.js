@@ -204,6 +204,15 @@
     "stats.history.trend": "Tendance",
     "stats.empty": "Vous n'avez encore aucun résultat. Passez un test pour voir vos statistiques ici.",
 
+    "stats.chart.trend_label": "Tendance",
+    "stats.chart.trend_unit_label": "ms · dernier",
+    "stats.chart.distribution_label": "Distribution",
+    "stats.chart.peer_avg": "Moyenne des autres · {value}",
+    "stats.chart.better_than": "Vous êtes plus rapide que {pct}% des utilisateurs",
+    "stats.chart.no_peer_data": "Pas encore assez de données d'autres utilisateurs pour afficher une ligne de comparaison.",
+    "stats.download_csv": "Télécharger le CSV",
+    "stats.csv.generating": "Génération…",
+
     "compare.title": "Comment vous vous situez",
     "compare.percentile": "Plus rapide que {pct} % des utilisateurs sur cette version exacte du test.",
     "compare.sample_note": "Agrégat anonymisé uniquement — l'identité ou la valeur brute d'un autre utilisateur n'est jamais affichée.",

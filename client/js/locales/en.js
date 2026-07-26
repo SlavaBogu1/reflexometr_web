@@ -204,6 +204,15 @@
     "stats.history.trend": "Trend",
     "stats.empty": "You have no results yet. Take a test to see your stats here.",
 
+    "stats.chart.trend_label": "Trend",
+    "stats.chart.trend_unit_label": "ms · latest",
+    "stats.chart.distribution_label": "Distribution",
+    "stats.chart.peer_avg": "Peer avg · {value}",
+    "stats.chart.better_than": "You're better than {pct}%",
+    "stats.chart.no_peer_data": "Not enough peer data yet to show a comparison line.",
+    "stats.download_csv": "Download CSV",
+    "stats.csv.generating": "Generating…",
+
     "compare.title": "How you compare",
     "compare.percentile": "Faster than {pct}% of users on this exact test version.",
     "compare.sample_note": "Anonymized aggregate only — no other user's identity or raw result is ever shown.",

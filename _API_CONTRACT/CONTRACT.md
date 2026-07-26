@@ -4,7 +4,7 @@
 Any change lands here first (version bump + changelog entry below), then the ProductOwner briefs
 ClientTeam on the diff (PRODUCT_OWNER_PROCESS.md § Contract Change Workflow).
 
-**Version:** v1.0 (Sprint 1) — first real content, replacing the v0.1 skeleton.
+**Version:** v1.1 (Sprint 3) — CR-UI-07: `preferred_locale` now accepts 6 codes, not 5 (see Changelog).
 
 **Note for ClientTeam:** `client/js/mock-api.js` / `SPRINT1_REPORT.md` (ClientTeam's) list several
 assumed field names and behaviors made against the still-empty v0.1 contract. This document is now
@@ -66,7 +66,7 @@ Errors: `AUTH_REQUIRED` (401, no/malformed token), `AUTH_SESSION_EXPIRED` (401, 
 
 ### `PATCH /profile`
 Auth: required. Self-service only — no id param; always the authenticated user (D3 privacy rule).
-Body (at least one of): `{ "dominant_hand"?: "left"|"right"|"none-recorded", "preferred_locale"?: one of the 5 supported codes }`
+Body (at least one of): `{ "dominant_hand"?: "left"|"right"|"none-recorded", "preferred_locale"?: one of the 6 supported codes (`en`, `es`, `de`, `fr`, `zh-Hans`, `ru` — REQUIREMENTS/SHARED_CONSTANTS.md § Supported locales) }`
 200: `UserProfile`
 Errors: `VALIDATION_ERROR` (400, bad `dominant_hand` or neither field given), `UNSUPPORTED_LOCALE` (400)
 
@@ -351,6 +351,11 @@ ProductOwner should schedule one before any of the above can be wired up for rea
 
 ## Changelog
 
+- v1.1 (2026-07-25) — Sprint 3: CR-UI-07 fix — `PATCH /profile`'s `preferred_locale` now accepts
+  `ru` (6 supported codes total). `server/src/Support/Locale.php::SUPPORTED` had been missing `ru`
+  since Sprint 2's CR-UI-06 even though `REQUIREMENTS/SHARED_CONSTANTS.md` already listed it and
+  this doc's field description (previously "one of the 5 supported codes") was never corrected —
+  both are now back in sync with the implementation. No other request/response shape changed.
 - v1.0 (2026-07-05) — Sprint 1: all endpoints above added (auth/session groundwork; CR-TEST-01
   import/export; CR-TEST-05 categories/packages; CR-TEST-02 run-token issuance/submission;
   CR-TEST-06 series mode; CR-STATS-01/02 history + anonymized comparison; CR-UI-02 structured

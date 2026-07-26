@@ -11,7 +11,7 @@ namespace Reflexometr\Support;
  */
 final class Locale
 {
-    public const SUPPORTED = ['en', 'es', 'de', 'fr', 'zh-Hans'];
+    public const SUPPORTED = ['en', 'es', 'de', 'fr', 'zh-Hans', 'ru'];
     public const DEFAULT = 'en';
 
     public static function isSupported(string $locale): bool

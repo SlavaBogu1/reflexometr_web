@@ -204,6 +204,15 @@
     "stats.history.trend": "趋势",
     "stats.empty": "你还没有任何结果。进行一次测试即可在此查看你的统计数据。",
 
+    "stats.chart.trend_label": "趋势",
+    "stats.chart.trend_unit_label": "毫秒 · 最新",
+    "stats.chart.distribution_label": "分布",
+    "stats.chart.peer_avg": "同伴平均 · {value}",
+    "stats.chart.better_than": "你比 {pct}% 的用户更快",
+    "stats.chart.no_peer_data": "其他用户的数据尚不足以显示对比线。",
+    "stats.download_csv": "下载 CSV",
+    "stats.csv.generating": "生成中…",
+
     "compare.title": "你的表现对比",
     "compare.percentile": "在此确切测试版本中，比 {pct}% 的用户更快。",
     "compare.sample_note": "仅显示匿名汇总数据——绝不会显示其他用户的身份或原始结果。",

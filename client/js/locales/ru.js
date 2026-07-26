@@ -204,6 +204,15 @@
     "stats.history.trend": "Тренд",
     "stats.empty": "У вас еще нет результатов. Пройдите тест, чтобы увидеть здесь вашу статистику.",
 
+    "stats.chart.trend_label": "Тренд",
+    "stats.chart.trend_unit_label": "мс · последний",
+    "stats.chart.distribution_label": "Распределение",
+    "stats.chart.peer_avg": "Среднее других · {value}",
+    "stats.chart.better_than": "Вы быстрее {pct}% пользователей",
+    "stats.chart.no_peer_data": "Пока недостаточно данных других пользователей для линии сравнения.",
+    "stats.download_csv": "Скачать CSV",
+    "stats.csv.generating": "Формирование…",
+
     "compare.title": "Как вы сравниваете",
     "compare.percentile": "Быстрее, чем {pct}% пользователей на этой точной версии теста.",
     "compare.sample_note": "Только анонимный агрегат - личность другого пользователя или необработанный результат никогда не показываются.",

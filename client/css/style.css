@@ -261,3 +261,88 @@ tr.selectable:hover { background: var(--color-surface-alt); }
 footer.site-footer {
   text-align: center; color: var(--color-text-dim); font-size: 0.8rem; padding: 2rem 1rem;
 }
+
+/* --- Stats dashboard: multi-view visualizations (CR-STATS-03) --- */
+.stats-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.stats-card-head h3 { margin: 0 0 0.3rem; }
+
+.stat-block { margin-bottom: 1.5rem; }
+.stat-block:last-child { margin-bottom: 0; }
+.stat-block-title {
+  font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--color-text-dim); margin: 0 0 0.6rem; font-weight: 600;
+}
+
+.sparkline-row { display: flex; align-items: flex-end; gap: 1rem; }
+.sparkline-row svg { flex: 1; height: 50px; min-width: 0; }
+.sparkline-row .spark-latest { font-variant-numeric: tabular-nums; font-size: 1.3rem; font-weight: 700; color: var(--color-text); white-space: nowrap; text-align: right; }
+.sparkline-row .spark-latest span { display: block; font-size: 0.68rem; font-weight: 400; color: var(--color-text-dim); }
+
+.vhist-scroll { overflow-x: auto; }
+.vhist-plot {
+  position: relative; display: flex; align-items: flex-end; gap: 1rem;
+  height: 110px; padding-top: 3rem; border-bottom: 1px solid var(--color-border);
+  min-width: 220px;
+}
+.vhist-bar-col { flex: 1; max-width: 72px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 0.35rem; }
+.vhist-bar { width: 100%; max-width: 56px; height: var(--h); min-height: 2px; background: var(--color-accent); border-radius: 4px 4px 0 0; }
+.vhist-count { font-size: 0.72rem; color: var(--color-text-dim); }
+.vhist-refline { position: absolute; top: 0; bottom: 0; border-left: 1.5px dashed var(--color-warn); z-index: 1; }
+.vhist-refline-tag {
+  /* Anchored at top:0 (the top of .vhist-plot's own box, inside its reserved
+     padding-top:3rem gap) rather than a negative offset above it — a negative
+     offset here would land outside .vhist-plot entirely, i.e. outside
+     .vhist-scroll's box, where it silently clips: per the CSS overflow spec,
+     setting overflow-x:auto on a scrolling ancestor forces the other axis's
+     visible to compute as auto too (mixed visible/non-visible always resolves
+     to auto), so there's no plain "make it visible" escape hatch for content
+     positioned outside the box — it must stay inside the box instead. */
+  position: absolute; top: 0; left: 0; transform: translateX(-50%);
+  text-align: center; white-space: nowrap; background: var(--color-surface); padding: 0 0.3rem;
+}
+.vhist-refline-tag .line1 { display: block; font-size: 0.68rem; color: var(--color-warn); }
+.vhist-refline-tag .line2 { display: block; font-size: 0.75rem; font-weight: 600; color: var(--color-ok); margin-top: 0.15rem; }
+.vhist-axis { display: flex; gap: 1rem; margin-top: 0.5rem; min-width: 220px; }
+.vhist-axis span { flex: 1; max-width: 72px; text-align: center; font-size: 0.72rem; color: var(--color-text-dim); }
+
+@media (max-width: 480px) {
+  .vhist-plot, .vhist-axis { gap: 0.5rem; }
+  .vhist-refline-tag .line1, .vhist-refline-tag .line2 { font-size: 0.62rem; }
+}
+
+/* --- CR-UI-08 prototype (method-info research blurb + Measurement Paths) --- */
+.research-blurb {
+  background: var(--color-surface-alt); border-left: 3px solid var(--color-accent);
+  border-radius: 0 8px 8px 0; padding: 0.85rem 1rem; font-size: 0.93rem;
+}
+.path-card {
+  border: 1px solid var(--color-border); border-radius: var(--radius); padding: 1.1rem 1.2rem;
+  margin-bottom: 0.9rem; display: flex; justify-content: space-between; gap: 1rem;
+  align-items: flex-start; flex-wrap: wrap;
+}
+.path-card:last-child { margin-bottom: 0; }
+.path-main h3 { margin: 0 0 0.3rem; }
+.path-for { color: var(--color-text-dim); font-size: 0.87rem; margin: 0 0 0.5rem; }
+.path-steps { font-size: 0.85rem; }
+.path-steps .arrow { color: var(--color-text-dim); margin: 0 0.35rem; }
+.path-side { display: flex; flex-direction: column; align-items: flex-end; gap: 0.6rem; }
+.path-duration { font-size: 0.8rem; color: var(--color-text-dim); }
+.steps-list { list-style: none; margin: 0 0 1.5rem; padding: 0; counter-reset: step; }
+.steps-list li {
+  counter-increment: step; display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.55rem 0; border-bottom: 1px solid var(--color-border); font-size: 0.94rem;
+}
+.steps-list li:last-child { border-bottom: none; }
+.steps-list li::before {
+  content: counter(step); font-size: 0.78rem; color: var(--color-accent);
+  background: var(--color-surface-alt); width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.summary-total {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--color-border);
+}
+.summary-total .value { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.result-row { display: flex; justify-content: space-between; align-items: center; padding: 0.7rem 0; border-bottom: 1px solid var(--color-border); }
+.result-row:last-child { border-bottom: none; }
+.result-row .val { font-variant-numeric: tabular-nums; margin-right: 1rem; }

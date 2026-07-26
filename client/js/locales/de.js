@@ -204,6 +204,15 @@
     "stats.history.trend": "Trend",
     "stats.empty": "Du hast noch keine Ergebnisse. Führe einen Test durch, um hier deine Statistik zu sehen.",
 
+    "stats.chart.trend_label": "Trend",
+    "stats.chart.trend_unit_label": "ms · zuletzt",
+    "stats.chart.distribution_label": "Verteilung",
+    "stats.chart.peer_avg": "Durchschnitt anderer · {value}",
+    "stats.chart.better_than": "Du bist schneller als {pct}% der Nutzer",
+    "stats.chart.no_peer_data": "Noch nicht genügend Daten anderer Nutzer für eine Vergleichslinie.",
+    "stats.download_csv": "CSV herunterladen",
+    "stats.csv.generating": "Wird erstellt…",
+
     "compare.title": "Wie du abschneidest",
     "compare.percentile": "Schneller als {pct}% der Nutzer bei dieser exakten Testversion.",
     "compare.sample_note": "Nur anonymisierte Aggregatdaten — die Identität oder der Rohwert anderer Nutzer wird nie angezeigt.",

@@ -34,6 +34,14 @@ TASKS.md
 /ccc.bat
 
 # ============================================================
+# Private research material & knowledge base — user's own IP,
+# never published or committed. Source documents (/Dox/) and the
+# derived knowledge base (/KB/) built from them.
+# ============================================================
+/Dox/
+/KB/
+
+# ============================================================
 # Common OS / editor cruft
 # ============================================================
 .DS_Store

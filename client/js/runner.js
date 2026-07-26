@@ -41,6 +41,25 @@
 
   // ------------------------------------------------------------ Page 1: Description
 
+  /**
+   * CR-UI-08 (Sprint 3 design prototype, folded into the live page per the
+   * approved mockup): placeholder "why this matters" blurbs, one per r-test
+   * slug. Short, generic, illustrative copy only — adapted paraphrase, never
+   * verbatim text from the private research KB — until CR-TEST-17 authors the
+   * real per-method content and i18n keys. Not run through Reflx.i18n on
+   * purpose (see CR-UI-08's "i18n: none" scope).
+   */
+  var WHY_IT_MATTERS_PLACEHOLDER = {
+    "simple-reaction": "Simple visual reaction time is one of the most-studied measures in reaction research — typical adult values fall in a fairly narrow band, making it a useful, low-effort baseline to track over time.",
+    "two-hand-reaction": "Comparing your two hands' reaction speed can surface asymmetries that a single-hand test can't — useful context alongside your dominant-hand setting when interpreting day-to-day variation."
+  };
+  function renderWhyItMatters() {
+    var el = document.getElementById("desc-why-it-matters");
+    if (!el) return;
+    el.textContent = WHY_IT_MATTERS_PLACEHOLDER[slug] ||
+      "Reaction-time measures are simple, objective, and repeatable — tracked over time, they can surface changes worth paying attention to.";
+  }
+
   function renderDescription() {
     document.getElementById("desc-name").textContent = t(meta.prefix + ".name");
     document.getElementById("desc-description").textContent = t(meta.prefix + ".description");
@@ -52,6 +71,7 @@
       ul.appendChild(li);
     });
     document.getElementById("desc-guidance").textContent = t(meta.prefix + ".guidance");
+    renderWhyItMatters();
 
     var needsDominant = slug === "two-hand-reaction" && !Reflx.settings.get().dominantHand;
     document.getElementById("dominant-hand-prompt").style.display = needsDominant ? "block" : "none";
