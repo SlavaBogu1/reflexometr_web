@@ -364,6 +364,7 @@
     "error.UNSUPPORTED_LOCALE": "Cette langue n'est pas prise en charge.",
     "error.SERIES_MODE_INVALID": "Cette option de série n'est pas valide.",
     "error.NOT_FOUND": "Introuvable.",
+    "error.INTERNAL_ERROR": "Une erreur s'est produite. Veuillez réessayer.",
     "error.NETWORK": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
     "error.UNKNOWN": "Une erreur s'est produite ({code}). Veuillez réessayer."
   });

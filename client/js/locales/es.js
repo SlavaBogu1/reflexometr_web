@@ -364,6 +364,7 @@
     "error.UNSUPPORTED_LOCALE": "Ese idioma no es compatible.",
     "error.SERIES_MODE_INVALID": "Esa opción de serie no es válida.",
     "error.NOT_FOUND": "No encontrado.",
+    "error.INTERNAL_ERROR": "Algo salió mal. Inténtalo de nuevo.",
     "error.NETWORK": "No se pudo conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.",
     "error.UNKNOWN": "Algo salió mal ({code}). Inténtalo de nuevo."
   });

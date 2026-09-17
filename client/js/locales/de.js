@@ -364,6 +364,7 @@
     "error.UNSUPPORTED_LOCALE": "Diese Sprache wird nicht unterstützt.",
     "error.SERIES_MODE_INVALID": "Diese Serienoption ist ungültig.",
     "error.NOT_FOUND": "Nicht gefunden.",
+    "error.INTERNAL_ERROR": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
     "error.NETWORK": "Der Server konnte nicht erreicht werden. Prüfe deine Verbindung und versuche es erneut.",
     "error.UNKNOWN": "Etwas ist schiefgelaufen ({code}). Bitte versuche es erneut."
   });

@@ -364,6 +364,7 @@
     "error.UNSUPPORTED_LOCALE": "That language isn't supported.",
     "error.SERIES_MODE_INVALID": "That series option isn't valid.",
     "error.NOT_FOUND": "Not found.",
+    "error.INTERNAL_ERROR": "Something went wrong. Please try again.",
     "error.NETWORK": "Could not reach the server. Check your connection and try again.",
     "error.UNKNOWN": "Something went wrong ({code}). Please try again."
   });

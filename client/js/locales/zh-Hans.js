@@ -364,6 +364,7 @@
     "error.UNSUPPORTED_LOCALE": "不支持该语言。",
     "error.SERIES_MODE_INVALID": "该系列测试选项无效。",
     "error.NOT_FOUND": "未找到。",
+    "error.INTERNAL_ERROR": "出现了一些问题，请重试。",
     "error.NETWORK": "无法连接到服务器。请检查你的网络连接后重试。",
     "error.UNKNOWN": "出现了一些问题（{code}）。请重试。"
   });
