@@ -86,10 +86,26 @@ final class LocaleConfigTest extends TestCase
         [$status, $body] = $this->dispatch($this->requestAs(null, 'GET', '/config/locales'));
         self::assertSame(200, $status);
         self::assertSame(['en'], $body['data']['enabled']);
-        // DEFAULT_LOCALE is unset here, so default() short-circuits to the constant (`ru`)
-        // without checking membership in the narrowed enabled() set — pre-existing behavior,
-        // unchanged by CR-UI-13 (only which literal the constant points at changed).
-        self::assertSame('ru', $body['data']['default']);
+        // DEFAULT_LOCALE is unset here and the compiled-in default (`ru`) isn't a member of the
+        // narrowed enabled() set, so default() falls back to enabled()[0] (CR-INFRA-03).
+        self::assertSame('en', $body['data']['default']);
+    }
+
+    /** CR-INFRA-03 regression guard: unset DEFAULT_LOCALE + ENABLED_LOCALES narrowed to exclude
+     *  the compiled-in default must never return a `default` outside `enabled` — asserted via
+     *  membership, not a hardcoded literal, since the compiled-in default may change again later. */
+    public function testUnsetDefaultLocaleWithNarrowedEnabledSetExcludingCompiledInDefaultStaysAMember(): void
+    {
+        self::assertNotContains(Locale::DEFAULT, ['en'], 'Test assumes the compiled-in default is not `en`; update the excluding set if that ever changes.');
+        Config::set('ENABLED_LOCALES', 'en');
+
+        $enabled = Locale::enabled();
+        $default = Locale::default();
+        self::assertContains($default, $enabled);
+
+        [$status, $body] = $this->dispatch($this->requestAs(null, 'GET', '/config/locales'));
+        self::assertSame(200, $status);
+        self::assertContains($body['data']['default'], $body['data']['enabled']);
     }
 
     public function testConfigLocalesEndpointReflectsEnabledSetAndDefault(): void

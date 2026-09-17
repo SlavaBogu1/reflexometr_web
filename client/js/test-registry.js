@@ -8,7 +8,19 @@
   "use strict";
   var Reflx = global.Reflx = global.Reflx || {};
   Reflx.testRegistry = {
-    "simple-reaction": { prefix: "test.simple" },
-    "two-hand-reaction": { prefix: "test.twohand" }
+    "simple-reaction": {
+      prefix: "test.simple",
+      headerStimulusKey: "test.simple.header_stimulus",
+      deviceHint: function (s) {
+        return { key: "test.simple.header_devices", params: { key: s.keyboardKeyLabel, gamepad: s.gamepadButtonLabel } };
+      }
+    },
+    "two-hand-reaction": {
+      prefix: "test.twohand",
+      headerStimulusKey: "test.twohand.header_stimulus",
+      deviceHint: function (s) {
+        return { key: "test.twohand.header_devices", params: { left: s.leftHandKeyLabel, right: s.rightHandKeyLabel } };
+      }
+    }
   };
 })(window);

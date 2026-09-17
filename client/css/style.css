@@ -271,6 +271,16 @@ tr.selectable:hover { background: var(--color-surface-alt); }
 
 .stage-status { text-align: center; margin-top: 0.75rem; color: var(--color-text-dim); font-size: 0.95rem; min-height: 1.4em; }
 
+/* CR-UI-16: pre-start countdown — reuses .stimulus-stage's box treatment for
+   visual consistency with the stimulus stage it precedes. */
+.countdown-stage {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 320px; background: var(--color-bg-alt); border-radius: var(--radius);
+  border: 1px solid var(--color-border); user-select: none; gap: 0.5rem;
+}
+.countdown-label { margin: 0; color: var(--color-text-dim); font-size: 1rem; }
+.countdown-number { font-size: 5rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--color-accent); line-height: 1; }
+
 .tally-list { list-style: none; padding: 0; margin: 0.5rem 0 0; }
 .tally-list li { display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid var(--color-border); font-size: 0.9rem; }
 
@@ -318,8 +328,17 @@ footer.site-footer {
      setting overflow-x:auto on a scrolling ancestor forces the other axis's
      visible to compute as auto too (mixed visible/non-visible always resolves
      to auto), so there's no plain "make it visible" escape hatch for content
-     positioned outside the box — it must stay inside the box instead. */
-  position: absolute; top: 0; left: 0; transform: translateX(-50%);
+     positioned outside the box — it must stay inside the box instead.
+
+     CR-STATS-03 (reopened, defect 1): `left` is no longer set here nor paired
+     with `transform: translateX(-50%)` — a pure CSS centering transform has no
+     awareness of `.vhist-scroll`'s visible bounds, so a line near either edge
+     of the plot centers its label half off that edge, which per the same
+     overflow-axis coupling above then clips instead of staying visible.
+     `alignRefLines()` (stats-page.js) now sets `left` directly (in px, already
+     clamped to the container's visible bounds) after measuring the label's
+     own rendered width — so no `transform` here at all. */
+  position: absolute; top: 0; left: 0;
   text-align: center; white-space: nowrap; background: var(--color-surface); padding: 0 0.3rem;
 }
 .vhist-refline-tag .line1 { display: block; font-size: 0.68rem; color: var(--color-warn); }

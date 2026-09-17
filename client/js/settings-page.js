@@ -24,6 +24,7 @@
     document.getElementById("lefthand-value").textContent = s.leftHandKeyLabel;
     document.getElementById("righthand-value").textContent = s.rightHandKeyLabel;
     document.getElementById("dominant-hand-select").value = s.dominantHand || "";
+    document.getElementById("countdown-seconds").value = s.countdownSeconds;
     document.getElementById("language-select").value = s.locale || "__auto__";
     document.getElementById("login-note").textContent = t(Reflx.session.isLoggedIn() ? "settings.synced_note" : "settings.login_note");
   }
@@ -120,6 +121,17 @@
           if (res.ok) Reflx.session.updateUser({ dominant_hand: res.data.dominant_hand });
         });
       }
+      flashSaved();
+    });
+
+    document.getElementById("countdown-seconds").addEventListener("change", function (e) {
+      // 0 is a valid "disable countdown" value, not an error — clamp to the
+      // field's own min/max (0..10) so an out-of-range typed value doesn't
+      // silently persist something the UI itself wouldn't allow via the spinner.
+      var raw = parseInt(e.target.value, 10);
+      var value = isNaN(raw) ? Reflx.settings.DEFAULTS.countdownSeconds : Reflx.util.clamp(raw, 0, 10);
+      Reflx.settings.set({ countdownSeconds: value });
+      renderValues();
       flashSaved();
     });
 

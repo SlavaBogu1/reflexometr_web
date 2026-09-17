@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings — CR-UI-16 mockup (countdown field)</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="container">
+    <h1>Settings</h1>
+    <p class="notice info">Changes apply only on this browser/device, except your language, which also syncs to your profile after login. No account required.</p>
+
+    <div class="card">
+      <h2>Input devices</h2>
+
+      <div class="field-row">
+        <div>
+          <label>Keyboard key</label>
+          <div class="field-desc">Used for tests with a single input (e.g. Simple Visual Reaction Time).</div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <span class="chip">Space</span>
+          <button class="btn secondary">Change</button>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label>Gamepad button</label>
+          <div class="field-desc">Used if a gamepad is connected during a test.</div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <span class="chip">Button 0 (A / Cross)</span>
+          <button class="btn secondary">Change</button>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label>Mouse</label>
+          <div class="field-desc">Locked to left-click — not reassignable at this stage.</div>
+        </div>
+        <span class="chip">Left-click (fixed)</span>
+      </div>
+
+      <!-- NEW — CR-UI-16: pre-start countdown field, same field-row pattern as the rows above,
+           number input instead of chip+button since there is no "rebind" action, just a value. -->
+      <div class="field-row">
+        <div>
+          <label>Pre-start countdown (seconds)</label>
+          <div class="field-desc">How long to wait after "Start test" before the first trial begins. Set to 0 to disable.</div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <input type="number" min="0" max="10" value="3" style="width:4.5rem;">
+        </div>
+      </div>
+      <!-- END NEW -->
+
+    </div>
+
+    <div class="card">
+      <h2>Two-hand mapping</h2>
+      <div class="field-row">
+        <label>Left-hand key</label>
+        <div class="btn-row" style="margin-top:0;">
+          <span class="chip">A</span>
+          <button class="btn secondary">Change</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <label>Right-hand key</label>
+        <div class="btn-row" style="margin-top:0;">
+          <span class="chip">L</span>
+          <button class="btn secondary">Change</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Profile</h2>
+      <div class="field-row">
+        <div>
+          <label>Dominant hand</label>
+          <div class="field-desc">Used only to annotate your results — has no effect on test behavior.</div>
+        </div>
+        <select>
+          <option>Not set</option>
+          <option>Left</option>
+          <option>Right</option>
+          <option>No preference</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Language</h2>
+      <div class="field-row">
+        <div>
+          <label>Language</label>
+          <div class="field-desc">Choose your preferred interface language.</div>
+        </div>
+        <select><option>Русский</option></select>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn secondary">Reset to defaults</button>
+    </div>
+  </main>
+</body>
+</html>

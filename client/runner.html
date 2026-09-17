@@ -73,6 +73,27 @@
 
     <!-- Page 2: Test (CR-TEST-02 / CR-TEST-06) -->
     <section class="page" id="page-test">
+
+      <!-- CR-UI-15: persistent context header, condensed 3-bullet format. Layout
+           approved: prototype-test-header.html. Populated by runner.js's
+           renderTestHeader(). -->
+      <div class="card" id="test-header" style="margin-bottom: 1rem;">
+        <ul id="test-header-facts" style="margin: 0; padding-left: 1.1rem; font-size: 0.9rem; color: var(--color-text-dim); line-height: 1.6;">
+          <li><strong style="color: var(--color-text);" data-i18n="runner.test.objective_label">Objective:</strong> <span id="test-header-objective"></span></li>
+          <li><strong style="color: var(--color-text);" data-i18n="runner.test.stimulus_label">Stimulus:</strong> <span id="test-header-stimulus"></span></li>
+          <li>
+            <span style="display: inline-flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+              <span><strong style="color: var(--color-text);" data-i18n="runner.test.devices_label">Input devices:</strong> <span id="test-header-devices"></span></span>
+              <a href="settings.html" class="btn secondary" style="padding: 0.15rem 0.6rem; font-size: 0.8rem; white-space: nowrap;" data-i18n="runner.test.settings_link">Settings</a>
+              <!-- Opens in the same tab, quitting the in-progress test is an
+                   accepted tradeoff for simplicity — matches "Quit test"'s own
+                   no-confirmation behavior today; deliberate, not an oversight
+                   (CR-UI-15). -->
+            </span>
+          </li>
+        </ul>
+      </div>
+
       <div class="btn-row" style="justify-content: space-between;">
         <span id="trial-progress" class="field-desc"></span>
         <button class="btn danger" id="btn-quit" data-i18n="runner.test.quit">Quit test</button>

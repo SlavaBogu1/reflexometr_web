@@ -81,8 +81,8 @@
     var stepX = (W - 2 * PAD) / (values.length - 1);
     var points = values.map(function (v, i) {
       var x = PAD + i * stepX;
-      var norm = (v - min) / span; // 0 = fastest/best, 1 = slowest/worst
-      var y = PAD + norm * (H - 2 * PAD); // faster (lower ms) draws higher on the chart
+      var norm = (v - min) / span; // 0 = smallest ms value, 1 = largest ms value
+      var y = PAD + (1 - norm) * (H - 2 * PAD); // larger ms value draws higher on the chart (matches runner.js's bar-chart convention: pct = value/max, taller bar = larger value)
       return x.toFixed(1) + "," + y.toFixed(1);
     });
     svg.appendChild(svgEl("polyline", {
@@ -141,20 +141,57 @@
    * distribution block is attached to the document (elements detached from the
    * document have no layout box, so getBoundingClientRect() would read all-zero),
    * and again whenever the layout may have changed width (window resize).
+   *
+   * CR-STATS-03 (reopened, defect 1): also clamps the line's `.vhist-refline-tag`
+   * label so its full measured width stays within `.vhist-scroll`'s visible
+   * bounds — previously the tag centered itself on the line's x-coordinate via a
+   * CSS `transform: translateX(-50%)` with no awareness of the container edges,
+   * so a line near the very start/end of the plot pushed roughly half the label
+   * outside the scroll box, where it silently clipped (see the CSS comment on
+   * `.vhist-refline-tag`). The line itself (the dashed vertical marker) keeps
+   * centering on the target bucket column unchanged — only the tag's own `left`
+   * is independently clamped.
    */
   function alignRefLines() {
+    // Two passes (measure all, then write all) to avoid layout thrashing — reading
+    // getBoundingClientRect() after writing a style forces a synchronous reflow,
+    // and this runs once per rendered version card's reference line.
+    var updates = [];
     Reflx.util.qsa(".vhist-refline[data-target-idx]").forEach(function (line) {
       var plot = line.parentElement;
-      if (!plot) return;
+      var scroll = plot && plot.parentElement; // .vhist-scroll, the actual clipping/visible box
+      if (!plot || !scroll) return;
       var col = plot.querySelector('.vhist-bar-col[data-idx="' + line.getAttribute("data-target-idx") + '"]');
       if (!col) return;
+      var tag = line.querySelector(".vhist-refline-tag");
+      if (!tag) return;
+
       var plotRect = plot.getBoundingClientRect();
       var colRect = col.getBoundingClientRect();
+      var scrollRect = scroll.getBoundingClientRect();
+      var tagWidth = tag.getBoundingClientRect().width;
+      updates.push({ line: line, tag: tag, plotRect: plotRect, colRect: colRect, scrollRect: scrollRect, tagWidth: tagWidth });
+    });
+
+    updates.forEach(function (u) {
       // Offset relative to .vhist-plot's own box (the refline's containing block),
       // not the viewport — stays correct regardless of .vhist-scroll's current
       // horizontal scroll offset, since plot and its descendants scroll together.
-      var centerPx = (colRect.left + colRect.right) / 2 - plotRect.left;
-      line.style.left = centerPx + "px";
+      var centerPx = (u.colRect.left + u.colRect.right) / 2 - u.plotRect.left;
+      u.line.style.left = centerPx + "px";
+
+      // Desired (unclamped) position: tag centered on the line's x, expressed as
+      // an offset from .vhist-plot's left edge (tag's own containing block is
+      // .vhist-refline, which is itself positioned at centerPx within plot).
+      var desiredLeftPx = centerPx - u.tagWidth / 2; // relative to plot
+      var minLeftPx = u.scrollRect.left - u.plotRect.left; // plot's own left edge may itself be scrolled past the visible box start
+      var maxLeftPx = u.scrollRect.right - u.plotRect.left - u.tagWidth;
+      // minLeftPx <= maxLeftPx always holds here: .vhist-scroll is always wider
+      // than a single reference-line tag in this layout. If that assumption ever
+      // breaks (e.g. a much narrower container), clamp() needs an explicit
+      // narrower-than-tag fallback, not a silent Math.min/Math.max reorder.
+      var clampedLeftPx = Reflx.util.clamp(desiredLeftPx, minLeftPx, maxLeftPx);
+      u.tag.style.left = (clampedLeftPx - centerPx) + "px"; // tag.style.left is relative to .vhist-refline (positioned at centerPx)
     });
   }
 

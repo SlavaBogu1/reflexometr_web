@@ -45,6 +45,19 @@
         </div>
         <span class="chip" data-i18n="settings.mouse.value">Left-click (fixed)</span>
       </div>
+
+      <!-- CR-UI-16: pre-start countdown field — same field-row pattern as the rows
+           above, a number input instead of chip+button since there is no "rebind"
+           action, just a value. Layout approved: prototype-settings-countdown.html. -->
+      <div class="field-row">
+        <div>
+          <label data-i18n="settings.countdown.label">Pre-start countdown (seconds)</label>
+          <div class="field-desc" data-i18n="settings.countdown.desc"></div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <input type="number" id="countdown-seconds" min="0" max="10" style="width:4.5rem;">
+        </div>
+      </div>
     </div>
 
     <div class="card">

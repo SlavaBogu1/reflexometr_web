@@ -48,22 +48,37 @@ final class Locale
 
     /**
      * The deployment's default locale: `DEFAULT_LOCALE`, falling back to `ru` (CR-UI-13/D18). If
-     * the configured value isn't a member of `enabled()`, falls back to `ru` and logs a warning
-     * rather than throwing — a misconfigured pair should never crash the request.
+     * `DEFAULT_LOCALE` is unset and the compiled-in default isn't a member of `enabled()` (e.g. a
+     * narrowed `ENABLED_LOCALES` that excludes it), falls back to `enabled()[0]` and logs a
+     * warning instead of returning a value outside the enabled set (CR-INFRA-03). If
+     * `DEFAULT_LOCALE` is explicitly set but not a member of `enabled()`, falls back to `ru`
+     * unconditionally (CR-INFRA-01 AC4 — accepted behavior, not touched by CR-INFRA-03) — never
+     * throws either way, a misconfigured pair should never crash the request.
      */
     public static function default(): string
     {
+        $enabled = self::enabled();
         $configured = Config::get('DEFAULT_LOCALE');
         if ($configured === null || trim($configured) === '') {
+            if (!in_array(self::DEFAULT, $enabled, true)) {
+                error_log(sprintf(
+                    'Locale::default(): compiled-in default "%s" is not in the enabled locale set (%s) — falling back to "%s"',
+                    self::DEFAULT,
+                    implode(',', $enabled),
+                    $enabled[0],
+                ));
+                return $enabled[0];
+            }
+
             return self::DEFAULT;
         }
 
         $configured = trim($configured);
-        if (!in_array($configured, self::enabled(), true)) {
+        if (!in_array($configured, $enabled, true)) {
             error_log(sprintf(
                 'Locale::default(): DEFAULT_LOCALE "%s" is not in the enabled locale set (%s) — falling back to "%s"',
                 $configured,
-                implode(',', self::enabled()),
+                implode(',', $enabled),
                 self::DEFAULT,
             ));
             return self::DEFAULT;

@@ -23,7 +23,8 @@
     rightHandKey: "Slash",
     rightHandKeyLabel: "/",
     dominantHand: null, // null | "left" | "right" | "none-recorded"
-    locale: null // null = follow browser detection; else an explicit CR-UI-02 locale code
+    locale: null, // null = follow browser detection; else an explicit CR-UI-02 locale code
+    countdownSeconds: 3 // CR-UI-16: pre-start "get ready" countdown, seconds. 0 = disabled (skip countdown entirely).
   };
 
   function get() {

@@ -31,7 +31,8 @@
     completedRuns: [], // { resultId, rTestId, versionId, kind, primaryMetricMs, summary, trialCount, falseStarts }
     activeTestHandle: null,
     falseStartsThisRun: 0,
-    currentToken: null
+    currentToken: null,
+    countdownTimer: null // CR-UI-16: pre-start countdown's setInterval handle, active only during the countdown itself
   };
 
   function showPage(id) {
@@ -120,12 +121,71 @@
     });
   }
 
+  // ------------------------------------------------------------ Page 2: Test — CR-UI-15 header
+
+  /**
+   * CR-UI-15: short "what triggers a response" copy per r-test, shown in the Test
+   * page's persistent header alongside the Objective (which reuses the existing
+   * `{prefix}.description` key wholesale, per the CR text — description text
+   * itself already includes both objective and stimulus context, but the header's
+   * condensed 3-bullet format wants a separate one-line Stimulus statement, so
+   * that specific sub-detail is authored fresh here per test rather than
+   * duplicating the whole description key).
+   */
+  /** Builds the Input-devices bullet's channel list from the user's actual current bindings (Reflx.settings.get()) — never hardcoded. */
+  function deviceHintFor(testSlug, settings) {
+    var hint = Reflx.testRegistry[testSlug].deviceHint(settings);
+    return t(hint.key, hint.params);
+  }
+
+  function renderTestHeader(settings) {
+    if (!meta) return;
+    document.getElementById("test-header-objective").textContent = t(meta.prefix + ".description");
+    document.getElementById("test-header-stimulus").textContent = t(meta.headerStimulusKey);
+    document.getElementById("test-header-devices").textContent = deviceHintFor(slug, settings || Reflx.settings.get());
+  }
+
   // ------------------------------------------------------------ Page 2: Test
 
   /** Builds the POST /r-tests/{slug}/runs body's `mode` field per CR-TEST-06. */
   function currentModeParam() {
     if (!runState.seriesMode) return "single";
     return runState.seriesKind === "count" ? "count:" + runState.seriesTarget : "until-quit";
+  }
+
+  /**
+   * CR-UI-16: visible pre-start "get ready" countdown, shown once per test start
+   * (initial entry via wireStart(), and every "Take again"/series-continuation
+   * call to beginRun() below — this is the single call site both paths share, so
+   * inserting it here covers CR-UI-16 acceptance criterion 4 with no separate
+   * wiring needed at the series/"Take again" buttons themselves).
+   *
+   * Purely a Page-2 transient visual state — does not arm any per-trial timing
+   * (stimulus_at, armTimer live entirely inside the test module's start(), only
+   * invoked once the countdown's onDone fires below).
+   */
+  function runCountdown(seconds, onDone) {
+    if (!seconds) { onDone(); return; } // 0 = disabled, current immediate-start behavior unchanged
+    var container = document.getElementById("test-content");
+    container.innerHTML = "";
+    var numberEl = Reflx.util.el("div", { class: "countdown-number" }, [String(seconds)]);
+    container.appendChild(Reflx.util.el("div", { class: "countdown-stage" }, [
+      Reflx.util.el("p", { class: "countdown-label" }, [t("runner.test.countdown_label")]),
+      numberEl
+    ]));
+    document.getElementById("stage-status").textContent = "";
+
+    var remaining = seconds;
+    runState.countdownTimer = setInterval(function () {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(runState.countdownTimer);
+        runState.countdownTimer = null;
+        onDone();
+        return;
+      }
+      numberEl.textContent = String(remaining);
+    }, 1000);
   }
 
   function beginRun() {
@@ -141,21 +201,25 @@
       runState.currentVersionId = run.r_test_version_id;
       runState.currentRunVersion = run.version;
 
+      var settings = Reflx.settings.get();
       showPage("page-test");
+      renderTestHeader(settings);
       document.getElementById("trial-progress").textContent = t("runner.test.trial_of", { n: 0, total: run.schedule.trial_count });
       document.getElementById("stage-status").textContent = "";
 
-      var container = document.getElementById("test-content");
-      var testModule = Reflx.tests[slug];
-      runState.activeTestHandle = testModule.start(container, {
-        schedule: run.schedule,
-        settings: Reflx.settings.get()
-      }, {
-        onProgress: function (done, total) {
-          document.getElementById("trial-progress").textContent = t("runner.test.trial_of", { n: Math.min(done + 1, total), total: total });
-        },
-        onFalseStart: function () { runState.falseStartsThisRun++; },
-        onDone: function (trials) { finishRun(trials); }
+      runCountdown(settings.countdownSeconds, function () {
+        var container = document.getElementById("test-content");
+        var testModule = Reflx.tests[slug];
+        runState.activeTestHandle = testModule.start(container, {
+          schedule: run.schedule,
+          settings: settings
+        }, {
+          onProgress: function (done, total) {
+            document.getElementById("trial-progress").textContent = t("runner.test.trial_of", { n: Math.min(done + 1, total), total: total });
+          },
+          onFalseStart: function () { runState.falseStartsThisRun++; },
+          onDone: function (trials) { finishRun(trials); }
+        });
       });
     });
   }
@@ -163,6 +227,10 @@
   function wireQuit() {
     document.getElementById("btn-quit").addEventListener("click", function () {
       if (!confirm(t("runner.test.quit_confirm"))) return;
+      // CR-UI-16: quitting during the pre-start countdown (before the test module
+      // has even started, so activeTestHandle may still be a stale prior handle
+      // or null) must also stop the countdown's own timer.
+      if (runState.countdownTimer) { clearInterval(runState.countdownTimer); runState.countdownTimer = null; }
       if (runState.activeTestHandle) runState.activeTestHandle.quit();
       // No partial-run submission (CR-TEST-06): quitting mid-run simply never calls submit.
       if (runState.completedRuns.length > 0) {
@@ -373,6 +441,15 @@
     document.addEventListener("reflx:localechange", function () {
       Reflx.i18n.applyToDocument();
       if (document.getElementById("page-description").classList.contains("active")) renderDescription();
+      if (document.getElementById("page-test").classList.contains("active")) renderTestHeader();
+    });
+
+    // CR-UI-15: re-render the header's device hints if the user changes a binding
+    // in another tab (Settings) and returns to this one — existing event, other
+    // pages (settings-page.js) already dispatch/consume it, wiring here is a
+    // simple additional listener, no new mechanism needed.
+    document.addEventListener("reflx:settingschange", function () {
+      if (document.getElementById("page-test").classList.contains("active")) renderTestHeader();
     });
   }
 

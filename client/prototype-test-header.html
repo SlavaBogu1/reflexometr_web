@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test page — CR-UI-15 mockup (persistent context header)</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="container">
+
+    <!-- Page 2: Test — CR-UI-15 mockup: new header block above the existing progress/quit row -->
+    <section class="page active" id="page-test">
+
+      <!-- NEW — CR-UI-15: persistent context header, condensed 3-bullet format -->
+      <div class="card" id="test-header" style="margin-bottom: 1rem;">
+        <ul id="test-header-facts" style="margin: 0; padding-left: 1.1rem; font-size: 0.9rem; color: var(--color-text-dim); line-height: 1.6;">
+          <li><strong style="color: var(--color-text);">Objective:</strong> Measure response time of your two hands to a stimulus.</li>
+          <li><strong style="color: var(--color-text);">Stimulus:</strong> Circle changes color from green to red.</li>
+          <li>
+            <span style="display: inline-flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+              <span><strong style="color: var(--color-text);">Input devices:</strong> Left hand key: A · Right hand key: L · Mouse · Gamepad</span>
+              <a href="settings.html" class="btn secondary" style="padding: 0.15rem 0.6rem; font-size: 0.8rem; white-space: nowrap;">Settings</a>
+            </span>
+          </li>
+        </ul>
+      </div>
+      <!-- END NEW -->
+
+      <div class="btn-row" style="justify-content: space-between;">
+        <span id="trial-progress" class="field-desc">Trial 2 of 10</span>
+        <button class="btn danger" id="btn-quit">Quit test</button>
+      </div>
+      <div id="test-content">
+        <div class="stimulus-stage" style="height: 220px; display:flex; align-items:center; justify-content:center; margin-top: 1rem;">
+          <div class="orb" style="width:120px;height:120px;border-radius:50%;background:#2dd4bf;"></div>
+        </div>
+      </div>
+      <div class="stage-status" id="stage-status" style="text-align:center; margin-top: 0.5rem;">Wait for it…</div>
+    </section>
+
+  </main>
+</body>
+</html>

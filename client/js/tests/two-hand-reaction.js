@@ -62,14 +62,21 @@
         statusEl.textContent = t("test.simple.armed");
         handlers.onProgress(trials.length, trialCount);
 
+        // CR-TEST-19: register both hand-key watchers here, at the top of armTrial(),
+        // before the delay — mirrors simple-reaction.js:63-65's pattern, so a
+        // pre-stimulus press is actually captured by a listener that already exists
+        // (previously these were registered inside the setTimeout below, i.e. only
+        // after the stimulus had already fired — no listener existed yet to hear an
+        // early press at all).
+        stopWatchers();
+        watchers.push(Reflx.inputCapture.watch({ type: "keyboard", code: settings.leftHandKey }, function (at) { onHand("left", at); }));
+        watchers.push(Reflx.inputCapture.watch({ type: "keyboard", code: settings.rightHandKey }, function (at) { onHand("right", at); }));
+
         armTimer = setTimeout(function () {
           if (stopped) return;
           stimulusAt = performance.now();
           orbEl.className = "orb go"; // CR-TEST-07: change stimulus color on stimulus onset
           statusEl.textContent = t("test.simple.go");
-          stopWatchers();
-          watchers.push(Reflx.inputCapture.watch({ type: "keyboard", code: settings.leftHandKey }, function (at) { onHand("left", at); }));
-          watchers.push(Reflx.inputCapture.watch({ type: "keyboard", code: settings.rightHandKey }, function (at) { onHand("right", at); }));
 
           if (timeoutMs) {
             timeoutTimer = setTimeout(function () {
@@ -81,7 +88,20 @@
       }
 
       function onHand(hand, at) {
-        if (stopped || stimulusAt === null) return;
+        if (stopped) return;
+        if (stimulusAt === null) {
+          // CR-TEST-19: false start — either hand fired before the stimulus. Void
+          // this trial slot (do not count it, do not advance trials.length), clear
+          // the arm timer, stop watchers, report it, and re-arm to consume the
+          // schedule's next spare buffer_trials entry — identical recovery flow to
+          // simple-reaction.js's onInput() false-start branch.
+          clearTimeout(armTimer);
+          stopWatchers();
+          statusEl.textContent = t("runner.test.false_start");
+          handlers.onFalseStart();
+          armTrial();
+          return;
+        }
         if (hand === "left" && leftAt === null) { leftAt = at; leftZone.textContent = t("test.twohand.hit_hand"); leftZone.className = "hand-zone hit"; }
         if (hand === "right" && rightAt === null) { rightAt = at; rightZone.textContent = t("test.twohand.hit_hand"); rightZone.className = "hand-zone hit"; }
         if (leftAt !== null && rightAt !== null) completeTrial();
