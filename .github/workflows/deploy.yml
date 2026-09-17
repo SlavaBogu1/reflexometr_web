@@ -155,7 +155,7 @@ jobs:
           strip_components: 1
           overwrite: true
 
-      - name: Remove non-deployable paths from the target (docs only)
+      - name: Remove non-deployable paths from the target (docs + design-review prototypes)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEPLOY_SSH_HOST }}
@@ -165,6 +165,7 @@ jobs:
           script: |
             cd ~/${{ env.RTEST_PATH }} || exit 1
             rm -rf CLAUDE.md TASKS.md requirements
+            rm -f prototype-*.html
 
       - name: Post-deploy smoke check
         run: |
