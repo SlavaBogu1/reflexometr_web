@@ -75,6 +75,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
           script: |
+            mkdir -p ~/rtest/api
             cd ~/rtest/api || exit 1
             rm -rf bin composer.json composer.lock database phpunit.xml public src storage vendor
 
@@ -132,6 +133,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
           script: |
+            mkdir -p ~/rtest
             cd ~/rtest || exit 1
             find . -maxdepth 1 -mindepth 1 ! -name 'api' -exec rm -rf {} +
 
