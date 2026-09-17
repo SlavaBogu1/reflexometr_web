@@ -23,9 +23,17 @@ name: Deploy to WebHostMost (sandbox.bogushevich.ru/rtest)
 #   Client -> ~/rtest/        (document root; everything except the api/ subdirectory)
 #
 # server/.env is provisioned once manually (D3/MT-05) and holds live DB credentials — it is
-# deliberately excluded from the server sync payload below (rsync --exclude) and is never
-# generated, uploaded, or overwritten by this workflow. Config.php:46-56's real-env-wins
-# precedent means an untouched .env on the target continues to override any bundled defaults.
+# deliberately excluded from the server sync payload below and is never generated, uploaded, or
+# overwritten by this workflow. Config.php:46-56's real-env-wins precedent means an untouched
+# .env on the target continues to override any bundled defaults.
+#
+# --- Sync method note (2026-09-17) ------------------------------------------------------------
+# rsync is NOT available on the target (confirmed live: `which rsync` finds nothing in this
+# cPanel account's PATH — common on shared hosting, no package-install access). Uses
+# appleboy/ssh-action to clean stale files via an explicit remote `rm -rf` scoped to known
+# subdirectories (never the whole ~/rtest/ or ~/rtest/api/ root — .env must survive), then
+# appleboy/scp-action to copy the new files over. No --delete-style "remove anything not in the
+# source" guarantee like rsync had — cleanup here is an explicit, named list, not automatic.
 
 on:
   push:
@@ -59,25 +67,40 @@ jobs:
         working-directory: server
         run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
-      - name: Install SSH key
-        uses: webfactory/ssh-agent@v0.9.0
+      - name: Remove stale deployed files (never touches .env)
+        uses: appleboy/ssh-action@v1.2.0
         with:
-          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          script: |
+            cd ~/rtest/api || exit 1
+            rm -rf bin composer.json composer.lock database phpunit.xml public src storage vendor
 
-      - name: Add target host to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -p "${{ secrets.DEPLOY_SSH_PORT || 22 }}" "${{ secrets.DEPLOY_SSH_HOST }}" >> ~/.ssh/known_hosts
+      - name: Deploy server/ to ~/rtest/api
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          source: "server"
+          target: "~/rtest/api"
+          strip_components: 1
+          overwrite: true
 
-      - name: Sync server/ to ~/rtest/api (excluding .env)
-        run: |
-          rsync -avz --delete \
-            --exclude ".env" \
-            --exclude "tests/" \
-            --exclude ".git/" \
-            -e "ssh -p ${{ secrets.DEPLOY_SSH_PORT || 22 }}" \
-            server/ \
-            "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/rtest/api/"
+      - name: Remove non-deployable paths from the target (tests/, docs — never .env, which was
+          never in the source and can't have been copied)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          script: |
+            cd ~/rtest/api || exit 1
+            rm -rf tests CLAUDE.md TASKS.md requirements
 
       - name: Post-deploy health check
         run: |
@@ -101,23 +124,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install SSH key
-        uses: webfactory/ssh-agent@v0.9.0
+      - name: Remove stale deployed files (never touches api/ or .env)
+        uses: appleboy/ssh-action@v1.2.0
         with:
-          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          script: |
+            cd ~/rtest || exit 1
+            find . -maxdepth 1 -mindepth 1 ! -name 'api' -exec rm -rf {} +
 
-      - name: Add target host to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -p "${{ secrets.DEPLOY_SSH_PORT || 22 }}" "${{ secrets.DEPLOY_SSH_HOST }}" >> ~/.ssh/known_hosts
+      - name: Deploy client/ to ~/rtest document root
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          source: "client"
+          target: "~/rtest"
+          strip_components: 1
+          overwrite: true
 
-      - name: Sync client/ to ~/rtest document root (excluding api/)
-        run: |
-          rsync -avz --delete \
-            --exclude "api/" \
-            -e "ssh -p ${{ secrets.DEPLOY_SSH_PORT || 22 }}" \
-            client/ \
-            "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/rtest/"
+      - name: Remove non-deployable paths from the target (docs only)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          script: |
+            cd ~/rtest || exit 1
+            rm -rf CLAUDE.md TASKS.md requirements
 
       - name: Post-deploy smoke check
         run: |
