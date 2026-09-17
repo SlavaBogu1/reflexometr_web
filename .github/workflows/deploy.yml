@@ -6,6 +6,15 @@ name: Deploy to WebHostMost (sandbox.bogushevich.ru/rtest)
 # so a server-only change never touches the client deploy and vice versa (CR-INFRA-02 acceptance
 # criterion 1). A manual workflow_dispatch trigger is always available as a fallback (criterion 4).
 #
+# --- Path-filter bug fix (2026-09-17) -----------------------------------------------------------
+# The original per-job `if: contains(github.event.head_commit.modified, 'server/')` (etc.) never
+# actually matched — GitHub Actions' `contains()` on an array checks for an exact element match,
+# not a substring/prefix test, and no changed file is ever literally named "server/" or "client/".
+# Every push-triggered run silently skipped BOTH jobs (visible only as a 2-second "Skipped" run,
+# easy to miss); only manual workflow_dispatch runs ever actually deployed. Replaced with a
+# dedicated `changes` job (dorny/paths-filter@v3) that correctly detects per-directory changes and
+# feeds `needs.changes.outputs.{server,client}` into each deploy job's `if:`.
+#
 # --- Required repo secrets (Settings > Secrets and variables > Actions) — SI-6.3 -----------------
 # Values are minted/rotated by a human and added directly in GitHub; never committed here or
 # anywhere else in the repo (CR-INFRA-02 acceptance criterion 5). Part of MT-04's on-completion
@@ -64,14 +73,28 @@ on:
   workflow_dispatch: {}
 
 jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      server: ${{ steps.filter.outputs.server }}
+      client: ${{ steps.filter.outputs.client }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            server:
+              - 'server/**'
+            client:
+              - 'client/**'
+
   deploy-server:
     name: Deploy server (API)
+    needs: changes
     runs-on: ubuntu-latest
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.head_commit.modified, 'server/') ||
-      contains(github.event.head_commit.added, 'server/') ||
-      contains(github.event.head_commit.removed, 'server/')
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -137,12 +160,9 @@ jobs:
 
   deploy-client:
     name: Deploy client (static files)
+    needs: changes
     runs-on: ubuntu-latest
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.head_commit.modified, 'client/') ||
-      contains(github.event.head_commit.added, 'client/') ||
-      contains(github.event.head_commit.removed, 'client/')
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.client == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
