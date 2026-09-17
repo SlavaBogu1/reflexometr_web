@@ -33,6 +33,21 @@ try {
 } catch (\Throwable $e) {
     // Last-resort safety net — never leak an English exception message to the client (CR-UI-02).
     error_log('[reflexometr] unhandled: ' . $e->getMessage());
+    // TEMPORARY (2026-09-17, 2nd round): r-tests/categories regressed after removing the first
+    // round of this logging - re-added briefly to diagnose. Remove again once done.
+    @file_put_contents(
+        __DIR__ . '/debug.log',
+        sprintf(
+            "[%s] %s: %s in %s:%d\n%s\n\n",
+            date('c'),
+            get_class($e),
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine(),
+            $e->getTraceAsString()
+        ),
+        FILE_APPEND
+    );
     [$status, $body] = Response::error(ErrorCode::INTERNAL_ERROR, 500);
 }
 
