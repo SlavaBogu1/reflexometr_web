@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reflexometr — All Paths (Design Gate mockup, NOT wired)</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .mockup-banner {
+      background: var(--color-warn); color: #2b1c02; text-align: center;
+      padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600;
+    }
+    .page-intro { text-align: center; padding: 2.5rem 0 0.5rem; }
+    .page-intro h1 { font-size: 1.9rem; margin-bottom: 0.4rem; }
+    .page-intro p { color: var(--color-text-dim); max-width: 640px; margin: 0 auto; }
+    .filter-row { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin: 1.25rem 0 2rem; }
+    .filter-row button.active { background: var(--color-accent); color: #05201d; border-color: var(--color-accent); }
+    .thin-tag { color: var(--color-warn); font-size: 0.78rem; }
+    .grounded-tag { color: var(--color-accent); font-size: 0.78rem; }
+    .back-link { display: block; text-align: center; margin-top: 1.5rem; font-size: 0.88rem; }
+  </style>
+</head>
+<body>
+  <div class="mockup-banner">DESIGN GATE MOCKUP (3 of 3 — All Paths) — not linked from live nav, not wired to any API. Reuses CR-UI-08's approved path-card/detail layout. For approval only.</div>
+  <div id="site-nav"></div>
+
+  <div class="page-intro container">
+    <h1>All measurement paths</h1>
+    <p>Every guided path, grouped by what you're trying to learn. Filter by category, or scroll through everything.</p>
+  </div>
+
+  <div class="container">
+    <div class="filter-row">
+      <button class="btn secondary active" type="button">All</button>
+      <button class="btn secondary" type="button">General</button>
+      <button class="btn secondary" type="button">Occupational</button>
+      <button class="btn secondary" type="button">Personal monitoring</button>
+      <button class="btn secondary" type="button">Clinical support</button>
+    </div>
+
+    <div id="path-list">
+      <div class="card path-card">
+        <div class="path-main">
+          <h3>Quick Check</h3>
+          <p class="path-for">General public — a fast daily check-in. Not profession-specific.</p>
+          <p class="path-steps">Simple Visual Reaction Time</p>
+        </div>
+        <div class="path-side">
+          <span class="chip path-duration">~2 min</span>
+          <span class="grounded-tag">General</span>
+          <button class="btn secondary" type="button">View path</button>
+        </div>
+      </div>
+
+      <div class="card path-card">
+        <div class="path-main">
+          <h3>Driver / Vehicle Operator Readiness</h3>
+          <p class="path-for">Suited for a before-shift or before-driving self-check.</p>
+          <p class="path-steps">Simple Visual Reaction Time<span class="arrow">→</span>Go/No-Go Reaction Time<span class="arrow">→</span>Tapping Test</p>
+        </div>
+        <div class="path-side">
+          <span class="chip path-duration">~7 min</span>
+          <span class="grounded-tag">Occupational</span>
+          <button class="btn secondary" type="button">View path</button>
+        </div>
+      </div>
+
+      <div class="card path-card">
+        <div class="path-main">
+          <h3>Aviation Candidate &amp; Personnel Screening Battery</h3>
+          <p class="path-for">Pilots, ATC trainees, aviation cadets — practice/self-familiarization, not an official certification.</p>
+          <p class="path-steps">Auditory SRT<span class="arrow">→</span>2-Choice RT<span class="arrow">→</span>Tapping Test<span class="arrow">→</span>Handedness Questionnaire</p>
+        </div>
+        <div class="path-side">
+          <span class="chip path-duration">~10–12 min</span>
+          <span class="grounded-tag">Occupational</span>
+          <button class="btn secondary" type="button">View path</button>
+        </div>
+      </div>
+
+      <div class="card path-card">
+        <div class="path-main">
+          <h3>Emergency Services Rapid-Decision Readiness</h3>
+          <p class="path-for">Emergency responders and dispatchers.</p>
+          <p class="path-steps">Go/No-Go RT<span class="arrow">→</span>4-Choice RT<span class="arrow">→</span>Two-Hand RT</p>
+        </div>
+        <div class="path-side">
+          <span class="chip path-duration">~7–9 min</span>
+          <span class="grounded-tag">Occupational</span>
+          <button class="btn secondary" type="button">View path</button>
+        </div>
+      </div>
+
+      <div class="card path-card">
+        <div class="path-main">
+          <h3>Gamer / Esports Reflex Profile</h3>
+          <p class="path-for">General-population methods regrouped for a gaming-relevant profile.</p>
+          <p class="path-steps">Simple RT<span class="arrow">→</span>2-Choice RT<span class="arrow">→</span>Tapping Test</p>
+        </div>
+        <div class="path-side">
+          <span class="chip path-duration">~6–8 min</span>
+          <span class="thin-tag">Thin research base</span>
+          <button class="btn secondary" type="button">View path</button>
+        </div>
+      </div>
+
+      <div class="card path-card">
+        <div class="path-main">
+          <h3>Self State-Check (Fatigue / Impairment Screening)</h3>
+          <p class="path-for">Compares today's run to your own rolling baseline — a self-awareness flag, not a diagnosis.</p>
+          <p class="path-steps">Simple RT<span class="arrow">→</span>Tapping Test</p>
+        </div>
+        <div class="path-side">
+          <span class="chip path-duration">~4 min</span>
+          <span class="grounded-tag">Personal monitoring</span>
+          <button class="btn secondary" type="button">View path</button>
+        </div>
+      </div>
+
+      <div class="card path-card">
+        <div class="path-main">
+          <h3>Elderly / Longitudinal Cognitive-Motor Monitoring</h3>
+          <p class="path-for">For family members or caregivers tracking trend over time — not a diagnostic screen.</p>
+          <p class="path-steps">Simple RT<span class="arrow">→</span>2-Choice RT<span class="arrow">→</span>Visual Search (if available)</p>
+        </div>
+        <div class="path-side">
+          <span class="chip path-duration">~8–10 min</span>
+          <span class="grounded-tag">Personal monitoring</span>
+          <button class="btn secondary" type="button">View path</button>
+        </div>
+      </div>
+
+      <div class="card path-card">
+        <div class="path-main">
+          <h3>New-Employee Baseline Certification</h3>
+          <p class="path-for">A one-time baseline record for a new employee — not a pass/fail decision.</p>
+          <p class="path-steps">Simple RT<span class="arrow">→</span>Auditory RT<span class="arrow">→</span>2-Choice RT<span class="arrow">→</span>Go/No-Go RT<span class="arrow">→</span>Tapping<span class="arrow">→</span>Handedness</p>
+        </div>
+        <div class="path-side">
+          <span class="chip path-duration">~15–18 min</span>
+          <span class="grounded-tag">Occupational</span>
+          <button class="btn secondary" type="button">View path</button>
+        </div>
+      </div>
+
+      <div class="card path-card">
+        <div class="path-main">
+          <h3>Psychological State / Stress &amp; Fatigue Tracking</h3>
+          <p class="path-for">A short, repeatable pair meant for frequent (e.g. daily) runs — trend over single score.</p>
+          <p class="path-steps">Simple RT<span class="arrow">→</span>Tapping Test</p>
+        </div>
+        <div class="path-side">
+          <span class="chip path-duration">~4 min</span>
+          <span class="grounded-tag">Personal monitoring</span>
+          <button class="btn secondary" type="button">View path</button>
+        </div>
+      </div>
+
+      <div class="card path-card">
+        <div class="path-main">
+          <h3>Clinical / Rehabilitation Screening Support</h3>
+          <p class="path-for">A support tool for medics/clinicians — not a diagnostic instrument.</p>
+          <p class="path-steps">Simple RT<span class="arrow">→</span>Two-Hand RT<span class="arrow">→</span>Go/No-Go RT<span class="arrow">→</span>Visual Search<span class="arrow">→</span>Handedness</p>
+        </div>
+        <div class="path-side">
+          <span class="chip path-duration">~12–15 min</span>
+          <span class="grounded-tag">Clinical support</span>
+          <button class="btn secondary" type="button">View path</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <a class="back-link" href="prototype-index-refresh.html">&larr; Back to home</a>
+
+  <footer class="site-footer">Reflexometr — main page refresh mockup (page 3 of 3: All Paths)</footer>
+</body>
+</html>

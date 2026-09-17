@@ -8,6 +8,8 @@ use Reflexometr\Controllers\AdminCategoryController;
 use Reflexometr\Controllers\AdminPackageController;
 use Reflexometr\Controllers\AdminRTestController;
 use Reflexometr\Controllers\AuthController;
+use Reflexometr\Controllers\ConfigController;
+use Reflexometr\Controllers\HealthController;
 use Reflexometr\Controllers\ProfileController;
 use Reflexometr\Controllers\RTestController;
 use Reflexometr\Controllers\RunController;
@@ -27,6 +29,12 @@ final class Routes
 
         // Profile (dominant_hand: CR-TEST-04, preferred_locale: CR-UI-02)
         $router->add('PATCH', '/profile', [ProfileController::class, 'update']);
+
+        // Deployment metadata (CR-INFRA-01) — no auth required
+        $router->add('GET', '/config/locales', [ConfigController::class, 'locales']);
+
+        // Health check (CR-INFRA-02) — no auth required; post-deploy smoke-check target
+        $router->add('GET', '/health', [HealthController::class, 'check']);
 
         // Public r-test browsing (CR-TEST-01, CR-TEST-05)
         $router->add('GET', '/r-tests', [RTestController::class, 'list']);

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="medical_facts.title">Reflexometr</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <div class="page-intro container">
+    <h1 data-i18n="medical_facts.intro.h1">Medical facts</h1>
+    <p data-i18n="medical_facts.intro.p">Factors known to affect reflexes and reaction time, and which reflexes can (and can't) be trained.</p>
+  </div>
+
+  <section class="section container">
+    <h2 data-i18n="medical_facts.factors.h2">What degrades reflexes</h2>
+    <p data-i18n="medical_facts.factors.p">Reflexometr does not diagnose any of the following — it simply measures reaction time, a metric known to move with each of them.</p>
+    <div class="grid">
+      <div class="card"><h3 data-i18n="medical_facts.factors.age">Age</h3><p data-i18n="medical_facts.factors.age.p">Choice reaction time slows measurably per year of age past young adulthood.</p></div>
+      <div class="card"><h3 data-i18n="medical_facts.factors.stress">Chronic stress</h3><p data-i18n="medical_facts.factors.stress.p">Sustained stress is associated with impaired cognitive-motor performance.</p></div>
+      <div class="card"><h3 data-i18n="medical_facts.factors.alcohol">Alcohol</h3><p data-i18n="medical_facts.factors.alcohol.p">Even moderate blood-alcohol levels measurably slow reaction time and braking response.</p></div>
+      <div class="card"><h3 data-i18n="medical_facts.factors.sleep">Sleep deprivation</h3><p data-i18n="medical_facts.factors.sleep.p">Extended wakefulness degrades reaction time comparably to legally-impairing alcohol levels.</p></div>
+      <div class="card"><h3 data-i18n="medical_facts.factors.mental">Mental health conditions</h3><p data-i18n="medical_facts.factors.mental.p">Psychomotor slowing is a recognized, measurable feature of some mental health conditions.</p></div>
+    </div>
+  </section>
+
+  <section class="section container">
+    <h2 data-i18n="medical_facts.trainability.h2">What can and can't be trained</h2>
+    <p class="notice info" data-i18n="content.coming_soon">Content coming soon — this section will be filled in with research-backed copy once drafts are approved.</p>
+  </section>
+
+  <section class="section container">
+    <h2 data-i18n="medical_facts.elderly.h2">Remote monitoring for aging adults</h2>
+    <p data-i18n="medical_facts.elderly.p">Reaction-time trend and variability, tracked over months, can help family members and caregivers notice emerging stress or cognitive change in an aging relative — non-invasively, and from any device with a browser.</p>
+  </section>
+
+  <div class="container">
+    <div class="disclaimer" data-i18n="medical_facts.disclaimer">
+      Reflexometr is not a certified medical device and does not provide a certified medical or regulatory fitness-for-duty assessment. It is a reaction-time measurement and tracking tool; consult a qualified professional for any medical or fitness-for-duty decision.
+    </div>
+  </div>
+
+  <a class="back-link" href="index.html" data-i18n="back_to_home">&larr; Back to home</a>
+
+  <footer class="site-footer">Reflexometr — Sprint 6 build</footer>
+
+  <script src="js/util.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/locales/en.js"></script>
+  <script src="js/locales/es.js"></script>
+  <script src="js/locales/de.js"></script>
+  <script src="js/locales/fr.js"></script>
+  <script src="js/locales/zh-Hans.js"></script>
+  <script src="js/locales/ru.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/session.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script>
+    Reflx.i18n.loadLocaleConfig().then(function () {
+      Reflx.i18n.init();
+      Reflx.nav.render("medical-facts");
+      Reflx.i18n.applyToDocument();
+    });
+    document.addEventListener("reflx:localechange", function () { Reflx.i18n.applyToDocument(); });
+  </script>
+</body>
+</html>

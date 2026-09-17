@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup — Home sub-menu (CR-UI-12, not linked from live nav)</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  /* Mockup-only additions — dropdown pattern doesn't exist in style.css yet.
+     If approved, ClientTeam authors the real CSS; this is throwaway scaffolding. */
+  .site-nav-mock { display: flex; align-items: center; gap: 1.25rem; padding: 0.85rem 1.25rem;
+    background: var(--color-bg-alt); border-bottom: 1px solid var(--color-border); flex-wrap: wrap; position: relative; }
+  .site-nav-mock .brand { font-weight: 700; font-size: 1.05rem; color: var(--color-text); text-decoration: none; margin-right: auto; }
+  .site-nav-mock a { color: var(--color-text-dim); text-decoration: none; font-size: 0.92rem; padding: 0.3rem 0.1rem; }
+  .site-nav-mock a:hover, .site-nav-mock a.active { color: var(--color-accent); }
+  .has-submenu { position: relative; }
+  .has-submenu > .submenu-trigger::after { content: " \25BE"; font-size: 0.7em; }
+  .submenu {
+    display: block; position: absolute; top: 100%; left: 0; margin-top: 0.4rem;
+    background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius);
+    min-width: 220px; padding: 0.4rem 0; box-shadow: 0 8px 20px rgba(0,0,0,0.35); z-index: 10;
+  }
+  .submenu a { display: block; padding: 0.55rem 1rem; color: var(--color-text); font-size: 0.9rem; }
+  .submenu a:hover { background: var(--color-surface-alt); color: var(--color-accent); }
+  .mockup-banner { background: var(--color-warn); color: #241a00; text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.85rem; }
+  .mockup-note { max-width: 960px; margin: 1rem auto 0; padding: 0 1.25rem; color: var(--color-text-dim); font-size: 0.85rem; }
+  .mockup-section-label { max-width: 960px; margin: 2.5rem auto 0.5rem; padding: 0 1.25rem; font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-accent); border-top: 1px dashed var(--color-border); padding-top: 1.5rem; }
+</style>
+</head>
+<body>
+  <div class="mockup-banner">MOCKUP — Design Gate artifact for CR-UI-12. Not linked from live nav, not final CSS.</div>
+
+  <!-- ============ Variant: expanded state of the Home dropdown ============ -->
+  <div class="mockup-section-label">Top nav — "Home" sub-menu open (hover/click state)</div>
+  <nav class="site-nav-mock">
+    <a class="brand" href="#">Reflexometr</a>
+    <div class="has-submenu">
+      <a href="#" class="submenu-trigger active">Home</a>
+      <div class="submenu">
+        <a href="#">Human reflexes</a>
+        <a href="#">Medical facts</a>
+        <a href="#">Certification</a>
+        <a href="#">Offerings</a>
+      </div>
+    </div>
+    <a href="#">Take a test</a>
+    <a href="#">All Paths</a>
+    <a href="#">Settings</a>
+    <a href="#">My Stats</a>
+    <a href="#">Log in</a>
+  </nav>
+  <p class="mockup-note">
+    "Home" becomes a dropdown trigger rather than a direct link. Clicking/tapping the "Home" label itself
+    still navigates to the landing page (see below); the caret area opens the 4-item sub-menu.
+    Desktop: hover-or-click-to-open. Mobile: tap-to-open (no hover), collapses into the existing responsive
+    nav wrapping pattern already used by `.site-nav` today.
+  </p>
+
+  <!-- ============ Variant: new stripped-down landing page ============ -->
+  <div class="mockup-section-label">New landing page (index.html) — stripped to intro + CTA only</div>
+  <main class="hero container">
+    <h1>How fast are you, really?</h1>
+    <p>A single quick check, or a guided path built for your goal — pick what fits.</p>
+    <div class="btn-row">
+      <a class="btn" href="#">Take a test</a>
+    </div>
+  </main>
+  <p class="mockup-note">
+    Everything else currently on index.html (path-preview cards, stats-teaser, "Curious about the research"
+    link, disclaimer) is <strong>removed from the landing page</strong> and redistributed: path cards move to
+    <code>paths.html</code> (already exists, CR-UI-09), disclaimer text moves into the new sub-pages where
+    relevant (e.g. "Medical facts"), stats-teaser drops (or could move to a sub-page — flag if you want it
+    kept somewhere). Landing page is intentionally minimal per the request: "short description and Take a
+    test button."
+  </p>
+
+  <!-- ============ Variant: one sample sub-page layout (Human reflexes) ============ -->
+  <div class="mockup-section-label">Sample sub-page layout — "Human reflexes" (Certification / Medical facts / Offerings reuse the same shell)</div>
+  <nav class="site-nav-mock">
+    <a class="brand" href="#">Reflexometr</a>
+    <div class="has-submenu">
+      <a href="#" class="submenu-trigger active">Home</a>
+      <div class="submenu">
+        <a href="#" class="active">Human reflexes</a>
+        <a href="#">Medical facts</a>
+        <a href="#">Certification</a>
+        <a href="#">Offerings</a>
+      </div>
+    </div>
+    <a href="#">Take a test</a>
+    <a href="#">All Paths</a>
+    <a href="#">Settings</a>
+    <a href="#">My Stats</a>
+    <a href="#">Log in</a>
+  </nav>
+  <div class="page-intro container">
+    <h1>Human reflexes</h1>
+    <p>A generic explanation of the different types of human reflexes and what they measure.</p>
+  </div>
+  <section class="section container">
+    <h2>Types of reflexes</h2>
+    <div class="grid">
+      <div class="card"><h3>Simple reaction</h3><p>Placeholder body copy — one stimulus, one response.</p></div>
+      <div class="card"><h3>Choice reaction</h3><p>Placeholder body copy — deciding between multiple responses.</p></div>
+      <div class="card"><h3>Sustained / vigilance</h3><p>Placeholder body copy — reaction speed held over time.</p></div>
+    </div>
+  </section>
+  <a class="back-link" href="#">&larr; Back to home</a>
+  <footer class="site-footer">Reflexometr — mockup</footer>
+
+</body>
+</html>

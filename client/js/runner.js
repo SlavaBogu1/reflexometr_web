@@ -293,18 +293,37 @@
       if (!res.ok) { trendBox.textContent = api.messageFor(res.code); return; }
       var entries = res.data.entries || [];
       if (entries.length <= 1) { trendBox.textContent = t("compare.trend.none"); return; }
-      var values = entries.map(function (e) { return e.primary_metric_ms; }).filter(isNum);
+      // Defensive chronological (ascending) sort before taking the last 8 — CONTRACT.md
+      // v1.2 newly documents this endpoint's actual order as **newest-first**, which was
+      // never documented before (v1.1 and earlier said nothing about order). This code
+      // previously trusted the raw array order for both "last 8 = most recent 8" and
+      // display order; against a newest-first array, a bare `entries.slice(-8)` actually
+      // grabs the OLDEST 8 of the whole history and shows them oldest-to-newest reversed
+      // — the opposite of this CR's own "last 8 runs, chronological left-to-right"
+      // acceptance criteria. `client/js/stats-page.js`'s renderVersionCard() already
+      // guards the same assumption this same way (see its comment); this brings the
+      // trend card in line now that the real order is confirmed rather than assumed.
+      var sorted = entries.slice().sort(function (a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+      var values = sorted.map(function (e) { return e.primary_metric_ms; }).filter(isNum);
       var max = Math.max.apply(null, values.map(Math.abs)) || 1;
-      var list = Reflx.util.el("ul", { class: "trend-list" });
-      entries.slice(-8).forEach(function (e) {
+      // CR-STATS-05: vertical bars, reusing CR-STATS-03's .vhist-bar/.vhist-bar-col
+      // pattern (client/css/style.css) for visual consistency with the dashboard
+      // histogram — bars rise from a baseline via the --h custom property. Same
+      // last-8, chronological-order data and same relative-scaling logic as the old
+      // horizontal layout, just plotted on a vertical axis; ms value labels sit above
+      // each bar (where the histogram shows its bucket count) and date labels sit
+      // below in the .vhist-axis row (where the histogram shows bucket ranges).
+      var plot = Reflx.util.el("div", { class: "vhist-plot" });
+      var axis = Reflx.util.el("div", { class: "vhist-axis" });
+      sorted.slice(-8).forEach(function (e, i) {
         var pct = Math.min(100, Math.round((Math.abs(e.primary_metric_ms) / max) * 100));
-        list.appendChild(Reflx.util.el("li", { class: "trend-row" }, [
-          Reflx.util.el("span", { class: "trend-date" }, [Reflx.i18n.formatDateTime(new Date(e.created_at), { dateStyle: "short", timeStyle: "short" })]),
-          Reflx.util.el("span", { class: "trend-bar-track" }, [Reflx.util.el("span", { class: "trend-bar-fill", style: "width:" + pct + "%" })]),
-          Reflx.util.el("span", { class: "trend-value" }, [fmtMs(e.primary_metric_ms)])
+        plot.appendChild(Reflx.util.el("div", { class: "vhist-bar-col", "data-idx": String(i), style: "--h:" + pct + "%;" }, [
+          Reflx.util.el("span", { class: "vhist-count" }, [fmtMs(e.primary_metric_ms)]),
+          Reflx.util.el("div", { class: "vhist-bar" })
         ]));
+        axis.appendChild(Reflx.util.el("span", {}, [Reflx.i18n.formatDateTime(new Date(e.created_at), { dateStyle: "short" })]));
       });
-      trendBox.appendChild(list);
+      trendBox.appendChild(Reflx.util.el("div", { class: "vhist-scroll" }, [plot, axis]));
     });
   }
 
@@ -331,23 +350,25 @@
   // ------------------------------------------------------------ boot
 
   function boot() {
-    Reflx.i18n.init();
-    Reflx.nav.render("browse");
-    Reflx.i18n.applyToDocument();
+    Reflx.i18n.loadLocaleConfig().then(function () {
+      Reflx.i18n.init();
+      Reflx.nav.render("browse");
+      Reflx.i18n.applyToDocument();
 
-    if (!meta) {
-      document.getElementById("not-found").style.display = "block";
-      return;
-    }
-    if (!Reflx.session.isLoggedIn()) {
-      location.href = "auth.html?returnTo=" + encodeURIComponent("runner.html" + location.search);
-      return;
-    }
+      if (!meta) {
+        document.getElementById("not-found").style.display = "block";
+        return;
+      }
+      if (!Reflx.session.isLoggedIn()) {
+        location.href = "auth.html?returnTo=" + encodeURIComponent("runner.html" + location.search);
+        return;
+      }
 
-    wireStart();
-    wireQuit();
-    wireModeSegmented();
-    renderDescription();
+      wireStart();
+      wireQuit();
+      wireModeSegmented();
+      renderDescription();
+    });
 
     document.addEventListener("reflx:localechange", function () {
       Reflx.i18n.applyToDocument();

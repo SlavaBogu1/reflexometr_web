@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="paths.title">Reflexometr</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <div class="page-intro container">
+    <h1 data-i18n="paths.intro.h1">All measurement paths</h1>
+    <p data-i18n="paths.intro.p">Every guided path, grouped by what you're trying to learn. Filter by category, or scroll through everything.</p>
+  </div>
+
+  <main class="container">
+    <div class="filter-row" id="filter-row">
+      <button class="btn secondary active" type="button" data-category="all" data-i18n="paths.filter.all">All</button>
+      <button class="btn secondary" type="button" data-category="general" data-i18n="paths.filter.general">General</button>
+      <button class="btn secondary" type="button" data-category="occupational" data-i18n="paths.filter.occupational">Occupational</button>
+      <button class="btn secondary" type="button" data-category="personal" data-i18n="paths.filter.personal">Personal monitoring</button>
+      <button class="btn secondary" type="button" data-category="clinical" data-i18n="paths.filter.clinical">Clinical support</button>
+    </div>
+
+    <!-- Page 1: browse list -->
+    <section class="page active" id="page-browse">
+      <div id="path-list">
+        <div class="card path-card" data-category="general">
+          <div class="path-main">
+            <h3 data-i18n="paths.mp1.title">Quick Check</h3>
+            <p class="path-for" data-i18n="paths.mp1.for">General public — a fast daily check-in. Not profession-specific.</p>
+            <p class="path-steps" data-i18n="paths.mp1.steps">Simple Visual Reaction Time</p>
+          </div>
+          <div class="path-side">
+            <span class="chip path-duration" data-i18n="paths.mp1.duration">~2 min</span>
+            <span class="grounded-tag" data-i18n="paths.tag.general">General</span>
+            <button class="btn secondary" type="button" onclick="showDetail('mp1')" data-i18n="paths.view">View path</button>
+          </div>
+        </div>
+
+        <div class="card path-card" data-category="occupational">
+          <div class="path-main">
+            <h3 data-i18n="paths.mp2.title">Driver / Vehicle Operator Readiness</h3>
+            <p class="path-for" data-i18n="paths.mp2.for">Suited for a before-shift or before-driving self-check.</p>
+            <p class="path-steps"><span data-i18n="test.simple.name">Simple Visual Reaction Time</span><span class="arrow">→</span><span data-i18n="paths.step.gonogo">Go/No-Go Reaction Time</span><span class="arrow">→</span><span data-i18n="paths.step.tapping">Tapping Test</span></p>
+          </div>
+          <div class="path-side">
+            <span class="chip path-duration" data-i18n="paths.mp2.duration">~7 min</span>
+            <span class="grounded-tag" data-i18n="paths.tag.occupational">Occupational</span>
+            <button class="btn secondary" type="button" onclick="showDetail('mp2')" data-i18n="paths.view">View path</button>
+          </div>
+        </div>
+
+        <div class="card path-card" data-category="occupational">
+          <div class="path-main">
+            <h3 data-i18n="paths.mp3.title">Aviation Candidate &amp; Personnel Screening Battery</h3>
+            <p class="path-for" data-i18n="paths.mp3.for">Pilots, ATC trainees, aviation cadets — practice/self-familiarization, not an official certification.</p>
+            <p class="path-steps"><span data-i18n="paths.step.auditory">Auditory SRT</span><span class="arrow">→</span><span data-i18n="paths.step.choice2">2-Choice RT</span><span class="arrow">→</span><span data-i18n="paths.step.tapping">Tapping Test</span><span class="arrow">→</span><span data-i18n="paths.step.handedness">Handedness Questionnaire</span></p>
+          </div>
+          <div class="path-side">
+            <span class="chip path-duration" data-i18n="paths.mp3.duration">~10–12 min</span>
+            <span class="grounded-tag" data-i18n="paths.tag.occupational">Occupational</span>
+            <button class="btn secondary" type="button" onclick="showDetail('mp3')" data-i18n="paths.view">View path</button>
+          </div>
+        </div>
+
+        <div class="card path-card" data-category="occupational">
+          <div class="path-main">
+            <h3 data-i18n="paths.mp4.title">Emergency Services Rapid-Decision Readiness</h3>
+            <p class="path-for" data-i18n="paths.mp4.for">Emergency responders and dispatchers.</p>
+            <p class="path-steps"><span data-i18n="paths.step.gonogo">Go/No-Go RT</span><span class="arrow">→</span><span data-i18n="paths.step.choice4">4-Choice RT</span><span class="arrow">→</span><span data-i18n="test.twohand.name">Two-Hand RT</span></p>
+          </div>
+          <div class="path-side">
+            <span class="chip path-duration" data-i18n="paths.mp4.duration">~7–9 min</span>
+            <span class="grounded-tag" data-i18n="paths.tag.occupational">Occupational</span>
+            <button class="btn secondary" type="button" onclick="showDetail('mp4')" data-i18n="paths.view">View path</button>
+          </div>
+        </div>
+
+        <div class="card path-card" data-category="general">
+          <div class="path-main">
+            <h3 data-i18n="paths.mp9.title">Gamer / Esports Reflex Profile</h3>
+            <p class="path-for" data-i18n="paths.mp9.for">General-population methods regrouped for a gaming-relevant profile.</p>
+            <p class="path-steps"><span data-i18n="paths.step.simple">Simple RT</span><span class="arrow">→</span><span data-i18n="paths.step.choice2">2-Choice RT</span><span class="arrow">→</span><span data-i18n="paths.step.tapping">Tapping Test</span></p>
+          </div>
+          <div class="path-side">
+            <span class="chip path-duration" data-i18n="paths.mp9.duration">~6–8 min</span>
+            <span class="thin-tag" data-i18n="paths.tag.thin">Thin research base</span>
+            <button class="btn secondary" type="button" onclick="showDetail('mp9')" data-i18n="paths.view">View path</button>
+          </div>
+        </div>
+
+        <div class="card path-card" data-category="personal">
+          <div class="path-main">
+            <h3 data-i18n="paths.mp10.title">Self State-Check (Fatigue / Impairment Screening)</h3>
+            <p class="path-for" data-i18n="paths.mp10.for">Compares today's run to your own rolling baseline — a self-awareness flag, not a diagnosis.</p>
+            <p class="path-steps"><span data-i18n="paths.step.simple">Simple RT</span><span class="arrow">→</span><span data-i18n="paths.step.tapping">Tapping Test</span></p>
+          </div>
+          <div class="path-side">
+            <span class="chip path-duration" data-i18n="paths.mp10.duration">~4 min</span>
+            <span class="grounded-tag" data-i18n="paths.tag.personal">Personal monitoring</span>
+            <button class="btn secondary" type="button" onclick="showDetail('mp10')" data-i18n="paths.view">View path</button>
+          </div>
+        </div>
+
+        <div class="card path-card" data-category="personal">
+          <div class="path-main">
+            <h3 data-i18n="paths.mp5.title">Elderly / Longitudinal Cognitive-Motor Monitoring</h3>
+            <p class="path-for" data-i18n="paths.mp5.for">For family members or caregivers tracking trend over time — not a diagnostic screen.</p>
+            <p class="path-steps"><span data-i18n="paths.step.simple">Simple RT</span><span class="arrow">→</span><span data-i18n="paths.step.choice2">2-Choice RT</span><span class="arrow">→</span><span data-i18n="paths.step.visualsearch">Visual Search (if available)</span></p>
+          </div>
+          <div class="path-side">
+            <span class="chip path-duration" data-i18n="paths.mp5.duration">~8–10 min</span>
+            <span class="grounded-tag" data-i18n="paths.tag.personal">Personal monitoring</span>
+            <button class="btn secondary" type="button" onclick="showDetail('mp5')" data-i18n="paths.view">View path</button>
+          </div>
+        </div>
+
+        <div class="card path-card" data-category="occupational">
+          <div class="path-main">
+            <h3 data-i18n="paths.mp6.title">New-Employee Baseline Certification</h3>
+            <p class="path-for" data-i18n="paths.mp6.for">A one-time baseline record for a new employee — not a pass/fail decision.</p>
+            <p class="path-steps"><span data-i18n="paths.step.simple">Simple RT</span><span class="arrow">→</span><span data-i18n="paths.step.auditory">Auditory RT</span><span class="arrow">→</span><span data-i18n="paths.step.choice2">2-Choice RT</span><span class="arrow">→</span><span data-i18n="paths.step.gonogo">Go/No-Go RT</span><span class="arrow">→</span><span data-i18n="paths.step.tapping">Tapping</span><span class="arrow">→</span><span data-i18n="paths.step.handedness">Handedness</span></p>
+          </div>
+          <div class="path-side">
+            <span class="chip path-duration" data-i18n="paths.mp6.duration">~15–18 min</span>
+            <span class="grounded-tag" data-i18n="paths.tag.occupational">Occupational</span>
+            <button class="btn secondary" type="button" onclick="showDetail('mp6')" data-i18n="paths.view">View path</button>
+          </div>
+        </div>
+
+        <div class="card path-card" data-category="personal">
+          <div class="path-main">
+            <h3 data-i18n="paths.mp7.title">Psychological State / Stress &amp; Fatigue Tracking</h3>
+            <p class="path-for" data-i18n="paths.mp7.for">A short, repeatable pair meant for frequent (e.g. daily) runs — trend over single score.</p>
+            <p class="path-steps"><span data-i18n="paths.step.simple">Simple RT</span><span class="arrow">→</span><span data-i18n="paths.step.tapping">Tapping Test</span></p>
+          </div>
+          <div class="path-side">
+            <span class="chip path-duration" data-i18n="paths.mp7.duration">~4 min</span>
+            <span class="grounded-tag" data-i18n="paths.tag.personal">Personal monitoring</span>
+            <button class="btn secondary" type="button" onclick="showDetail('mp7')" data-i18n="paths.view">View path</button>
+          </div>
+        </div>
+
+        <div class="card path-card" data-category="clinical">
+          <div class="path-main">
+            <h3 data-i18n="paths.mp8.title">Clinical / Rehabilitation Screening Support</h3>
+            <p class="path-for" data-i18n="paths.mp8.for">A support tool for medics/clinicians — not a diagnostic instrument.</p>
+            <p class="path-steps"><span data-i18n="paths.step.simple">Simple RT</span><span class="arrow">→</span><span data-i18n="test.twohand.name">Two-Hand RT</span><span class="arrow">→</span><span data-i18n="paths.step.gonogo">Go/No-Go RT</span><span class="arrow">→</span><span data-i18n="paths.step.visualsearch">Visual Search</span><span class="arrow">→</span><span data-i18n="paths.step.handedness">Handedness</span></p>
+          </div>
+          <div class="path-side">
+            <span class="chip path-duration" data-i18n="paths.mp8.duration">~12–15 min</span>
+            <span class="grounded-tag" data-i18n="paths.tag.clinical">Clinical support</span>
+            <button class="btn secondary" type="button" onclick="showDetail('mp8')" data-i18n="paths.view">View path</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Page 2: static path detail (CR-TEST-15/16/17 unscheduled — mirrors CR-UI-08's prototype interaction) -->
+    <section class="page" id="page-detail">
+      <button class="btn secondary" type="button" onclick="showBrowse()" data-i18n="paths.back_to_paths">&larr; Back to paths</button>
+      <h2 id="detail-title" style="margin-top:1rem;"></h2>
+      <p class="field-desc" id="detail-desc"></p>
+      <p class="path-for" id="detail-for"></p>
+      <div class="disclaimer" data-i18n="paths.detail.disclaimer">
+        This is a self-guided reflex/reaction-time screening tool, not a medical or
+        occupational-certification diagnostic instrument. Results reflect a snapshot influenced by
+        device, environment, and personal state (sleep, mood, attention) as well as underlying
+        ability — see the research notes for context.
+      </div>
+      <ol class="steps-list" id="detail-steps"></ol>
+      <div style="text-align:right;">
+        <a class="btn" id="detail-start-link" href="browse.html" data-i18n="paths.detail.start">Start Path</a>
+      </div>
+    </section>
+  </main>
+
+  <a class="back-link" href="index.html" data-i18n="back_to_home">&larr; Back to home</a>
+
+  <footer class="site-footer">Reflexometr — Sprint 5 build</footer>
+
+  <script src="js/util.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/locales/en.js"></script>
+  <script src="js/locales/es.js"></script>
+  <script src="js/locales/de.js"></script>
+  <script src="js/locales/fr.js"></script>
+  <script src="js/locales/zh-Hans.js"></script>
+  <script src="js/locales/ru.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/session.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script>
+    // Path-detail content, keyed to match the browse list's onclick(id) calls.
+    // Not wired to a real path-runner backend (CR-TEST-15/16/17 unscheduled) — "View path"
+    // renders this static detail; "Start Path" links into today's single-test flow
+    // (browse.html), mirroring CR-UI-08's prototype interaction until the runner lands.
+    var PATH_DETAIL = {
+      mp1:  { title: "paths.mp1.title",  desc: "paths.mp1.detail_desc",  steps: ["test.simple.name"] },
+      mp2:  { title: "paths.mp2.title",  desc: "paths.mp2.detail_desc",  steps: ["test.simple.name", "paths.step.gonogo", "paths.step.tapping"] },
+      mp3:  { title: "paths.mp3.title",  desc: "paths.mp3.detail_desc",  steps: ["paths.step.auditory", "paths.step.choice2", "paths.step.tapping", "paths.step.handedness"] },
+      mp4:  { title: "paths.mp4.title",  desc: "paths.mp4.detail_desc",  steps: ["paths.step.gonogo", "paths.step.choice4", "test.twohand.name"] },
+      mp5:  { title: "paths.mp5.title",  desc: "paths.mp5.detail_desc",  steps: ["paths.step.simple", "paths.step.choice2", "paths.step.visualsearch"] },
+      mp6:  { title: "paths.mp6.title",  desc: "paths.mp6.detail_desc",  steps: ["paths.step.simple", "paths.step.auditory", "paths.step.choice2", "paths.step.gonogo", "paths.step.tapping", "paths.step.handedness"] },
+      mp7:  { title: "paths.mp7.title",  desc: "paths.mp7.detail_desc",  steps: ["paths.step.simple", "paths.step.tapping"] },
+      mp8:  { title: "paths.mp8.title",  desc: "paths.mp8.detail_desc",  steps: ["paths.step.simple", "test.twohand.name", "paths.step.gonogo", "paths.step.visualsearch", "paths.step.handedness"] },
+      mp9:  { title: "paths.mp9.title",  desc: "paths.mp9.detail_desc",  steps: ["paths.step.simple", "paths.step.choice2", "paths.step.tapping"] },
+      mp10: { title: "paths.mp10.title", desc: "paths.mp10.detail_desc", steps: ["paths.step.simple", "paths.step.tapping"] }
+    };
+    var FOR_KEY = { mp1: "paths.mp1.for", mp2: "paths.mp2.for", mp3: "paths.mp3.for", mp4: "paths.mp4.for", mp5: "paths.mp5.for", mp6: "paths.mp6.for", mp7: "paths.mp7.for", mp8: "paths.mp8.for", mp9: "paths.mp9.for", mp10: "paths.mp10.for" };
+
+    function showDetail(id) {
+      var t = Reflx.i18n.t;
+      var d = PATH_DETAIL[id];
+      document.getElementById("detail-title").textContent = t(d.title);
+      document.getElementById("detail-desc").textContent = t(d.desc);
+      document.getElementById("detail-for").textContent = t(FOR_KEY[id]);
+      var list = document.getElementById("detail-steps");
+      list.innerHTML = "";
+      d.steps.forEach(function (key) {
+        var li = document.createElement("li");
+        li.textContent = t(key);
+        list.appendChild(li);
+      });
+      document.querySelectorAll(".page").forEach(function (p) { p.classList.remove("active"); });
+      document.getElementById("page-detail").classList.add("active");
+      window.scrollTo(0, 0);
+    }
+    function showBrowse() {
+      document.querySelectorAll(".page").forEach(function (p) { p.classList.remove("active"); });
+      document.getElementById("page-browse").classList.add("active");
+      window.scrollTo(0, 0);
+    }
+
+    function applyFilter(category) {
+      document.querySelectorAll("#path-list .path-card").forEach(function (card) {
+        card.style.display = (category === "all" || card.getAttribute("data-category") === category) ? "" : "none";
+      });
+    }
+    document.getElementById("filter-row").addEventListener("click", function (e) {
+      var btn = e.target.closest("button[data-category]");
+      if (!btn) return;
+      document.querySelectorAll("#filter-row button").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      applyFilter(btn.getAttribute("data-category"));
+    });
+
+    Reflx.i18n.loadLocaleConfig().then(function () {
+      Reflx.i18n.init();
+      Reflx.nav.render("paths");
+      Reflx.i18n.applyToDocument();
+    });
+    document.addEventListener("reflx:localechange", function () { Reflx.i18n.applyToDocument(); });
+  </script>
+</body>
+</html>

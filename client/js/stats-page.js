@@ -441,10 +441,12 @@
     });
   }
 
-  Reflx.i18n.init();
-  Reflx.nav.render("stats");
-  Reflx.i18n.applyToDocument();
-  render();
+  Reflx.i18n.loadLocaleConfig().then(function () {
+    Reflx.i18n.init();
+    Reflx.nav.render("stats");
+    Reflx.i18n.applyToDocument();
+    render();
+  });
   document.addEventListener("reflx:localechange", function () { Reflx.i18n.applyToDocument(); render(); });
   document.addEventListener("reflx:sessionchange", render);
 })();

@@ -79,6 +79,35 @@ h1, h2, h3 { line-height: 1.25; }
 }
 .site-nav a:hover, .site-nav a.active { color: var(--color-accent); }
 
+/* --- Home dropdown sub-menu (CR-UI-12) --- */
+.has-submenu { position: relative; }
+.has-submenu > .submenu-trigger::after { content: " \25BE"; font-size: 0.7em; padding-left: 0.2rem; }
+.has-submenu .submenu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.4rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  min-width: 200px;
+  padding: 0.4rem 0;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+}
+.has-submenu.open .submenu { display: block; }
+.has-submenu .submenu a {
+  display: block;
+  padding: 0.55rem 1rem;
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+.has-submenu .submenu a:hover, .has-submenu .submenu a.active {
+  background: var(--color-surface-alt);
+  color: var(--color-accent);
+}
+
 /* --- Generic components --- */
 .card {
   background: var(--color-surface);
@@ -251,13 +280,6 @@ tr.selectable:hover { background: var(--color-surface-alt); }
 }
 .percentile-bar-fill { height: 100%; background: var(--color-accent); }
 
-.trend-list { list-style: none; padding: 0; margin: 0.5rem 0 0; }
-.trend-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.25rem 0; font-size: 0.85rem; }
-.trend-row .trend-date { flex: 0 0 9.5em; color: var(--color-text-dim); }
-.trend-row .trend-bar-track { flex: 1; background: var(--color-surface-alt); border-radius: 4px; height: 8px; overflow: hidden; }
-.trend-row .trend-bar-fill { height: 100%; background: var(--color-accent-dim); }
-.trend-row .trend-value { flex: 0 0 5.5em; text-align: right; }
-
 footer.site-footer {
   text-align: center; color: var(--color-text-dim); font-size: 0.8rem; padding: 2rem 1rem;
 }
@@ -346,3 +368,39 @@ footer.site-footer {
 .result-row { display: flex; justify-content: space-between; align-items: center; padding: 0.7rem 0; border-bottom: 1px solid var(--color-border); }
 .result-row:last-child { border-bottom: none; }
 .result-row .val { font-variant-numeric: tabular-nums; margin-right: 1rem; }
+
+/* --- CR-UI-09 (Sprint 5): Home / The Research / All Paths page split --- */
+.hero .btn-row { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.25rem; flex-wrap: wrap; }
+.home-links { text-align: center; margin-top: 0.75rem; }
+.home-links a { font-size: 0.88rem; color: var(--color-text-dim); text-decoration: underline; }
+
+.path-mini-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem; margin-top: 1.25rem;
+}
+.path-mini-card {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius); padding: 1.1rem 1.2rem; display: flex; flex-direction: column;
+}
+.path-mini-card h3 { margin: 0 0 0.35rem; font-size: 1.05rem; }
+.path-mini-card .tagline { color: var(--color-text-dim); font-size: 0.87rem; margin: 0 0 0.7rem; flex-grow: 1; }
+.path-mini-card .meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--color-text-dim); margin-bottom: 0.8rem; }
+.path-mini-card .btn { align-self: flex-start; }
+
+.grounded-tag { color: var(--color-accent); font-size: 0.78rem; }
+.thin-tag { color: var(--color-warn); font-size: 0.78rem; }
+
+.teaser-card { max-width: 620px; margin: 0 auto; }
+.teaser-badge {
+  position: absolute; top: -0.65rem; right: 1rem; background: var(--color-surface-alt);
+  border: 1px solid var(--color-border); border-radius: 999px; padding: 0.15rem 0.7rem;
+  font-size: 0.7rem; color: var(--color-text-dim);
+}
+
+.page-intro { text-align: center; padding: 2.5rem 0 0.5rem; }
+.page-intro h1 { font-size: 1.9rem; margin-bottom: 0.4rem; }
+.page-intro p { color: var(--color-text-dim); max-width: 640px; margin: 0 auto; }
+.back-link { display: block; text-align: center; margin-top: 1.5rem; font-size: 0.88rem; }
+
+.filter-row { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin: 1.25rem 0 2rem; }
+.filter-row button.active { background: var(--color-accent); color: #05201d; border-color: var(--color-accent); }

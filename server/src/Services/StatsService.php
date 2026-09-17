@@ -23,10 +23,15 @@ final class StatsService
         $this->results = new ResultRepository(Database::connection());
     }
 
-    /** @return array<string,mixed> */
-    public function history(int $userId, int $rTestId, int $rTestVersionId): array
+    /**
+     * @param int|null $limit Optional page size; null (default) returns the caller's **complete**
+     *   history for this scope (CR-STATS-04 — no more silent, undocumented caps).
+     * @return array<string,mixed>
+     */
+    public function history(int $userId, int $rTestId, int $rTestVersionId, ?int $limit = null, int $offset = 0): array
     {
-        $rows = $this->results->historyForUser($userId, $rTestId, $rTestVersionId);
+        $rows = $this->results->historyForUser($userId, $rTestId, $rTestVersionId, $limit, $offset);
+        $total = $this->results->countForUser($userId, $rTestId, $rTestVersionId);
         $entries = array_map(static function (array $row): array {
             return [
                 'result_id' => (int) $row['id'],
@@ -39,6 +44,7 @@ final class StatsService
         return [
             'r_test_id' => $rTestId,
             'r_test_version_id' => $rTestVersionId,
+            'total' => $total,
             'entries' => $entries,
         ];
     }

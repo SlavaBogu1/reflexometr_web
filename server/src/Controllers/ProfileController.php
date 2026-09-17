@@ -39,7 +39,7 @@ final class ProfileController
 
         if (array_key_exists('preferred_locale', $body)) {
             $value = $body['preferred_locale'];
-            if (!is_string($value) || !Locale::isSupported($value)) {
+            if (!is_string($value) || !Locale::isSupported($value) || !in_array($value, Locale::enabled(), true)) {
                 throw new ApiException(ErrorCode::UNSUPPORTED_LOCALE, 400, ['fields' => ['preferred_locale']]);
             }
             $users->updatePreferredLocale((int) $user['id'], $value);

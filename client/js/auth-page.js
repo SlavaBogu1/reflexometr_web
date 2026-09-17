@@ -62,10 +62,12 @@
     setMode(mode === "login" ? "register" : "login");
   });
 
-  Reflx.i18n.init();
-  Reflx.nav.render("login");
-  Reflx.i18n.applyToDocument();
-  setMode("login");
+  Reflx.i18n.loadLocaleConfig().then(function () {
+    Reflx.i18n.init();
+    Reflx.nav.render("login");
+    Reflx.i18n.applyToDocument();
+    setMode("login");
+  });
 
   // Already logged in? Nothing more to do here.
   if (Reflx.session.isLoggedIn()) location.href = returnTo;

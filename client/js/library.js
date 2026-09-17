@@ -235,13 +235,15 @@
   }
 
   function boot() {
-    Reflx.i18n.init();
-    Reflx.nav.render("library");
-    Reflx.i18n.applyToDocument();
-    wireTabs();
-    wireImport();
-    wirePackageCreate();
-    if (showGate()) loadAll();
+    Reflx.i18n.loadLocaleConfig().then(function () {
+      Reflx.i18n.init();
+      Reflx.nav.render("library");
+      Reflx.i18n.applyToDocument();
+      wireTabs();
+      wireImport();
+      wirePackageCreate();
+      if (showGate()) loadAll();
+    });
     document.addEventListener("reflx:sessionchange", function () { if (showGate()) loadAll(); });
     document.addEventListener("reflx:localechange", function () {
       Reflx.i18n.applyToDocument();

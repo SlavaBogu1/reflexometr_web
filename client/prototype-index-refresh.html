@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reflexometr — Main Page Refresh (Design Gate mockup, NOT wired)</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Mockup-only additions — not part of the approved app stylesheet until this gate passes. */
+    .mockup-banner {
+      background: var(--color-warn); color: #2b1c02; text-align: center;
+      padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600;
+    }
+    .path-mini-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem; margin-top: 1.25rem;
+    }
+    .path-mini-card {
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius); padding: 1.1rem 1.2rem; display: flex; flex-direction: column;
+    }
+    .path-mini-card h3 { margin: 0 0 0.35rem; font-size: 1.05rem; }
+    .path-mini-card .tagline { color: var(--color-text-dim); font-size: 0.87rem; margin: 0 0 0.7rem; flex-grow: 1; }
+    .path-mini-card .meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--color-text-dim); margin-bottom: 0.8rem; }
+    .path-mini-card .btn { align-self: flex-start; }
+    .grounded-tag { color: var(--color-accent); }
+    .thin-tag { color: var(--color-warn); }
+    .hero .btn-row { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.25rem; flex-wrap: wrap; }
+    .home-links { text-align: center; margin-top: 0.75rem; }
+    .home-links a { font-size: 0.88rem; color: var(--color-text-dim); text-decoration: underline; }
+    .teaser-card { max-width: 620px; margin: 0 auto; }
+    .teaser-badge {
+      position: absolute; top: -0.65rem; right: 1rem; background: var(--color-surface-alt);
+      border: 1px solid var(--color-border); border-radius: 999px; padding: 0.15rem 0.7rem;
+      font-size: 0.7rem; color: var(--color-text-dim);
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-banner">DESIGN GATE MOCKUP (1 of 3 — Home, incl. stats-preview teaser) — not linked from live nav, not wired to any API. Sample data below is hardcoded/illustrative, not a real API call. For approval only.</div>
+  <div id="site-nav"></div>
+
+  <main class="hero container">
+    <h1>How fast are you, really?</h1>
+    <p>A single quick check, or a guided path built for your goal — pick what fits.</p>
+    <div class="btn-row">
+      <a class="btn" href="#">Choose a testing path</a>
+      <a class="btn secondary" href="#">Just take one test</a>
+    </div>
+  </main>
+
+  <section class="section container">
+    <h2>Choose your path</h2>
+    <p>Reflexometr isn't a one-off quiz — pick the guided sequence that matches what you're trying to learn about yourself.</p>
+    <div class="path-mini-grid">
+      <div class="path-mini-card">
+        <h3>Quick Check</h3>
+        <p class="tagline">One fast test. The simplest possible check-in — good for a first visit or a daily one-off.</p>
+        <div class="meta-row"><span>~2 min</span><span class="grounded-tag">General public</span></div>
+        <a class="btn secondary" href="#">Start</a>
+      </div>
+      <div class="path-mini-card">
+        <h3>Driver / Vehicle Operator Readiness</h3>
+        <p class="tagline">A before-shift self-check for drivers and operators — reaction speed, impulse control, sustained motor readiness.</p>
+        <div class="meta-row"><span>~6–8 min</span><span class="grounded-tag">Drivers &amp; operators</span></div>
+        <a class="btn secondary" href="#">Start</a>
+      </div>
+      <div class="path-mini-card">
+        <h3>Gamer / Esports Reflex Profile</h3>
+        <p class="tagline">See where your reflexes stand across speed, choice-reaction, and sustained tempo. <em>No esports-specific norms yet — general-population methods only.</em></p>
+        <div class="meta-row"><span>~6–8 min</span><span class="thin-tag">Thin research base</span></div>
+        <a class="btn secondary" href="#">Start</a>
+      </div>
+      <div class="path-mini-card">
+        <h3>Self State-Check</h3>
+        <p class="tagline">Compares today's run against your own recent baseline and flags if you're outside your typical range — a fatigue/focus self-awareness screen, not a diagnosis.</p>
+        <div class="meta-row"><span>~4 min</span><span class="grounded-tag">Self-monitoring</span></div>
+        <a class="btn secondary" href="#">Start</a>
+      </div>
+      <div class="path-mini-card">
+        <h3>Elderly / Longitudinal Monitoring</h3>
+        <p class="tagline">A lighter battery meant to be repeated weekly or monthly to track trend over time, not a single score.</p>
+        <div class="meta-row"><span>~8–10 min</span><span class="grounded-tag">Family &amp; caregivers</span></div>
+        <a class="btn secondary" href="#">Start</a>
+      </div>
+      <div class="path-mini-card">
+        <h3>See all paths</h3>
+        <p class="tagline">Aviation screening, emergency-services readiness, new-employee baseline, and more — browse the full library.</p>
+        <div class="meta-row"><span>&nbsp;</span><span>&nbsp;</span></div>
+        <a class="btn secondary" href="prototype-paths-refresh.html">Browse all</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container">
+    <h2 style="text-align:center;">Watch your progress</h2>
+    <p style="text-align:center; max-width:520px; margin:0 auto;">Every path feeds your personal trend — see how you compare to your own history, and to others, over time.</p>
+
+    <div class="card teaser-card" style="position:relative; margin-top:1.5rem;">
+      <span class="teaser-badge">Sample data — illustrative only</span>
+
+      <div class="stat-block">
+        <p class="stat-block-title">Your trend</p>
+        <div class="sparkline-row">
+          <svg viewBox="0 0 300 54" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="4,44 41,38 78,40 115,30 152,26 189,18 226,20 263,12 296,10"
+              fill="none" stroke="var(--color-accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="296" cy="10" r="4" fill="var(--color-accent)"/>
+          </svg>
+          <div class="spark-latest">214<span>ms</span></div>
+        </div>
+      </div>
+
+      <div class="stat-block">
+        <p class="stat-block-title">How you compare</p>
+        <div class="vhist-scroll">
+          <div class="vhist-plot">
+            <div class="vhist-refline" style="left:52%;">
+              <div class="vhist-refline-tag"><span class="line1">peer avg</span><span class="line2">231 ms</span></div>
+            </div>
+            <div class="vhist-bar-col"><div class="vhist-bar" style="--h:22%;"></div><span class="vhist-count">3</span></div>
+            <div class="vhist-bar-col"><div class="vhist-bar" style="--h:48%;"></div><span class="vhist-count">7</span></div>
+            <div class="vhist-bar-col"><div class="vhist-bar" style="--h:100%;"></div><span class="vhist-count">14</span></div>
+            <div class="vhist-bar-col"><div class="vhist-bar" style="--h:66%;"></div><span class="vhist-count">9</span></div>
+            <div class="vhist-bar-col"><div class="vhist-bar" style="--h:30%;"></div><span class="vhist-count">4</span></div>
+          </div>
+          <div class="vhist-axis">
+            <span>190</span><span>210</span><span>230</span><span>250</span><span>270</span>
+          </div>
+        </div>
+      </div>
+
+      <p style="text-align:center; color:var(--color-text-dim); font-size:0.85rem; margin-top:0.5rem;">Faster than 68% of participants on this test</p>
+    </div>
+  </section>
+
+  <div class="container home-links">
+    <a href="prototype-science-refresh.html">Curious about the research behind this? Read the science &rarr;</a>
+  </div>
+
+  <div class="container">
+    <div class="disclaimer" style="margin-top:2rem;">
+      Reflexometr is not a certified medical device and does not provide a certified medical or regulatory fitness-for-duty assessment. It is a reaction-time measurement and tracking tool; consult a qualified professional for any medical or fitness-for-duty decision.
+    </div>
+  </div>
+
+  <footer class="site-footer">Reflexometr — main page refresh mockup (page 1 of 3: Home)</footer>
+</body>
+</html>

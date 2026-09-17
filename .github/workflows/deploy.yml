@@ -1,0 +1,129 @@
+name: Deploy to WebHostMost (sandbox.bogushevich.ru/rtest)
+
+# CR-INFRA-02 — replaces the manual SCP/FTP/SSH copy steps in
+# ProductOwner_records/DEPLOYMENT_PLAN.md §§ 2D/2E (now historical — target/paths there predate
+# D16) with an automated sync on every push to main. Two independent jobs, gated by path filters,
+# so a server-only change never touches the client deploy and vice versa (CR-INFRA-02 acceptance
+# criterion 1). A manual workflow_dispatch trigger is always available as a fallback (criterion 4).
+#
+# --- Required repo secrets (Settings > Secrets and variables > Actions) — SI-6.3 -----------------
+# Values are minted/rotated by a human and added directly in GitHub; never committed here or
+# anywhere else in the repo (CR-INFRA-02 acceptance criterion 5). Part of MT-04's on-completion
+# handoff (ProductOwner_records/MANUAL_TASKS.md).
+#
+#   DEPLOY_SSH_HOST  - the target host, e.g. sandbox.bogushevich.ru
+#   DEPLOY_SSH_USER  - the cPanel/SSH login user
+#   DEPLOY_SSH_KEY   - private key (PEM), paired with a public key installed in the account's
+#                      ~/.ssh/authorized_keys on the target — never a password
+#   DEPLOY_SSH_PORT  - optional; only needed if the host uses a non-default SSH port (defaults to
+#                      22 below if the secret is unset)
+#
+# --- Target layout (D16) --------------------------------------------------------------------------
+#   API  -> ~/rtest/api/      (document-root alias to server/public/, D13 path-split under /rtest)
+#   Client -> ~/rtest/        (document root; everything except the api/ subdirectory)
+#
+# server/.env is provisioned once manually (D3/MT-05) and holds live DB credentials — it is
+# deliberately excluded from the server sync payload below (rsync --exclude) and is never
+# generated, uploaded, or overwritten by this workflow. Config.php:46-56's real-env-wins
+# precedent means an untouched .env on the target continues to override any bundled defaults.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "server/**"
+      - "client/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy-server:
+    name: Deploy server (API)
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.modified, 'server/') ||
+      contains(github.event.head_commit.added, 'server/') ||
+      contains(github.event.head_commit.removed, 'server/')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+          tools: composer:v2
+
+      - name: Install production dependencies
+        working-directory: server
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Add target host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${{ secrets.DEPLOY_SSH_PORT || 22 }}" "${{ secrets.DEPLOY_SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync server/ to ~/rtest/api (excluding .env)
+        run: |
+          rsync -avz --delete \
+            --exclude ".env" \
+            --exclude "tests/" \
+            --exclude ".git/" \
+            -e "ssh -p ${{ secrets.DEPLOY_SSH_PORT || 22 }}" \
+            server/ \
+            "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/rtest/api/"
+
+      - name: Post-deploy health check
+        run: |
+          status=$(curl -s -o /tmp/health_body -w "%{http_code}" "https://${{ secrets.DEPLOY_SSH_HOST }}/rtest/api/health")
+          echo "Health check HTTP status: $status"
+          cat /tmp/health_body
+          if [ "$status" != "200" ]; then
+            echo "::error::Post-deploy health check failed (HTTP $status) — deployed API is not responding correctly."
+            exit 1
+          fi
+
+  deploy-client:
+    name: Deploy client (static files)
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.modified, 'client/') ||
+      contains(github.event.head_commit.added, 'client/') ||
+      contains(github.event.head_commit.removed, 'client/')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Add target host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${{ secrets.DEPLOY_SSH_PORT || 22 }}" "${{ secrets.DEPLOY_SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync client/ to ~/rtest document root (excluding api/)
+        run: |
+          rsync -avz --delete \
+            --exclude "api/" \
+            -e "ssh -p ${{ secrets.DEPLOY_SSH_PORT || 22 }}" \
+            client/ \
+            "${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/rtest/"
+
+      - name: Post-deploy smoke check
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" "https://${{ secrets.DEPLOY_SSH_HOST }}/rtest/")
+          echo "Client root HTTP status: $status"
+          if [ "$status" != "200" ]; then
+            echo "::error::Post-deploy client smoke check failed (HTTP $status)."
+            exit 1
+          fi

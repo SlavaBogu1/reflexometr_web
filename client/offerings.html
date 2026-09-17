@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="offerings.title">Reflexometr</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <div class="page-intro container">
+    <h1 data-i18n="offerings.intro.h1">Offerings</h1>
+    <p data-i18n="offerings.intro.p">Solutions and service directions we're building around the core reflex-testing platform.</p>
+  </div>
+
+  <section class="section container">
+    <div class="grid">
+      <div class="card">
+        <h3 data-i18n="offerings.government.h2">Certification program for government</h3>
+        <p data-i18n="offerings.government.p">A structured reflex/reaction-time certification program for government agencies and safety-critical public roles — draft direction, marketing copy placeholder pending final program details.</p>
+      </div>
+      <div class="card">
+        <h3 data-i18n="offerings.elderly.h2">Application for elderly users</h3>
+        <p data-i18n="offerings.elderly.p">A lighter, caregiver-friendly application aimed at longitudinal reflex and cognitive-motor monitoring for aging adults — draft direction, marketing copy placeholder pending final program details.</p>
+      </div>
+      <div class="card">
+        <h3 data-i18n="offerings.cybersportsmen.h2">Program for competitive gamers</h3>
+        <p data-i18n="offerings.cybersportsmen.p">A dedicated reflex-profiling program for competitive gamers ("cybersportsmen") tracking speed, choice-reaction, and sustained tempo — draft direction, marketing copy placeholder pending final program details.</p>
+      </div>
+    </div>
+  </section>
+
+  <a class="back-link" href="index.html" data-i18n="back_to_home">&larr; Back to home</a>
+
+  <footer class="site-footer">Reflexometr — Sprint 6 build</footer>
+
+  <script src="js/util.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/locales/en.js"></script>
+  <script src="js/locales/es.js"></script>
+  <script src="js/locales/de.js"></script>
+  <script src="js/locales/fr.js"></script>
+  <script src="js/locales/zh-Hans.js"></script>
+  <script src="js/locales/ru.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/session.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script>
+    Reflx.i18n.loadLocaleConfig().then(function () {
+      Reflx.i18n.init();
+      Reflx.nav.render("offerings");
+      Reflx.i18n.applyToDocument();
+    });
+    document.addEventListener("reflx:localechange", function () { Reflx.i18n.applyToDocument(); });
+  </script>
+</body>
+</html>

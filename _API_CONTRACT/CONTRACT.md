@@ -4,7 +4,7 @@
 Any change lands here first (version bump + changelog entry below), then the ProductOwner briefs
 ClientTeam on the diff (PRODUCT_OWNER_PROCESS.md § Contract Change Workflow).
 
-**Version:** v1.1 (Sprint 3) — CR-UI-07: `preferred_locale` now accepts 6 codes, not 5 (see Changelog).
+**Version:** v1.4 (Sprint 6) — CR-INFRA-02: new `GET /health` endpoint (see Changelog).
 
 **Note for ClientTeam:** `client/js/mock-api.js` / `SPRINT1_REPORT.md` (ClientTeam's) list several
 assumed field names and behaviors made against the still-empty v0.1 contract. This document is now
@@ -16,7 +16,7 @@ those assumptions.
 ## Conventions
 
 - Base path: none assumed — routes below are relative to wherever `server/public/index.php` is
-  deployed (e.g. HostGator document root or subdirectory).
+  deployed (e.g. WebHostMost document root or subdirectory).
 - All requests/responses are `application/json` unless noted (admin import optionally accepts
   `multipart/form-data` for file upload).
 - **Success envelope:** `{ "data": <payload> }`
@@ -70,10 +70,51 @@ Body (at least one of): `{ "dominant_hand"?: "left"|"right"|"none-recorded", "pr
 200: `UserProfile`
 Errors: `VALIDATION_ERROR` (400, bad `dominant_hand` or neither field given), `UNSUPPORTED_LOCALE` (400)
 
+**CR-INFRA-01 (v1.3):** `preferred_locale` is now additionally validated against **this
+deployment's enabled locale set** (`GET /config/locales`' `enabled` list), not just the full
+6-code superset above — a single-language deployment (`ENABLED_LOCALES` narrowed in server
+`.env`) rejects `preferred_locale` values outside its own offered list with the same
+`UNSUPPORTED_LOCALE` (400), even if the code is one of the 6 supported codes in general.
+**CR-UI-13:** the deployment's default/fallback locale (used when no `DEFAULT_LOCALE` override
+narrows it) is `ru`, not `en` — see the `GET /config/locales` section below.
+
 `dominant_hand` (CR-TEST-04) and `preferred_locale` (CR-UI-02, default unset/`null`) both live here.
 Editing either is a metadata-only change — see CR-TEST-04: results already submitted keep the
 `dominant_hand` value **captured at their own submission time**, never re-derived from the current
 profile.
+
+---
+
+## Deployment configuration (CR-INFRA-01)
+
+Read-only, no auth required — deployment metadata, not user data.
+
+### `GET /config/locales`
+Returns this deployment's enabled locale list and default locale (per-deployment locale
+scoping — `ENABLED_LOCALES`/`DEFAULT_LOCALE`, server `.env`). `client/js/i18n.js` sources its
+locale selector/fallback from this instead of a hardcoded array, so a single-language deployment
+only offers the locale(s) it's configured for.
+
+200: `{ "enabled": [...one or more of the 6 supported codes...], "default": string }`
+`enabled` is never empty — an unset/empty `ENABLED_LOCALES` or one that narrows to nothing valid
+falls back to the full 6-code superset. `default` is always a member of `enabled`; a
+misconfigured `DEFAULT_LOCALE` (not in the enabled set) falls back to `ru` server-side (CR-UI-13/
+D18 — `ru` is the deployment default/fallback, not `en`) rather than being surfaced as an error.
+
+---
+
+## Health check (CR-INFRA-02)
+
+Read-only, no auth required — ops/deployment metadata, not user data. This is the post-deploy
+smoke-check target `.github/workflows/deploy.yml` polls after every deploy; it fails the
+workflow (non-2xx) rather than silently continuing if the deployed API can't reach its database.
+
+### `GET /health`
+Exercises a real DB round-trip (`SELECT 1`), not just "PHP responded" — a missing/misconfigured
+`.env` or unreachable MySQL on the target surfaces here.
+
+200: `{ "status": "ok" }`
+503: `{ "error": { "code": "INTERNAL_ERROR" } }` (DB connection/query failed)
 
 ---
 
@@ -258,9 +299,26 @@ one aggregate figure (CR-STATS-01).
 
 ### `GET /r-tests/{slug}/versions/{version}/history`
 The requesting user's own past results for this exact r-test + version (trend view).
-200: `{ "r_test_id", "r_test_version_id", "entries": [ { "result_id", "created_at", "primary_metric_ms", "summary" }, ... ] }`
+
+Query params (both optional): `limit` (int >= 1), `offset` (int >= 0, default 0). **Default
+behavior (no `limit` given): returns the caller's complete history for this scope — no cap of
+any kind.** This is a safe default because the query is already tightly scoped to one
+authenticated user's own data for one exact r-test/version pair, never an admin-wide or
+cross-user query. Pass `limit` (optionally with `offset`) only if the caller wants to page through
+results instead of receiving them all at once (e.g. `?limit=50&offset=50` for the second page of
+50, ordered newest-first — same order as the unpaged response).
+
+200: `{ "r_test_id", "r_test_version_id", "total": int, "entries": [ { "result_id", "created_at", "primary_metric_ms", "summary" }, ... ] }`
+`total` is the full count of matching results for this scope, regardless of `limit`/`offset` —
+use it to know when paging is complete (`offset + count(entries) >= total`).
 An empty `entries` array (not an error) if the user has no prior results for this exact version.
-Errors: `RTEST_NOT_FOUND` (404), `RTEST_VERSION_NOT_FOUND` (404)
+Errors: `RTEST_NOT_FOUND` (404), `RTEST_VERSION_NOT_FOUND` (404), `VALIDATION_ERROR` (400 — `limit`
+present but not a positive integer, or `offset` present but not a non-negative integer;
+`details.field` names which one)
+
+**Prior to v1.2:** this endpoint silently capped `entries` at 50 with no way to request more and
+no indication in the response that truncation had occurred. That cap is gone — do not assume 50
+is still a ceiling.
 
 ### `GET /results/{id}/comparison`
 Anonymized aggregate comparison for one specific completed run (call right after submit, using its
@@ -351,6 +409,29 @@ ProductOwner should schedule one before any of the above can be wired up for rea
 
 ## Changelog
 
+- v1.4 (2026-09-16) — Sprint 6: CR-INFRA-02 (CI/CD). New endpoint `GET /health` (no auth) —
+  exercises a real DB round-trip, returns `{ "data": { "status": "ok" } }` on success or 503
+  `INTERNAL_ERROR` on DB failure. Used as the deploy workflow's post-deploy smoke-check target.
+  No other endpoint or response shape changed.
+- v1.3 addendum (2026-09-16) — Sprint 6: CR-UI-13 (default/fallback locale `en` → `ru`, D18).
+  Prose-only correction, **no version bump** — the wire shape (`GET /config/locales`'s response
+  shape, `PATCH /profile` validation behavior) is unchanged; only which locale code the
+  fallback/default resolves to changed (`Locale::DEFAULT` constant server-side).
+- v1.3 (2026-09-04) — Sprint 5: CR-INFRA-01 (per-deployment locale scoping). New endpoint
+  `GET /config/locales` (no auth) returning `{ "data": { "enabled": [...], "default": "..." } }`
+  — lets a deployment narrow the locales it offers (`ENABLED_LOCALES`/`DEFAULT_LOCALE`, server
+  `.env`) without a client-side hardcoded list. `PATCH /profile`'s `preferred_locale` validation
+  is narrowed to match: a value outside the deployment's enabled set now returns
+  `UNSUPPORTED_LOCALE` (400) even if it's one of the 6 generally-supported codes. No other
+  endpoint or response shape changed.
+- v1.2 (2026-07-26) — Sprint 4: CR-STATS-04 fix — `GET /r-tests/{slug}/versions/{version}/history`
+  no longer hardcaps results at 50. A user with 125 real results was only ever getting 65 back
+  (50 + 15 across two different r-test/version scopes), silently truncated with no client-visible
+  signal. Default behavior now returns the caller's **complete** history for the scope (safe
+  because it's already a single-user, single-scope query); optional `limit`/`offset` query params
+  let a caller page instead. Response gains a new `total` field (full count for the scope,
+  independent of `limit`/`offset`). New `VALIDATION_ERROR` case if `limit`/`offset` are malformed.
+  No other endpoint or response shape changed.
 - v1.1 (2026-07-25) — Sprint 3: CR-UI-07 fix — `PATCH /profile`'s `preferred_locale` now accepts
   `ru` (6 supported codes total). `server/src/Support/Locale.php::SUPPORTED` had been missing `ru`
   since Sprint 2's CR-UI-06 even though `REQUIREMENTS/SHARED_CONSTANTS.md` already listed it and

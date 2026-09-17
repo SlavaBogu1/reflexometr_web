@@ -1,24 +1,36 @@
 /**
- * Reflexometr — i18n mechanism (CR-UI-02).
+ * Reflexometr — i18n mechanism (CR-UI-02; locale list made deployment-configurable
+ * by CR-INFRA-01).
  *
  * Resolution order (per CR-UI-02 / BACKLOG.md):
  *   1. explicit user selection (Platform Settings, CI-1.1) — persisted in localStorage,
  *      and additionally synced to the profile once logged in (not implemented client-side
  *      this sprint — no login UI landed yet, see SPRINT1_REPORT.md assumptions).
  *   2. browser Accept-Language / navigator.language
- *   3. English fallback — including for any key missing from a non-English locale file,
- *      and for any locale code we don't recognize.
+ *   3. Russian fallback (CR-UI-13/D18, was English) — including for any key missing
+ *      from a non-Russian locale file, and for any locale code we don't recognize.
  *
  * Locale resource files (client/js/locales/*.js) are loaded as plain scripts (not fetch())
  * so this also works when the app is opened directly via file:// (no build step, no server
  * required to view it) — each file registers itself into `Reflx.i18n.locales`.
+ *
+ * CR-INFRA-01 (SI-5.3 / CI-5.5): `SUPPORTED`/`FALLBACK` are no longer hardcoded — every
+ * page calls `loadLocaleConfig()` once at startup (before `init()`), which fetches
+ * `GET /config/locales` (`_API_CONTRACT/CONTRACT.md` v1.3 — `{ "enabled": [...],
+ * "default": "en" }`, standard `{ "data": ... }` envelope) and narrows both arrays to
+ * the deployment's enabled set. The original 6-locale array is kept as
+ * `HARDCODED_DEFAULT` and used as-is if the endpoint is unreachable (network error,
+ * non-2xx, or a malformed body) — the app must degrade to "offer every locale," never
+ * to a broken/empty selector. This also covers the case where the endpoint doesn't
+ * exist yet on an older/un-upgraded deployment.
  */
 (function (global) {
   "use strict";
 
   var Reflx = global.Reflx = global.Reflx || {};
-  var SUPPORTED = ["en", "es", "de", "fr", "zh-Hans", "ru"];
-  var FALLBACK = "en";
+  var HARDCODED_DEFAULT = ["en", "es", "de", "fr", "zh-Hans", "ru"];
+  var SUPPORTED = HARDCODED_DEFAULT.slice();
+  var FALLBACK = "ru"; // CR-UI-13/D18: ru is now the default/fallback locale (was "en").
 
   var locales = {}; // populated by js/locales/*.js via registerLocale()
   var current = null;
@@ -27,12 +39,54 @@
     locales[code] = dict;
   }
 
+  /**
+   * Fetch the deployment's enabled-locale config and narrow SUPPORTED/FALLBACK
+   * in place (so any earlier-captured reference to `Reflx.i18n.SUPPORTED`, e.g.
+   * `client/js/settings-page.js:38`'s selector population, sees the update).
+   * Always resolves (never rejects) — callers can unconditionally chain `.then()`.
+   */
+  function loadLocaleConfig() {
+    return fetch(apiBaseForConfig() + "/config/locales", { headers: { "Accept": "application/json" } })
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function (json) {
+        var data = json && json.data ? json.data : json;
+        var enabled = data && Array.isArray(data.enabled) ? data.enabled.filter(function (c) {
+          return HARDCODED_DEFAULT.indexOf(c) !== -1;
+        }) : [];
+        if (!enabled.length) throw new Error("empty/invalid enabled list");
+        SUPPORTED.length = 0;
+        Array.prototype.push.apply(SUPPORTED, enabled);
+        FALLBACK = (data.default && enabled.indexOf(data.default) !== -1) ? data.default : "en";
+        if (SUPPORTED.indexOf(FALLBACK) === -1) FALLBACK = SUPPORTED[0];
+      })
+      .catch(function () {
+        // Unreachable endpoint, non-2xx, or malformed body: degrade to "offer every
+        // locale" rather than a broken or empty selector (SI-5.3 not landed yet, or
+        // API down on first paint, both hit this path identically). CR-UI-13/D18:
+        // last-resort fallback is "ru" (was "en"), matching Locale::DEFAULT server-side.
+        SUPPORTED.length = 0;
+        Array.prototype.push.apply(SUPPORTED, HARDCODED_DEFAULT);
+        FALLBACK = "ru";
+      });
+  }
+
+  function apiBaseForConfig() {
+    var path = window.location.pathname;
+    if (path.indexOf("/rtest/") !== -1) return "/rtest/api";
+    return "/api";
+  }
+
   function normalizeToSupported(code) {
     if (!code) return null;
     if (SUPPORTED.indexOf(code) !== -1) return code;
     // Try a bare-language match, e.g. "es-MX" -> "es", "zh-CN"/"zh" -> "zh-Hans"
+    // — gated on SUPPORTED so a narrowed deployment (CR-INFRA-01) never resolves to
+    // a locale that isn't actually enabled.
     var lower = code.toLowerCase();
-    if (lower.indexOf("zh") === 0) return "zh-Hans";
+    if (lower.indexOf("zh") === 0 && SUPPORTED.indexOf("zh-Hans") !== -1) return "zh-Hans";
     var bare = lower.split("-")[0];
     var hit = SUPPORTED.filter(function (s) { return s.toLowerCase().split("-")[0] === bare; });
     return hit.length ? hit[0] : null;
@@ -122,8 +176,8 @@
 
   Reflx.i18n = {
     SUPPORTED: SUPPORTED,
-    FALLBACK: FALLBACK,
     registerLocale: registerLocale,
+    loadLocaleConfig: loadLocaleConfig,
     init: init,
     setLocale: setLocale,
     getLocale: getLocale,
@@ -132,4 +186,8 @@
     formatDateTime: formatDateTime,
     applyToDocument: applyToDocument
   };
+  // FALLBACK is reassigned by loadLocaleConfig() (a narrowed deployment default may
+  // differ from "en") — expose it as a live getter rather than a one-time snapshot,
+  // since plain property assignment above would freeze the value at load time.
+  Object.defineProperty(Reflx.i18n, "FALLBACK", { get: function () { return FALLBACK; }, enumerable: true });
 })(window);

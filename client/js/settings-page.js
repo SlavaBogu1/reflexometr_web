@@ -151,10 +151,12 @@
     renderValues();
   }
 
-  Reflx.i18n.init();
-  Reflx.nav.render("settings");
-  renderAll();
-  wire();
+  Reflx.i18n.loadLocaleConfig().then(function () {
+    Reflx.i18n.init();
+    Reflx.nav.render("settings");
+    renderAll();
+    wire();
+  });
   document.addEventListener("reflx:localechange", renderAll);
   document.addEventListener("reflx:sessionchange", renderValues);
 })();
