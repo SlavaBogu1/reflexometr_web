@@ -18,28 +18,41 @@ name: Deploy to WebHostMost (sandbox.bogushevich.ru/rtest)
 #   DEPLOY_SSH_PORT  - optional; only needed if the host uses a non-default SSH port (defaults to
 #                      22 below if the secret is unset)
 #
-# --- Target layout (D16) --------------------------------------------------------------------------
+# --- Target layout (D16, revised 2026-09-17) -------------------------------------------------
 # WebHostMost's addon-domain document root is ~/domains/<domain>/public_html/ , NOT ~/ (confirmed
-# live 2026-09-17 after a first deploy attempt landed in the wrong place — the account home
-# directory is not served). RTEST_PATH below (env, defined per-job) holds that real path.
-#   API    -> $RTEST_PATH/api/  (server/public/'s effective document root, D13 split under /rtest)
-#   Client -> $RTEST_PATH/      (document root; everything except the api/ subdirectory)
+# live after a first deploy attempt landed in the wrong place — the account home directory is
+# not served). RTEST_PATH/APP_PATH below (env, defined per-job) hold the real paths.
 #
-# server/.env is provisioned once manually (D3/MT-05) and holds live DB credentials — it is
-# deliberately excluded from the server sync payload below and is never generated, uploaded, or
-# overwritten by this workflow. Config.php:46-56's real-env-wins precedent means an untouched
-# .env on the target continues to override any bundled defaults.
+# WebHostMost serves $RTEST_PATH/api/ directly (no separate "docroot vs. app root" concept for
+# an addon-domain subdirectory) — it does NOT execute a nested public/index.php the way a local
+# `php -S` dev server or a vhost pointed at server/public/ would. So server/public/'s CONTENTS
+# (index.php, .htaccess) are deployed directly into $RTEST_PATH/api/ (the web-servable root),
+# while everything else (src/, vendor/, database/, storage/, bin/, composer.*) goes into the
+# sibling $APP_PATH — one level up, outside any domain's document root, never web-servable. This
+# preserves the original public/-split's security intent (vendor/src/db files unreachable by
+# direct URL) despite WebHostMost's flatter serving model. The deploy writes app-path.php next to
+# index.php, telling it where to find the real app root (server/public/index.php reads that file
+# if present; otherwise it assumes the local-repo layout, dirname(__DIR__)).
+#   API    -> $RTEST_PATH/api/   (server/public/'s contents — web-servable)
+#            $APP_PATH/          (everything else — NOT web-servable)
+#   Client -> $RTEST_PATH/       (document root; everything except the api/ subdirectory)
+#
+# server/.env is provisioned once manually (D3/MT-05) at $APP_PATH/.env and holds live DB
+# credentials — deliberately excluded from the server sync payload below and never generated,
+# uploaded, or overwritten by this workflow. Config.php's real-env-wins precedent means an
+# untouched .env on the target continues to override any bundled defaults.
 #
 # --- Sync method note (2026-09-17) ------------------------------------------------------------
 # rsync is NOT available on the target (confirmed live: `which rsync` finds nothing in this
 # cPanel account's PATH — common on shared hosting, no package-install access). Uses
 # appleboy/ssh-action to clean stale files via an explicit remote `rm -rf` scoped to known
-# subdirectories (never the whole $RTEST_PATH or $RTEST_PATH/api root — .env must survive), then
+# subdirectories (never the whole $RTEST_PATH or $APP_PATH root — .env must survive), then
 # appleboy/scp-action to copy the new files over. No --delete-style "remove anything not in the
 # source" guarantee like rsync had — cleanup here is an explicit, named list, not automatic.
 
 env:
   RTEST_PATH: domains/sandbox.bogushevich.ru/public_html/rtest
+  APP_PATH: domains/sandbox.bogushevich.ru/rtest-app
 
 on:
   push:
@@ -81,11 +94,13 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
           script: |
-            mkdir -p ~/${{ env.RTEST_PATH }}/api
+            mkdir -p ~/${{ env.RTEST_PATH }}/api ~/${{ env.APP_PATH }}
             cd ~/${{ env.RTEST_PATH }}/api || exit 1
+            rm -f index.php app-path.php
+            cd ~/${{ env.APP_PATH }} || exit 1
             rm -rf bin composer.json composer.lock database phpunit.xml public src storage vendor
 
-      - name: Deploy server/ to the API path
+      - name: Deploy server/ to the non-servable app path
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_SSH_HOST }}
@@ -93,12 +108,11 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
           source: "server"
-          target: "~/${{ env.RTEST_PATH }}/api"
+          target: "~/${{ env.APP_PATH }}"
           strip_components: 1
           overwrite: true
 
-      - name: Remove non-deployable paths from the target (tests/, docs — never .env, which was
-          never in the source and can't have been copied)
+      - name: Move public/'s contents to the web-servable API path; clean up + write app-path.php
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEPLOY_SSH_HOST }}
@@ -106,8 +120,10 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
           script: |
-            cd ~/${{ env.RTEST_PATH }}/api || exit 1
-            rm -rf tests CLAUDE.md TASKS.md requirements
+            cd ~/${{ env.APP_PATH }} || exit 1
+            cp -a public/. ~/${{ env.RTEST_PATH }}/api/
+            rm -rf tests CLAUDE.md TASKS.md requirements public
+            echo "<?php return '$(pwd)';" > ~/${{ env.RTEST_PATH }}/api/app-path.php
 
       - name: Post-deploy health check
         run: |

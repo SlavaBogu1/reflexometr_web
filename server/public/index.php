@@ -2,7 +2,17 @@
 
 declare(strict_types=1);
 
-require dirname(__DIR__) . '/vendor/autoload.php';
+// In this repo, public/'s sibling is the rest of server/ (dirname(__DIR__)/vendor) — that's the
+// default. Some hosts (e.g. WebHostMost, see .github/workflows/deploy.yml) can't serve a nested
+// public/index.php directly and instead deploy public/'s contents to the web root with
+// everything else (vendor/, src/, database/, ...) in a separate, non-servable location — in that
+// case the deploy step also writes app-path.php next to this file, defining the real app root.
+$appRoot = dirname(__DIR__);
+$appPathOverride = __DIR__ . '/app-path.php';
+if (is_file($appPathOverride)) {
+    $appRoot = require $appPathOverride;
+}
+require $appRoot . '/vendor/autoload.php';
 
 use Reflexometr\Config;
 use Reflexometr\Http\ErrorCode;
