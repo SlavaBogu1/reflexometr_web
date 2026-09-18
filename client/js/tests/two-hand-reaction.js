@@ -69,19 +69,12 @@
         // after the stimulus had already fired — no listener existed yet to hear an
         // early press at all).
         stopWatchers();
-        // TEMP DEBUG (false-start investigation, remove before merge)
-        console.log("[Reflx-debug] armTrial: watchers registering", {
-          leftHandKey: settings.leftHandKey, rightHandKey: settings.rightHandKey,
-          trialIndex: trials.length, t: performance.now()
-        });
         watchers.push(Reflx.inputCapture.watch({ type: "keyboard", code: settings.leftHandKey }, function (at) { onHand("left", at); }));
         watchers.push(Reflx.inputCapture.watch({ type: "keyboard", code: settings.rightHandKey }, function (at) { onHand("right", at); }));
 
         armTimer = setTimeout(function () {
           if (stopped) return;
           stimulusAt = performance.now();
-          // TEMP DEBUG (false-start investigation, remove before merge)
-          console.log("[Reflx-debug] stimulus onset (armTimer fired)", { stimulusAt: stimulusAt, delay: delay });
           orbEl.className = "orb go"; // CR-TEST-07: change stimulus color on stimulus onset
           statusEl.textContent = t("test.simple.go");
 
@@ -95,11 +88,6 @@
       }
 
       function onHand(hand, at) {
-        // TEMP DEBUG (false-start investigation, remove before merge)
-        console.log("[Reflx-debug] onHand fired", {
-          hand: hand, at: at, stopped: stopped, stimulusAt: stimulusAt,
-          isFalseStart: stimulusAt === null
-        });
         if (stopped) return;
         if (stimulusAt === null) {
           // CR-TEST-19: false start — either hand fired before the stimulus. Void
