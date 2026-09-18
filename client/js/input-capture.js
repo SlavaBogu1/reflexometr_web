@@ -19,6 +19,12 @@
 
     if (spec.type === "keyboard") {
       var onKey = function (e) {
+        // TEMP DEBUG (false-start investigation, remove before merge): log every
+        // keydown this watcher observes, matched or not, with active/code state.
+        console.log("[Reflx-debug] keydown observed", {
+          eCode: e.code, watchedCode: spec.code, active: active,
+          matched: active && e.code === spec.code, t: performance.now()
+        });
         if (!active || e.code !== spec.code) return;
         e.preventDefault();
         onFire(performance.now());
