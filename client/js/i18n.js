@@ -57,10 +57,18 @@
           return HARDCODED_DEFAULT.indexOf(c) !== -1;
         }) : [];
         if (!enabled.length) throw new Error("empty/invalid enabled list");
+        // CR-INFRA-05/D20: the server is the sole authority on what the default is —
+        // its contract guarantees `default` is always a member of `enabled`
+        // (server/src/Support/Locale.php), so the client has no fallback *policy*
+        // of its own here. If that guarantee is ever violated, treat it as the same
+        // kind of malformed response the outer .catch() already handles, rather
+        // than silently inventing a second recovery value inline.
+        if (!data.default || enabled.indexOf(data.default) === -1) {
+          throw new Error("server default is not a member of its own enabled list");
+        }
         SUPPORTED.length = 0;
         Array.prototype.push.apply(SUPPORTED, enabled);
-        FALLBACK = (data.default && enabled.indexOf(data.default) !== -1) ? data.default : "en";
-        if (SUPPORTED.indexOf(FALLBACK) === -1) FALLBACK = SUPPORTED[0];
+        FALLBACK = data.default;
       })
       .catch(function () {
         // Unreachable endpoint, non-2xx, or malformed body: degrade to "offer every

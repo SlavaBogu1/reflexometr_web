@@ -179,6 +179,13 @@ jobs:
             cd ~/${{ env.RTEST_PATH }} || exit 1
             find . -maxdepth 1 -mindepth 1 ! -name 'api' -exec rm -rf {} +
 
+      - name: Write build-info.json (CR-INFRA-06 — footer build label, never hand-typed)
+        run: |
+          sha=$(echo "${{ github.sha }}" | cut -c1-7)
+          date=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          printf '{"sha": "%s", "date": "%s"}\n' "$sha" "$date" > client/build-info.json
+          cat client/build-info.json
+
       - name: Deploy client/ to the document root
         uses: appleboy/scp-action@v0.1.7
         with:

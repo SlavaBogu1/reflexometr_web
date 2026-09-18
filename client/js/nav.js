@@ -43,7 +43,11 @@
     wrap.appendChild(trigger);
     wrap.appendChild(submenu);
 
-    // Desktop hover-to-open.
+    // Desktop hover-to-open. CR-UI-18: the hit-box is contiguous from trigger
+    // through to the panel (style.css's `.has-submenu` padding-bottom), so a
+    // normal trigger-to-panel mouse path never crosses a dead zone and
+    // `mouseleave` only fires once the cursor has genuinely left the combined
+    // trigger+panel area.
     wrap.addEventListener("mouseenter", function () { wrap.classList.add("open"); });
     wrap.addEventListener("mouseleave", function () { wrap.classList.remove("open"); });
     // Tap-outside-to-close (mobile/click mode, where "open" was toggled via click).

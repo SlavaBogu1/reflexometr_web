@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings — CR mockup (merged Profile + Language)</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="container">
+    <h1>Settings</h1>
+    <p class="notice info">Changes apply only on this browser/device, except your language, which also syncs to your profile after login. No account required.</p>
+
+    <div class="card">
+      <h2>Input devices</h2>
+      <div class="field-row">
+        <div>
+          <label>Keyboard key</label>
+          <div class="field-desc">Used for tests with a single input (e.g. Simple Visual Reaction Time).</div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <span class="chip">Space</span>
+          <button class="btn secondary">Change</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div>
+          <label>Gamepad button</label>
+          <div class="field-desc">Used if a gamepad is connected during a test.</div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <span class="chip">Button 0 (A / Cross)</span>
+          <button class="btn secondary">Change</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div>
+          <label>Mouse</label>
+          <div class="field-desc">Locked to left-click — not reassignable at this stage.</div>
+        </div>
+        <span class="chip">Left-click (fixed)</span>
+      </div>
+      <div class="field-row">
+        <div>
+          <label>Pre-start countdown (seconds)</label>
+          <div class="field-desc">How long to wait after "Start test" before the first trial begins. Set to 0 to disable.</div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <input type="number" min="0" max="10" value="3" style="width:4.5rem;">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Two-hand mapping</h2>
+      <div class="field-row">
+        <label>Left-hand key</label>
+        <div class="btn-row" style="margin-top:0;">
+          <span class="chip">A</span>
+          <button class="btn secondary">Change</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <label>Right-hand key</label>
+        <div class="btn-row" style="margin-top:0;">
+          <span class="chip">L</span>
+          <button class="btn secondary">Change</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MERGED — was two separate cards ("Profile" with Dominant hand + a login-note
+         notice box, and "Language" with the Language selector). Now: one card, a
+         section-level sub-heading carries the sync-status note (was a notice box
+         inside the old Profile card), two field-rows below it (Dominant hand,
+         Language) — no per-field "Language" label repeated since the card title
+         + sub-heading already establish context, matching the pattern the
+         "Two-hand mapping" card above uses (per-row plain <label>, no repeated
+         section-name label). -->
+    <div class="card">
+      <h2>Profile</h2>
+      <p class="field-desc" style="margin-top:-0.5rem; margin-bottom:1rem;">Synced to your account — carries over to any device once you're logged in.</p>
+
+      <div class="field-row">
+        <div>
+          <label>Dominant hand</label>
+          <div class="field-desc">Used to interpret two-hand test results. Self-reported, editable any time.</div>
+        </div>
+        <select>
+          <option>Right</option>
+        </select>
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label>Language</label>
+          <div class="field-desc">Applies immediately, site-wide.</div>
+        </div>
+        <select>
+          <option>English</option>
+        </select>
+      </div>
+    </div>
+    <!-- END MERGED -->
+
+    <div class="btn-row">
+      <button class="btn secondary">Reset to defaults</button>
+    </div>
+  </main>
+</body>
+</html>

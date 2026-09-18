@@ -97,9 +97,11 @@ only offers the locale(s) it's configured for.
 
 200: `{ "enabled": [...one or more of the 6 supported codes...], "default": string }`
 `enabled` is never empty — an unset/empty `ENABLED_LOCALES` or one that narrows to nothing valid
-falls back to the full 6-code superset. `default` is always a member of `enabled`; a
-misconfigured `DEFAULT_LOCALE` (not in the enabled set) falls back to `ru` server-side (CR-UI-13/
-D18 — `ru` is the deployment default/fallback, not `en`) rather than being surfaced as an error.
+falls back to the full 6-code superset. `default` is always a member of `enabled` (CR-INFRA-05):
+the deployment's configured `DEFAULT_LOCALE` if it's a member of `enabled`, otherwise the
+compiled-in default `ru` (CR-UI-13/D18) if *it's* a member of `enabled`, otherwise `enabled[0]` —
+whether `DEFAULT_LOCALE` is unset or explicitly set to an invalid value, an out-of-set default
+never crashes the request or is surfaced as an error, and never resolves outside `enabled`.
 
 ---
 

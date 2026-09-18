@@ -5,6 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title data-i18n="settings.title">Settings</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* CR-UI-20: per-device-type group icons within the merged "Input devices" card. */
+    .device-icon {
+      width: 1.4rem; height: 1.4rem; flex: none;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--color-text-dim);
+    }
+    .device-icon svg { width: 100%; height: 100%; }
+    .device-group-heading { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+    .device-group-heading:not(:first-child) { margin-top: 1.25rem; }
+    .device-group-heading h3 { margin: 0; font-size: 1rem; }
+    .device-subitem { padding-left: 2.15rem; }
+  </style>
 </head>
 <body>
   <div id="site-nav"></div>
@@ -13,12 +26,27 @@
     <h1 data-i18n="settings.title">Settings</h1>
     <p class="notice info" data-i18n="settings.intro"></p>
 
+    <!-- CR-UI-20: "Two-hand mapping" merged into "Input devices"; icon-led groups
+         (Keyboard/Gamepad/Mouse), Keyboard group holds all 3 keyboard-related
+         bindings together. Layout approved: prototype-settings-devices-merge.html. -->
     <div class="card">
       <h2 data-i18n="settings.section.devices">Input devices</h2>
 
-      <div class="field-row">
+      <div class="device-group-heading">
+        <div class="device-icon" title="Keyboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="5" width="20" height="14" rx="2"/>
+            <path d="M5 9h1.4M8.3 9h1.4M11.6 9h1.4M14.9 9h1.4M18.2 9h1.4
+                     M5 12h1.4M8.3 12h1.4M11.6 12h1.4M14.9 12h1.4M18.2 12h1.4
+                     M7 15.5h10"/>
+          </svg>
+        </div>
+        <h3 data-i18n="settings.group.keyboard">Keyboard</h3>
+      </div>
+
+      <div class="field-row device-subitem">
         <div>
-          <label data-i18n="settings.keyboard.label">Keyboard key</label>
+          <label data-i18n="settings.keyboard.label">Single-key (one-hand tests)</label>
           <div class="field-desc" data-i18n="settings.keyboard.desc"></div>
         </div>
         <div class="btn-row" style="margin-top:0;">
@@ -27,7 +55,41 @@
         </div>
       </div>
 
-      <div class="field-row">
+      <div class="field-row device-subitem">
+        <div>
+          <label data-i18n="settings.lefthand.label">Left-hand key</label>
+          <div class="field-desc" data-i18n="settings.lefthand.desc"></div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <span id="lefthand-value" class="chip"></span>
+          <button class="btn secondary" id="btn-rebind-left" data-i18n="common.change">Change</button>
+        </div>
+      </div>
+
+      <div class="field-row device-subitem">
+        <div>
+          <label data-i18n="settings.righthand.label">Right-hand key</label>
+          <div class="field-desc" data-i18n="settings.righthand.desc"></div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <span id="righthand-value" class="chip"></span>
+          <button class="btn secondary" id="btn-rebind-right" data-i18n="common.change">Change</button>
+        </div>
+      </div>
+
+      <div class="device-group-heading">
+        <div class="device-icon" title="Gamepad">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M6 9h12l2 7a2 2 0 0 1-3.4 1.4L14 15h-4l-2.6 2.4A2 2 0 0 1 4 16z"/>
+            <path d="M8 11v3M6.5 12.5h3"/>
+            <circle cx="16" cy="11" r="0.8" fill="currentColor"/>
+            <circle cx="18" cy="13" r="0.8" fill="currentColor"/>
+          </svg>
+        </div>
+        <h3 data-i18n="settings.group.gamepad">Gamepad</h3>
+      </div>
+
+      <div class="field-row device-subitem">
         <div>
           <label data-i18n="settings.gamepad.label">Gamepad button</label>
           <div class="field-desc" data-i18n="settings.gamepad.desc"></div>
@@ -38,7 +100,17 @@
         </div>
       </div>
 
-      <div class="field-row">
+      <div class="device-group-heading">
+        <div class="device-icon" title="Mouse">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="7" y="3" width="10" height="18" rx="5"/>
+            <path d="M12 3v6"/>
+          </svg>
+        </div>
+        <h3 data-i18n="settings.group.mouse">Mouse</h3>
+      </div>
+
+      <div class="field-row device-subitem">
         <div>
           <label data-i18n="settings.mouse.label">Mouse</label>
           <div class="field-desc" data-i18n="settings.mouse.desc"></div>
@@ -48,7 +120,7 @@
 
       <!-- CR-UI-16: pre-start countdown field — same field-row pattern as the rows
            above, a number input instead of chip+button since there is no "rebind"
-           action, just a value. Layout approved: prototype-settings-countdown.html. -->
+           action, just a value. Ungrouped (not device-specific). -->
       <div class="field-row">
         <div>
           <label data-i18n="settings.countdown.label">Pre-start countdown (seconds)</label>
@@ -60,26 +132,13 @@
       </div>
     </div>
 
-    <div class="card">
-      <h2 data-i18n="settings.section.twohand">Two-hand mapping</h2>
-      <div class="field-row">
-        <label data-i18n="settings.lefthand.label">Left-hand key</label>
-        <div class="btn-row" style="margin-top:0;">
-          <span id="lefthand-value" class="chip"></span>
-          <button class="btn secondary" id="btn-rebind-left" data-i18n="common.change">Change</button>
-        </div>
-      </div>
-      <div class="field-row">
-        <label data-i18n="settings.righthand.label">Right-hand key</label>
-        <div class="btn-row" style="margin-top:0;">
-          <span id="righthand-value" class="chip"></span>
-          <button class="btn secondary" id="btn-rebind-right" data-i18n="common.change">Change</button>
-        </div>
-      </div>
-    </div>
-
+    <!-- CR-UI-19: "Language" merged into "Profile"; sync-status note moved to a
+         plain sub-heading line under the title (was a bordered notice box).
+         Layout approved: prototype-settings-profile-merge.html. -->
     <div class="card">
       <h2 data-i18n="settings.section.profile">Profile</h2>
+      <p class="field-desc" id="login-note" data-i18n="settings.login_note" style="margin-top:-0.5rem; margin-bottom:1rem;"></p>
+
       <div class="field-row">
         <div>
           <label data-i18n="settings.dominant.label">Dominant hand</label>
@@ -92,11 +151,7 @@
           <option value="none-recorded" data-i18n="settings.dominant.none">No preference</option>
         </select>
       </div>
-      <p class="notice warn" id="login-note" data-i18n="settings.login_note"></p>
-    </div>
 
-    <div class="card">
-      <h2 data-i18n="settings.section.language">Language</h2>
       <div class="field-row">
         <div>
           <label data-i18n="settings.language.label">Language</label>

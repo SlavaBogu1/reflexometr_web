@@ -47,12 +47,16 @@ final class LocaleConfigTest extends TestCase
         self::assertSame('es', Locale::default());
     }
 
-    /** A DEFAULT_LOCALE outside the enabled set falls back to `ru` rather than crashing. */
-    public function testDefaultLocaleOutsideEnabledSetFallsBackToRu(): void
+    /** CR-INFRA-05 regression guard: a DEFAULT_LOCALE outside the enabled set — where the
+     *  compiled-in default (`ru`) is *also* outside the enabled set — falls back to `enabled()[0]`
+     *  rather than crashing or returning a value outside `enabled` (asserted via membership, not a
+     *  hardcoded literal, since neither `ru` nor any other specific code is guaranteed here). */
+    public function testDefaultLocaleOutsideEnabledSetFallsBackToAMember(): void
     {
         Config::set('ENABLED_LOCALES', 'es,fr');
         Config::set('DEFAULT_LOCALE', 'de');
-        self::assertSame('ru', Locale::default());
+        self::assertContains(Locale::default(), Locale::enabled());
+        self::assertSame('es', Locale::default());
     }
 
     /** An ENABLED_LOCALES value containing only unrecognized codes must never resolve to zero

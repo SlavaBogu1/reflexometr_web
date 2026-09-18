@@ -125,12 +125,11 @@
 
   /**
    * CR-UI-15: short "what triggers a response" copy per r-test, shown in the Test
-   * page's persistent header alongside the Objective (which reuses the existing
-   * `{prefix}.description` key wholesale, per the CR text — description text
-   * itself already includes both objective and stimulus context, but the header's
-   * condensed 3-bullet format wants a separate one-line Stimulus statement, so
-   * that specific sub-detail is authored fresh here per test rather than
-   * duplicating the whole description key).
+   * page's persistent header alongside the Objective. CR-UI-22 follow-up: the
+   * Objective bullet originally reused `{prefix}.description` wholesale; it now
+   * uses its own condensed `{prefix}.header_objective` key instead (see
+   * renderTestHeader() below) so the header can be shortened without also
+   * changing the Description page's fuller original wording.
    */
   /** Builds the Input-devices bullet's channel list from the user's actual current bindings (Reflx.settings.get()) — never hardcoded. */
   function deviceHintFor(testSlug, settings) {
@@ -138,10 +137,49 @@
     return t(hint.key, hint.params);
   }
 
+  /**
+   * CR-UI-22: the Stimulus bullet's locale string carries `{green}`/`{red}`
+   * placeholder tokens (not literal English words) so this works correctly
+   * regardless of a locale's own word order/inflection — each token is
+   * replaced with a small color-swatch (matching the real orb's
+   * `--stimulus-green`/`--stimulus-red` custom properties, so it can never
+   * drift from the actual on-screen stimulus color) immediately followed by
+   * that locale's own translated color word. The whole string is always a
+   * trusted i18n locale-file value, never user input, so building DOM nodes
+   * from it here introduces no XSS surface — same trust boundary the rest of
+   * the app's i18n-driven content already relies on.
+   */
+  var STIMULUS_SWATCH = {
+    green: { color: "var(--stimulus-green)", word: function () { return t("test.color.green"); } },
+    red: { color: "var(--stimulus-red)", word: function () { return t("test.color.red"); } }
+  };
+
+  function renderStimulusBullet(key) {
+    var el = document.getElementById("test-header-stimulus");
+    el.innerHTML = "";
+    // Splitting on the token regex yields alternating [text, token, text, token, ..., text] —
+    // odd indices are always the captured token name (green/red), so no manual match/lastIndex
+    // bookkeeping is needed.
+    var parts = t(key).split(/\{(green|red)\}/);
+    parts.forEach(function (part, i) {
+      if (i % 2 === 0) {
+        if (part) el.appendChild(document.createTextNode(part));
+        return;
+      }
+      var swatch = STIMULUS_SWATCH[part];
+      el.appendChild(Reflx.util.el("span", { class: "color-swatch", style: "background:" + swatch.color + ";" }));
+      el.appendChild(document.createTextNode(swatch.word()));
+    });
+  }
+
   function renderTestHeader(settings) {
     if (!meta) return;
-    document.getElementById("test-header-objective").textContent = t(meta.prefix + ".description");
-    document.getElementById("test-header-stimulus").textContent = t(meta.headerStimulusKey);
+    // CR-UI-22: the header's Objective now uses its own condensed key (kept
+    // separate from `{prefix}.description`, which the Description page still
+    // uses verbatim) so shortening the header copy doesn't also change the
+    // Description page's fuller wording.
+    document.getElementById("test-header-objective").textContent = t(meta.prefix + ".header_objective");
+    renderStimulusBullet(meta.headerStimulusKey);
     document.getElementById("test-header-devices").textContent = deviceHintFor(slug, settings || Reflx.settings.get());
   }
 
@@ -204,7 +242,6 @@
       var settings = Reflx.settings.get();
       showPage("page-test");
       renderTestHeader(settings);
-      document.getElementById("trial-progress").textContent = t("runner.test.trial_of", { n: 0, total: run.schedule.trial_count });
       document.getElementById("stage-status").textContent = "";
 
       runCountdown(settings.countdownSeconds, function () {
@@ -214,8 +251,13 @@
           schedule: run.schedule,
           settings: settings
         }, {
+          // CR-UI-21: #trial-progress now lives inside the test module's own
+          // stage markup (built fresh by start(), above) rather than static
+          // runner.html markup — look it up fresh each call rather than
+          // capturing a stale reference from before the module built its DOM.
           onProgress: function (done, total) {
-            document.getElementById("trial-progress").textContent = t("runner.test.trial_of", { n: Math.min(done + 1, total), total: total });
+            var el = document.getElementById("trial-progress");
+            if (el) el.textContent = t("runner.test.trial_of", { n: Math.min(done + 1, total), total: total });
           },
           onFalseStart: function () { runState.falseStartsThisRun++; },
           onDone: function (trials) { finishRun(trials); }

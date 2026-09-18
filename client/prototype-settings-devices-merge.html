@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings — CR mockup (merged Input devices + Two-hand mapping, with icons)</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .device-icon {
+      width: 1.4rem; height: 1.4rem; flex: none;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--color-text-dim);
+    }
+    .device-icon svg { width: 100%; height: 100%; }
+    .field-row.with-icon { align-items: flex-start; gap: 0.75rem; }
+    .field-row.with-icon > .device-icon { margin-top: 0.15rem; }
+    .device-group-heading { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+    .device-group-heading .device-icon { width: 1.4rem; height: 1.4rem; }
+    .device-group-heading h3 { margin: 0; font-size: 1rem; }
+    .device-subitem { padding-left: 2.15rem; }
+  </style>
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="container">
+    <h1>Settings</h1>
+    <p class="notice info">Changes apply only on this browser/device, except your language, which also syncs to your profile after login. No account required.</p>
+
+    <!-- MERGED — "Two-hand mapping" folded into "Input devices"; icons added per
+         device type; keyboard (one-hand) row sits directly above the two-hand
+         key rows so all keyboard-related bindings are grouped together. -->
+    <div class="card">
+      <h2>Input devices</h2>
+
+      <div class="device-group-heading">
+        <div class="device-icon" title="Keyboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="5" width="20" height="14" rx="2"/>
+            <path d="M5 9h1.4M8.3 9h1.4M11.6 9h1.4M14.9 9h1.4M18.2 9h1.4
+                     M5 12h1.4M8.3 12h1.4M11.6 12h1.4M14.9 12h1.4M18.2 12h1.4
+                     M7 15.5h10"/>
+          </svg>
+        </div>
+        <h3>Keyboard</h3>
+      </div>
+
+      <div class="field-row device-subitem">
+        <div>
+          <label>Single-key (one-hand tests)</label>
+          <div class="field-desc">Used for tests with a single input (e.g. Simple Visual Reaction Time).</div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <span class="chip">Space</span>
+          <button class="btn secondary">Change</button>
+        </div>
+      </div>
+
+      <div class="field-row device-subitem">
+        <div>
+          <label>Left-hand key</label>
+          <div class="field-desc">Used for Two-Hand Reaction Time.</div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <span class="chip">A</span>
+          <button class="btn secondary">Change</button>
+        </div>
+      </div>
+
+      <div class="field-row device-subitem">
+        <div>
+          <label>Right-hand key</label>
+          <div class="field-desc">Used for Two-Hand Reaction Time.</div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <span class="chip">L</span>
+          <button class="btn secondary">Change</button>
+        </div>
+      </div>
+
+      <div class="device-group-heading">
+        <div class="device-icon" title="Gamepad">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 9h12l2 7a2 2 0 0 1-3.4 1.4L14 15h-4l-2.6 2.4A2 2 0 0 1 4 16z"/><path d="M8 11v3M6.5 12.5h3"/><circle cx="16" cy="11" r="0.8" fill="currentColor"/><circle cx="18" cy="13" r="0.8" fill="currentColor"/></svg>
+        </div>
+        <h3>Gamepad</h3>
+      </div>
+      <div class="field-row device-subitem">
+        <div>
+          <label>Button</label>
+          <div class="field-desc">Used if a gamepad is connected during a test.</div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <span class="chip">Button 0 (A / Cross)</span>
+          <button class="btn secondary">Change</button>
+        </div>
+      </div>
+
+      <div class="device-group-heading">
+        <div class="device-icon" title="Mouse">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 3v6"/></svg>
+        </div>
+        <h3>Mouse</h3>
+      </div>
+      <div class="field-row device-subitem">
+        <div>
+          <label>Click</label>
+          <div class="field-desc">Locked to left-click — not reassignable at this stage.</div>
+        </div>
+        <span class="chip">Left-click (fixed)</span>
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label>Pre-start countdown (seconds)</label>
+          <div class="field-desc">How long to wait after "Start test" before the first trial begins. Set to 0 to disable.</div>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <input type="number" min="0" max="10" value="3" style="width:4.5rem;">
+        </div>
+      </div>
+    </div>
+    <!-- END MERGED -->
+
+    <div class="card">
+      <h2>Profile</h2>
+      <p class="field-desc" style="margin-top:-0.5rem; margin-bottom:1rem;">Synced to your account — carries over to any device once you're logged in.</p>
+      <div class="field-row">
+        <div>
+          <label>Dominant hand</label>
+          <div class="field-desc">Used to interpret two-hand test results. Self-reported, editable any time.</div>
+        </div>
+        <select><option>Right</option></select>
+      </div>
+      <div class="field-row">
+        <div>
+          <label>Language</label>
+          <div class="field-desc">Applies immediately, site-wide.</div>
+        </div>
+        <select><option>English</option></select>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn secondary">Reset to defaults</button>
+    </div>
+  </main>
+</body>
+</html>

@@ -38,7 +38,13 @@
       var stimulusAt = null;
       var watchers = [];
 
-      var orb = Reflx.util.el("div", { class: "stimulus-stage" }, [Reflx.util.el("div", { class: "orb idle" })]);
+      // CR-UI-21: trial counter now renders inside the stage box (first child,
+      // centered above the circle via .stimulus-stage's own flex layout) rather
+      // than living in static runner.html markup outside it.
+      var orb = Reflx.util.el("div", { class: "stimulus-stage" }, [
+        Reflx.util.el("span", { id: "trial-progress", class: "field-desc" }),
+        Reflx.util.el("div", { class: "orb idle" })
+      ]);
       container.innerHTML = "";
       container.appendChild(orb);
       var orbEl = orb.querySelector(".orb");
@@ -75,12 +81,18 @@
       function onInput(at) {
         if (stopped) return;
         if (stimulusAt === null) {
-          // False start — before the color change.
+          // CR-TEST-20: false start — before the color change. Visible feedback
+          // (yellow orb + the status text) stays on screen for a brief pause
+          // before re-arming, instead of being instantly overwritten by the next
+          // trial's "get ready" state (mirrors the existing legitimate-completed-
+          // trial pause pattern below). No change to the detection/discard logic
+          // itself (CR-TEST-19, already correct) — only the feedback around it.
           clearTimeout(armTimer);
           stopWatchers();
+          orbEl.className = "orb false-start";
           statusEl.textContent = t("runner.test.false_start");
           handlers.onFalseStart();
-          armTrial();
+          setTimeout(armTrial, 500);
           return;
         }
         stopWatchers();

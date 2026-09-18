@@ -179,7 +179,7 @@
 
   <a class="back-link" href="index.html" data-i18n="back_to_home">&larr; Back to home</a>
 
-  <footer class="site-footer">Reflexometr — Sprint 5 build</footer>
+  <footer class="site-footer"></footer>
 
   <script src="js/util.js"></script>
   <script src="js/i18n.js"></script>
@@ -193,6 +193,7 @@
   <script src="js/session.js"></script>
   <script src="js/api.js"></script>
   <script src="js/nav.js"></script>
+  <script src="js/build-info.js"></script>
   <script>
     // Path-detail content, keyed to match the browse list's onclick(id) calls.
     // Not wired to a real path-runner backend (CR-TEST-15/16/17 unscheduled) — "View path"
@@ -212,7 +213,16 @@
     };
     var FOR_KEY = { mp1: "paths.mp1.for", mp2: "paths.mp2.for", mp3: "paths.mp3.for", mp4: "paths.mp4.for", mp5: "paths.mp5.for", mp6: "paths.mp6.for", mp7: "paths.mp7.for", mp8: "paths.mp8.for", mp9: "paths.mp9.for", mp10: "paths.mp10.for" };
 
+    // CR-INFRA-05 locale-change propagation audit: showDetail()'s content is
+    // built imperatively via t() at click-time, not via data-i18n attributes,
+    // so applyToDocument() alone (called by the reflx:localechange listener
+    // below) never re-renders it — a user on the detail page who switches
+    // locale in another tab/Settings would see stale text. Track which detail
+    // is currently shown and re-run showDetail() for it on locale change.
+    var currentDetailId = null;
+
     function showDetail(id) {
+      currentDetailId = id;
       var t = Reflx.i18n.t;
       var d = PATH_DETAIL[id];
       document.getElementById("detail-title").textContent = t(d.title);
@@ -230,6 +240,7 @@
       window.scrollTo(0, 0);
     }
     function showBrowse() {
+      currentDetailId = null;
       document.querySelectorAll(".page").forEach(function (p) { p.classList.remove("active"); });
       document.getElementById("page-browse").classList.add("active");
       window.scrollTo(0, 0);
@@ -253,7 +264,12 @@
       Reflx.nav.render("paths");
       Reflx.i18n.applyToDocument();
     });
-    document.addEventListener("reflx:localechange", function () { Reflx.i18n.applyToDocument(); });
+    document.addEventListener("reflx:localechange", function () {
+      Reflx.i18n.applyToDocument();
+      // CR-INFRA-05: re-render the imperatively-built detail content too, if
+      // a path detail is currently the active page (see showDetail() above).
+      if (currentDetailId) showDetail(currentDetailId);
+    });
   </script>
 </body>
 </html>

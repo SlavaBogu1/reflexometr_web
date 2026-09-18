@@ -33,7 +33,13 @@
       var leftAt = null, rightAt = null;
       var watchers = [];
 
+      // CR-UI-21: trial counter now renders inside the stage box (centered above
+      // the shared orb via .two-hand-stage's absolute-positioned #trial-progress
+      // rule in style.css) rather than living in static runner.html markup
+      // outside it. Inserted first so it doesn't interfere with the hand-zones'
+      // own flex order.
       var stage = Reflx.util.el("div", { class: "two-hand-stage" }, [
+        Reflx.util.el("span", { id: "trial-progress", class: "field-desc" }),
         Reflx.util.el("div", { class: "hand-zone", id: "hand-left" }, [t("test.twohand.left_status")]),
         Reflx.util.el("div", { class: "hand-zone", id: "hand-right" }, [t("test.twohand.right_status")])
       ]);
@@ -95,11 +101,20 @@
           // the arm timer, stop watchers, report it, and re-arm to consume the
           // schedule's next spare buffer_trials entry — identical recovery flow to
           // simple-reaction.js's onInput() false-start branch.
+          // CR-TEST-20: add visible feedback (yellow orb, brief pause) around this
+          // already-correct decision point — no change to detection/discard logic.
+          // Verified: a false start is only reachable here while stimulusAt is
+          // still null, i.e. before either hand can register a legitimate "hit"
+          // this trial (that only happens once stimulusAt is set below in
+          // armTrial()'s setTimeout) — so leftZone/rightZone are always still in
+          // their armTrial()-reset waiting state already; no stale "hit" styling
+          // to clear.
           clearTimeout(armTimer);
           stopWatchers();
+          orbEl.className = "orb false-start";
           statusEl.textContent = t("runner.test.false_start");
           handlers.onFalseStart();
-          armTrial();
+          setTimeout(armTrial, 500);
           return;
         }
         if (hand === "left" && leftAt === null) { leftAt = at; leftZone.textContent = t("test.twohand.hit_hand"); leftZone.className = "hand-zone hit"; }

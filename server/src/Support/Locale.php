@@ -47,13 +47,13 @@ final class Locale
     }
 
     /**
-     * The deployment's default locale: `DEFAULT_LOCALE`, falling back to `ru` (CR-UI-13/D18). If
-     * `DEFAULT_LOCALE` is unset and the compiled-in default isn't a member of `enabled()` (e.g. a
-     * narrowed `ENABLED_LOCALES` that excludes it), falls back to `enabled()[0]` and logs a
-     * warning instead of returning a value outside the enabled set (CR-INFRA-03). If
-     * `DEFAULT_LOCALE` is explicitly set but not a member of `enabled()`, falls back to `ru`
-     * unconditionally (CR-INFRA-01 AC4 — accepted behavior, not touched by CR-INFRA-03) — never
-     * throws either way, a misconfigured pair should never crash the request.
+     * The deployment's default locale: `DEFAULT_LOCALE` if set and a member of `enabled()`,
+     * otherwise `ru` (CR-UI-13/D18) if set and a member of `enabled()`, otherwise `enabled()[0]`.
+     * One unified rule enforced identically regardless of *why* the compiled-in/configured default
+     * doesn't apply — unset `DEFAULT_LOCALE` (CR-INFRA-03, Sprint 7) and explicit-but-invalid
+     * `DEFAULT_LOCALE` (CR-INFRA-05, Sprint 8) both resolve the same way: fall back to `enabled()[0]`
+     * and log a warning via `error_log()`. The returned value is therefore always guaranteed to be a
+     * member of `enabled()` — never throws, a misconfigured pair should never crash the request.
      */
     public static function default(): string
     {
@@ -79,9 +79,9 @@ final class Locale
                 'Locale::default(): DEFAULT_LOCALE "%s" is not in the enabled locale set (%s) — falling back to "%s"',
                 $configured,
                 implode(',', $enabled),
-                self::DEFAULT,
+                $enabled[0],
             ));
-            return self::DEFAULT;
+            return $enabled[0];
         }
 
         return $configured;

@@ -79,15 +79,22 @@ h1, h2, h3 { line-height: 1.25; }
 }
 .site-nav a:hover, .site-nav a.active { color: var(--color-accent); }
 
-/* --- Home dropdown sub-menu (CR-UI-12) --- */
+/* --- Home dropdown sub-menu (CR-UI-12, hover dead-zone fix CR-UI-18) --- */
 .has-submenu { position: relative; }
 .has-submenu > .submenu-trigger::after { content: " \25BE"; font-size: 0.7em; padding-left: 0.2rem; }
+/* CR-UI-18: the visual gap between the trigger and the panel now lives in the
+   wrapper's own padding-bottom, so `.has-submenu`'s hoverable hit-box is
+   contiguous from the trigger's bottom edge through to the panel's top edge —
+   `mouseleave` can no longer fire mid-transit through an unclaimed dead zone.
+   `.submenu`'s own `margin-top` is 0; the visual spacing is achieved by this
+   padding instead. */
+.has-submenu { padding-bottom: 0.4rem; margin-bottom: -0.4rem; }
 .has-submenu .submenu {
   display: none;
   position: absolute;
   top: 100%;
   left: 0;
-  margin-top: 0.4rem;
+  margin-top: 0;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
@@ -247,8 +254,16 @@ tr.selectable:hover { background: var(--color-surface-alt); }
   position: relative;
   user-select: none;
 }
+/* CR-UI-21: trial counter renders inside the stage, centered above the (now
+   larger) circle — absolutely positioned along the stage's own top edge per
+   the approved mockup, rather than a flex-column stack, so it never shifts
+   the orb's true vertical centering within the box. */
+.stimulus-stage #trial-progress {
+  position: absolute; top: 1rem; left: 50%; transform: translateX(-50%);
+}
+/* CR-UI-21: +20% (140px -> 168px). */
 .orb {
-  width: 140px; height: 140px; border-radius: 50%;
+  width: 168px; height: 168px; border-radius: 50%;
   background: var(--stimulus-green);
   transition: background 0.05s linear;
   box-shadow: 0 0 40px rgba(0,0,0,0.25);
@@ -256,11 +271,13 @@ tr.selectable:hover { background: var(--color-surface-alt); }
 .orb.armed { background: var(--stimulus-green); }
 .orb.go { background: var(--stimulus-red); }
 .orb.idle { background: var(--color-text-dim); opacity: 0.4; }
+/* CR-TEST-20: visible false-start feedback — reuses --color-warn. */
+.orb.false-start { background: var(--color-warn); }
 
 .two-hand-stage {
   display: flex; align-items: center; justify-content: space-between;
   gap: 1rem; height: 320px; background: var(--color-bg-alt);
-  border: 1px solid var(--color-border); border-radius: var(--radius); padding: 0 2rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius); padding: 2.5rem 2rem 0;
   position: relative;
 }
 .hand-zone {
@@ -269,7 +286,22 @@ tr.selectable:hover { background: var(--color-surface-alt); }
 }
 .hand-zone.hit { border-color: var(--color-ok); background: rgba(99,201,138,0.12); }
 
+/* CR-UI-21: trial counter renders inside the stage, centered above the
+   hand-zones/shared orb — .two-hand-stage keeps its row layout for the hand
+   zones, so the counter is absolutely positioned along its top edge instead
+   (the stage's own top padding above reserves room for it without
+   overlapping the (now larger, shared) orb or the Left/Right zone labels). */
+.two-hand-stage #trial-progress {
+  position: absolute; top: 0.75rem; left: 50%; transform: translateX(-50%);
+}
+
 .stage-status { text-align: center; margin-top: 0.75rem; color: var(--color-text-dim); font-size: 0.95rem; min-height: 1.4em; }
+
+/* CR-UI-22: inline color swatch next to the Stimulus bullet's color words. */
+.color-swatch {
+  display: inline-block; width: 0.9em; height: 0.9em; border-radius: 3px;
+  vertical-align: middle; margin: 0 0.15em;
+}
 
 /* CR-UI-16: pre-start countdown — reuses .stimulus-stage's box treatment for
    visual consistency with the stimulus stage it precedes. */
