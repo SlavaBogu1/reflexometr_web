@@ -54,6 +54,8 @@ final class HistoryPaginationTest extends TestCase
                 '[{"index":0,"stimulus_at":100,"responses":{"primary":250}}]',
                 '{"overall":{"mean_ms":250}}',
                 200.0 + $i,
+                null,
+                null,
                 1000 + $i,
                 1000000 + $i,
             );

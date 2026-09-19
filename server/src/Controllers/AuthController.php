@@ -62,6 +62,9 @@ final class AuthController
             'is_admin' => (bool) $user['is_admin'],
             'dominant_hand' => $user['dominant_hand'],
             'preferred_locale' => $user['preferred_locale'],
+            // CR-AUTH-03: optional profile fields, freeform text, no uniqueness constraint.
+            'real_name' => $user['real_name'] ?? null,
+            'display_name' => $user['display_name'] ?? null,
         ];
     }
 }

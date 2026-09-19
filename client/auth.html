@@ -25,6 +25,10 @@
         </label>
         <input type="password" id="auth-password" autocomplete="current-password">
       </div>
+      <div class="field-row" id="auth-password-confirm-row" style="flex-direction:column; align-items:stretch; gap:0.3rem; display:none;">
+        <label for="auth-password-confirm" data-i18n="auth.password_confirm.label">Confirm password</label>
+        <input type="password" id="auth-password-confirm" autocomplete="new-password">
+      </div>
 
       <div class="btn-row">
         <button class="btn" id="auth-submit" data-i18n="auth.login.submit">Log in</button>

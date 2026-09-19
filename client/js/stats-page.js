@@ -295,6 +295,11 @@
       var latestR = byIdRes[String(latestEntry.result_id)] || byIdRes[latestEntry.result_id];
       var betterThanPct = (latestR && latestR.res.ok && isNum(latestR.res.data.percentile))
         ? Math.round(latestR.res.data.percentile) : null;
+      // CR-STATS-08: peer variability figure, read straight off the latest entry's
+      // comparison response (`peer_sd_ms_median` — CONTRACT.md v1.5) — not derived
+      // or recomputed client-side.
+      var yourSdMs = (latestR && latestR.res.ok && isNum(latestR.res.data.your_sd_ms)) ? latestR.res.data.your_sd_ms : null;
+      var peerSdMsMedian = (latestR && latestR.res.ok && isNum(latestR.res.data.peer_sd_ms_median)) ? latestR.res.data.peer_sd_ms_median : null;
 
       var pts = results
         .filter(function (r) { return r.res.ok && isNum(r.res.data.percentile); })
@@ -320,8 +325,32 @@
         peerAvgMs = pts[0].ms;
       }
 
-      return { peerAvgMs: peerAvgMs, betterThanPct: betterThanPct };
+      return { peerAvgMs: peerAvgMs, betterThanPct: betterThanPct, yourSdMs: yourSdMs, peerSdMsMedian: peerSdMsMedian };
     });
+  }
+
+  /**
+   * CR-STATS-08: peer variability figure, reusing the existing `.vhist-*` visual
+   * language (a `.stat-block` line, same family as the trend/distribution blocks
+   * above) rather than a new chart type. Renders nothing if neither figure is
+   * available (fewer than 2 valid readings for this user, or no peer data yet).
+   */
+  function renderVariabilityBlock(yourSdMs, peerSdMsMedian) {
+    if (yourSdMs === null && peerSdMsMedian === null) return null;
+    var wrap = Reflx.util.el("div", { class: "stat-block" }, [
+      Reflx.util.el("p", { class: "stat-block-title" }, [t("stats.chart.variability_label")])
+    ]);
+    var row = Reflx.util.el("div", { class: "field-row" }, [
+      Reflx.util.el("label", {}, [t("stats.chart.variability_yours")]),
+      Reflx.util.el("span", {}, [yourSdMs !== null ? fmtMs(yourSdMs) : "—"])
+    ]);
+    wrap.appendChild(row);
+    var peerRow = Reflx.util.el("div", { class: "field-row" }, [
+      Reflx.util.el("label", {}, [t("stats.chart.variability_peer")]),
+      Reflx.util.el("span", {}, [peerSdMsMedian !== null ? fmtMs(peerSdMsMedian) : t("stats.chart.no_peer_data")])
+    ]);
+    wrap.appendChild(peerRow);
+    return wrap;
   }
 
   // ------------------------------------------------------------ CSV export (CR-STATS-03)
@@ -436,6 +465,9 @@
       // Only meaningful once distBlock is attached to the document (see alignRefLines
       // doc comment) — replaceChild above just did that.
       alignRefLines();
+
+      var variabilityBlock = renderVariabilityBlock(ref.yourSdMs, ref.peerSdMsMedian);
+      if (variabilityBlock) card.appendChild(variabilityBlock);
     });
 
     allGroups.push({ r: r, version: version, name: name, entries: sorted });

@@ -46,11 +46,42 @@ final class ProfileController
             $updated = true;
         }
 
+        // CR-AUTH-03: real_name/display_name — plain freeform strings, nullable (send null to
+        // clear), max 100 chars, no uniqueness constraint (neither is a login identifier).
+        if (array_key_exists('real_name', $body)) {
+            $value = self::validateOptionalName($body['real_name'], 'real_name');
+            $users->updateRealName((int) $user['id'], $value);
+            $updated = true;
+        }
+
+        if (array_key_exists('display_name', $body)) {
+            $value = self::validateOptionalName($body['display_name'], 'display_name');
+            $users->updateDisplayName((int) $user['id'], $value);
+            $updated = true;
+        }
+
         if (!$updated) {
-            throw new ApiException(ErrorCode::VALIDATION_ERROR, 400, ['fields' => ['dominant_hand', 'preferred_locale']]);
+            throw new ApiException(ErrorCode::VALIDATION_ERROR, 400, [
+                'fields' => ['dominant_hand', 'preferred_locale', 'real_name', 'display_name'],
+            ]);
         }
 
         $fresh = $users->findById((int) $user['id']);
         return Response::json(AuthController::profile($fresh));
+    }
+
+    /**
+     * CR-AUTH-03: accepts a string (<=100 chars) or null (clears the field). Any other type, or a
+     * string over 100 chars, is VALIDATION_ERROR.
+     */
+    private static function validateOptionalName(mixed $value, string $field): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        if (!is_string($value) || mb_strlen($value) > 100) {
+            throw new ApiException(ErrorCode::VALIDATION_ERROR, 400, ['fields' => [$field]]);
+        }
+        return $value;
     }
 }

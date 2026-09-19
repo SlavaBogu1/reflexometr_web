@@ -6,6 +6,7 @@ namespace Reflexometr\Support;
 
 use Reflexometr\Http\ApiException;
 use Reflexometr\Http\ErrorCode;
+use Reflexometr\Http\Request;
 
 /**
  * Small structural-validation helpers. Failures always carry a field-name list in `details`,
@@ -59,6 +60,32 @@ final class Validation
             self::fail([$key]);
         }
         return $value;
+    }
+
+    /** Optional positive-int query param; null if absent. VALIDATION_ERROR if malformed. */
+    public static function optionalPositiveIntQuery(Request $request, string $key): ?int
+    {
+        $raw = $request->query($key);
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+        if (!ctype_digit((string) $raw) || (int) $raw < 1) {
+            self::fail([$key]);
+        }
+        return (int) $raw;
+    }
+
+    /** Optional non-negative-int query param; 0 if absent. VALIDATION_ERROR if malformed. */
+    public static function nonNegativeIntQuery(Request $request, string $key): int
+    {
+        $raw = $request->query($key);
+        if ($raw === null || $raw === '') {
+            return 0;
+        }
+        if (!ctype_digit((string) $raw)) {
+            self::fail([$key]);
+        }
+        return (int) $raw;
     }
 
     private function __construct()

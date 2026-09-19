@@ -8,6 +8,7 @@ use Reflexometr\Database;
 use Reflexometr\Http\ApiException;
 use Reflexometr\Http\ErrorCode;
 use Reflexometr\Repositories\ResultRepository;
+use Reflexometr\Support\Stats;
 
 /**
  * CR-STATS-01 (every query scoped to one exact (r_test_id, r_test_version_id) pair — never
@@ -53,6 +54,19 @@ final class StatsService
      * Anonymized aggregate comparison for one specific result, scoped to that result's exact
      * (r_test_id, r_test_version_id). Never returns another user's identity or raw value (D12) —
      * only this user's own value plus an aggregate percentile/rank/count.
+     *
+     * CR-AUTH-02/D19: the comparison **pool** (percentile/rank/total_participants, and CR-STATS-08's
+     * peer_sd_ms_median below) only includes `approval_status = 'approved'` results — see
+     * ResultRepository::allApprovedMetricsForScope, one query backing both aggregates. The
+     * requesting user's **own**
+     * `your_value_ms`/`your_sd_ms`/`your_cv` are read directly from their own result row and are
+     * completely unaffected by their own result's approval status.
+     *
+     * CR-STATS-08: adds `your_sd_ms`/`your_cv` (this result's own values) plus `peer_sd_ms_median`
+     * — the median sd_ms across the (approved) peer pool, a real server-computed aggregate (not a
+     * client-side interpolation trick, since a single scalar can't reconstruct a distribution's
+     * spread). Null whenever there is no approved peer data yet (own result excluded from the
+     * "peer" pool, matching percentile/rank's existing self-exclusion convention).
      * @return array<string,mixed>
      */
     public function comparisonForResult(int $userId, array $result): array
@@ -65,28 +79,61 @@ final class StatsService
         $rTestId = (int) $result['r_test_id'];
         $rTestVersionId = (int) $result['r_test_version_id'];
         $ownValue = (float) $result['primary_metric_ms'];
+        $ownSdMs = $result['sd_ms'] !== null ? (float) $result['sd_ms'] : null;
+        $ownCv = $result['cv'] !== null ? (float) $result['cv'] : null;
+        $ownIsApproved = ($result['approval_status'] ?? 'approved') === 'approved';
 
-        $all = $this->results->allMetricsForScope($rTestId, $rTestVersionId);
-        $total = count($all);
-        $othersCount = $total - 1;
+        // Single query backs both the percentile/rank pool and the peer-sd_ms pool — one shared
+        // approval_status='approved' filter (ResultRepository::allApprovedMetricsForScope), not a
+        // duplicated predicate per aggregate.
+        $scopeRows = $this->results->allApprovedMetricsForScope($rTestId, $rTestVersionId);
+        // Self-exclusion: if this own result is itself approved, it is included in $scopeRows —
+        // remove exactly the one row matching this result's own value so percentile/rank/
+        // total_participants and the peer sd_ms pool continue to mean "this result vs. the rest
+        // of the approved field," identical to pre-CR-AUTH-02 semantics. If this own result is NOT
+        // approved, it was never in $scopeRows to begin with.
+        if ($ownIsApproved) {
+            foreach ($scopeRows as $idx => $row) {
+                if ($row['primary_metric_ms'] === $ownValue) {
+                    array_splice($scopeRows, $idx, 1);
+                    break;
+                }
+            }
+        }
+        $all = array_map(static fn ($row) => $row['primary_metric_ms'], $scopeRows);
+        $peerSdValues = array_values(array_filter(
+            array_map(static fn ($row) => $row['sd_ms'], $scopeRows),
+            static fn ($v) => $v !== null
+        ));
+        $othersCount = count($all);
+        $total = $othersCount + 1; // self always counts toward total_participants (pre-existing semantics)
 
-        // Percentile = share of *other* participants this result is faster than (lower ms =
-        // faster) — self excluded from the denominator so "faster than 100%" is meaningful with
-        // as few as one other participant. Ties neither help nor hurt (not counted as "beaten").
+        // Percentile = share of *other* (approved) participants this result is faster than (lower
+        // ms = faster) — self excluded from the denominator so "faster than 100%" is meaningful
+        // with as few as one other participant. Ties neither help nor hurt (not counted as "beaten").
         $beatenCount = count(array_filter($all, static fn (float $v): bool => $v > $ownValue));
         $percentile = $othersCount > 0 ? round(($beatenCount / $othersCount) * 100, 1) : null;
 
-        sort($all);
-        $rank = array_search($ownValue, $all, true);
+        $rankPool = $all;
+        $rankPool[] = $ownValue;
+        sort($rankPool);
+        $rank = array_search($ownValue, $rankPool, true);
         $rank = $rank === false ? null : $rank + 1;
+
+        $peerSdMsMedian = Stats::median($peerSdValues);
 
         return [
             'r_test_id' => $rTestId,
             'r_test_version_id' => $rTestVersionId,
             'your_value_ms' => $ownValue,
+            'your_sd_ms' => $ownSdMs,
+            'your_cv' => $ownCv,
             'percentile' => $percentile,
             'rank' => $rank,
             'total_participants' => $total,
+            'peer_sd_ms_median' => $peerSdMsMedian,
         ];
     }
+
+    /** @param array<int,float> $values */
 }

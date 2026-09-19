@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mockup — Test Description page refresh (CR-UI-24)</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Mockup-only additions — CR-UI-24 candidate CSS, not yet in style.css */
+    .runs-row { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+    .runs-count-field { display: flex; align-items: center; gap: 0.5rem; }
+    .runs-count-field input[type="number"] { width: 4.5em; }
+    .round-toggle {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      border: 1px solid var(--color-border); border-radius: 999px;
+      padding: 0.45rem 0.9rem; cursor: pointer; font-size: 0.88rem;
+      color: var(--color-text-dim); background: var(--color-surface);
+      user-select: none;
+    }
+    .round-toggle input { accent-color: var(--color-accent); }
+    .round-toggle.active { border-color: var(--color-accent); color: var(--color-text); background: var(--color-surface-alt); }
+    .mode-card-row { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap; }
+    .mockup-banner {
+      background: rgba(63,208,201,0.12); border: 1px solid var(--color-accent-dim);
+      border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" style="padding-top: 1.5rem;">
+    <div class="mockup-banner">
+      <strong>Design Gate mockup — CR-UI-24.</strong> Static, illustrative only (no real i18n wiring,
+      no live JS behavior). Reuses <code>client/css/style.css</code> as-is except for the small
+      additions in this file's own <code>&lt;style&gt;</code> block (round-toggle pill, runs-row
+      layout) — those become real CSS in <code>style.css</code> once approved.
+    </div>
+  </div>
+
+  <main class="container">
+    <section class="page active">
+
+      <!-- 1) Test Description card — replaces the bare header + old "What you'll do" card.
+           Same card, renamed h3, description text now lives inside it instead of under <h1>. -->
+      <h1>Simple Visual Reaction Time</h1>
+
+      <div class="card">
+        <h3>Test Description</h3>
+        <p style="margin-top: 0;">A circle starts green. After a short, random delay it turns red —
+          react as fast as you can using your configured input.</p>
+        <ul style="margin-bottom: 0;">
+          <li>Watch the circle. It starts green (wait).</li>
+          <li>The moment it turns red, respond immediately with your configured key/button/click.</li>
+          <li>Responding before the color changes voids that trial — it will simply run again.</li>
+        </ul>
+      </div>
+
+      <!-- 2) Mode card, promoted directly under Test Description. Single "Number of runs" field
+           (default 1) + "Run until I quit" round-toggle, mutually exclusive; Start Test button
+           on the right. -->
+      <div class="card">
+        <div class="mode-card-row">
+          <div class="runs-row">
+            <div class="runs-count-field">
+              <label for="mock-runs-count" style="font-weight: 600;">Number of runs</label>
+              <input type="number" id="mock-runs-count" min="1" max="50" value="1">
+            </div>
+            <label class="round-toggle" for="mock-until-quit">
+              <input type="checkbox" id="mock-until-quit">
+              <span>Run until I quit</span>
+            </label>
+          </div>
+          <button class="btn" id="btn-start">Start Test</button>
+        </div>
+      </div>
+
+      <!-- (unchanged) dominant-hand inline prompt would still appear here for two-hand tests,
+           between Mode and the merged results-analysis card — not shown in this mockup since
+           this example r-test doesn't need it. -->
+
+      <!-- 3) Merged "Test results analysis" card — combines old "Interpreting your results"
+           + "Why this matters" into one card. -->
+      <div class="card">
+        <h3>Test results analysis</h3>
+        <p>A single run is a snapshot; run it regularly (e.g. daily) to see a meaningful trend, since
+          day-to-day reaction time naturally varies.</p>
+        <div class="research-blurb" style="margin-top: 1rem; margin-bottom: 0;">
+          Simple visual reaction time is one of the most-studied measures in reaction research —
+          typical adult values fall in a fairly narrow band, making it a useful, low-effort baseline
+          to track over time.
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <div class="container" style="padding-bottom: 2rem;">
+    <div class="mockup-banner" style="background: var(--color-surface-alt); border-color: var(--color-border);">
+      <strong>Behavior notes for review (not yet implemented):</strong>
+      <ul style="margin: 0.5rem 0 0;">
+        <li>"Number of runs" and "Run until I quit" are mutually exclusive — checking the toggle
+          should disable/grey the number field (or vice versa), matching how <code>#mode-segmented</code>
+          today shows/hides <code>#series-options</code>.</li>
+        <li>Runs = 1 (the default) behaves exactly like today's "Single test" mode — no series tally
+          card, no "Series so far" UI change needed.</li>
+        <li>Runs ≥ 2, or "Run until I quit" checked, behaves like today's "Series" mode.</li>
+        <li>"Start Test" button label stays constant regardless of runs count in this proposal
+          (today's page swaps "Start test" / "Start series" text) — flagged as an open question in
+          the CR for the user to confirm.</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

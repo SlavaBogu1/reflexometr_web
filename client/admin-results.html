@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="admin_results.title">Pending Results</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="container">
+    <h1 data-i18n="admin_results.title">Pending Results</h1>
+    <p class="notice warn" data-i18n="admin_results.admin_only"></p>
+
+    <div id="login-required-notice" class="notice danger" data-i18n="library.login_required" style="display:none;"></div>
+    <div id="not-admin-notice" class="notice danger" data-i18n="library.not_admin_notice" style="display:none;"></div>
+
+    <div id="admin-area" style="display:none;">
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="admin_results.col.rtest">R-test</th>
+              <th data-i18n="admin_results.col.version">Version</th>
+              <th data-i18n="admin_results.col.value">Result</th>
+              <th data-i18n="admin_results.col.submitted">Submitted</th>
+              <th data-i18n="admin_results.col.status">Status</th>
+              <th data-i18n="library.col.actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="pending-results-tbody"></tbody>
+        </table>
+        <p class="field-desc" id="pending-results-empty" style="display:none;" data-i18n="admin_results.empty"></p>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/util.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/locales/en.js"></script>
+  <script src="js/locales/es.js"></script>
+  <script src="js/locales/de.js"></script>
+  <script src="js/locales/fr.js"></script>
+  <script src="js/locales/zh-Hans.js"></script>
+  <script src="js/locales/ru.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/session.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/admin-results.js"></script>
+</body>
+</html>

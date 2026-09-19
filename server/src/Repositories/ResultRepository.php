@@ -8,6 +8,9 @@ use PDO;
 
 final class ResultRepository
 {
+    /** CR-AUTH-02 (D19): valid `approval_status` values — mirrors UserRepository's *_VALUES pattern. */
+    public const APPROVAL_STATUS_VALUES = ['pending', 'approved', 'rejected'];
+
     public function __construct(private readonly PDO $db)
     {
     }
@@ -22,19 +25,24 @@ final class ResultRepository
         string $trialsJson,
         string $summaryJson,
         float $primaryMetricMs,
+        ?float $sdMs,
+        ?float $cv,
         int $clientStartedAtMs,
         int $serverReceivedAtMs,
     ): int {
+        // approval_status intentionally omitted from the INSERT column list — the schema default
+        // ('pending') is the single source of truth for a newly-submitted result's starting state
+        // (CR-AUTH-02/D19), never re-specified here.
         $stmt = $this->db->prepare(
             'INSERT INTO results
                 (user_id, r_test_id, r_test_version_id, run_token_id, dominant_hand_at_submission,
-                 trial_count, trials_json, summary_json, primary_metric_ms,
+                 trial_count, trials_json, summary_json, primary_metric_ms, sd_ms, cv,
                  client_started_at_ms, server_received_at_ms)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $userId, $rTestId, $rTestVersionId, $runTokenId, $dominantHandAtSubmission,
-            $trialCount, $trialsJson, $summaryJson, $primaryMetricMs,
+            $trialCount, $trialsJson, $summaryJson, $primaryMetricMs, $sdMs, $cv,
             $clientStartedAtMs, $serverReceivedAtMs,
         ]);
         return (int) $this->db->lastInsertId();
@@ -90,17 +98,68 @@ final class ResultRepository
     }
 
     /**
-     * All primary metric values for a given (r_test_id, r_test_version_id) scope, across every
-     * user — used only to compute an anonymized aggregate (percentile/rank), never returned
-     * as a per-user list to any endpoint (D12).
-     * @return array<int,float>
+     * All primary_metric_ms/sd_ms pairs for a given (r_test_id, r_test_version_id) scope, across
+     * every user — used only to compute anonymized aggregates (percentile/rank, CR-STATS-08's
+     * peer_sd_ms_median), never returned as a per-user list to any endpoint (D12). CR-AUTH-02/D19:
+     * the comparison **pool** is restricted to `approval_status = 'approved'` results only — a
+     * pending/rejected result never affects *other* users' aggregates (the requesting user's own
+     * value is read directly off their own result row, unaffected by this filter — see
+     * StatsService). One query backs both aggregates so the approval filter exists in exactly one
+     * place, not duplicated per metric.
+     * @return array<int,array{primary_metric_ms:float,sd_ms:?float}>
      */
-    public function allMetricsForScope(int $rTestId, int $rTestVersionId): array
+    public function allApprovedMetricsForScope(int $rTestId, int $rTestVersionId): array
     {
         $stmt = $this->db->prepare(
-            'SELECT primary_metric_ms FROM results WHERE r_test_id = ? AND r_test_version_id = ?'
+            "SELECT primary_metric_ms, sd_ms FROM results
+             WHERE r_test_id = ? AND r_test_version_id = ? AND approval_status = 'approved'"
         );
         $stmt->execute([$rTestId, $rTestVersionId]);
-        return array_map(static fn ($v) => (float) $v, $stmt->fetchAll(PDO::FETCH_COLUMN));
+        return array_map(
+            static fn ($row) => [
+                'primary_metric_ms' => (float) $row['primary_metric_ms'],
+                'sd_ms' => $row['sd_ms'] !== null ? (float) $row['sd_ms'] : null,
+            ],
+            $stmt->fetchAll(PDO::FETCH_ASSOC)
+        );
+    }
+
+    /**
+     * CR-AUTH-02: paginated list of results awaiting admin review. Never exposes the submitting
+     * user's identity beyond existing admin-access norms (no email/user_id in the returned shape —
+     * see AdminResultController).
+     * @return array<int,array<string,mixed>>
+     */
+    public function findByApprovalStatus(string $status, int $limit, int $offset): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT r.id, r.r_test_id, r.r_test_version_id, r.primary_metric_ms, r.created_at,
+                    rt.slug AS r_test_slug, rtv.version AS r_test_version
+             FROM results r
+             JOIN r_tests rt ON rt.id = r.r_test_id
+             JOIN r_test_versions rtv ON rtv.id = r.r_test_version_id
+             WHERE r.approval_status = ?
+             ORDER BY r.created_at ASC, r.id ASC
+             LIMIT ? OFFSET ?'
+        );
+        $stmt->bindValue(1, $status, PDO::PARAM_STR);
+        $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+        $stmt->bindValue(3, $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function countByApprovalStatus(string $status): int
+    {
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM results WHERE approval_status = ?');
+        $stmt->execute([$status]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /** CR-AUTH-02: admin transition — never deletes the row (D19). */
+    public function updateApprovalStatus(int $id, string $status): void
+    {
+        $stmt = $this->db->prepare('UPDATE results SET approval_status = ? WHERE id = ?');
+        $stmt->execute([$status, $id]);
     }
 }

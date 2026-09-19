@@ -10,13 +10,17 @@ namespace Reflexometr\Services;
  * percentiles on — kept generic (not per-r-test-type bespoke code) so a newly imported r-test
  * needs no new server code to participate in stats (in the spirit of D11: this project only
  * provides a generic runtime).
+ *
+ * CR-STATS-08: also computes sd_ms (sample standard deviation) and cv (coefficient of variation,
+ * sd_ms / mean_ms) — overall, and per-channel for multi-channel (two-hand) tests, matching the
+ * existing summary.channels breakdown.
  */
 final class ResultSummaryService
 {
     /**
      * @param array<string,mixed> $schedule Compiled schedule (has response_channels).
      * @param array<int,array<string,mixed>> $trials Validated submitted trial log.
-     * @return array{summary: array<string,mixed>, primaryMetricMs: float}
+     * @return array{summary: array<string,mixed>, primaryMetricMs: float, sdMs: ?float, cv: ?float}
      */
     public static function compute(array $schedule, array $trials, ?string $dominantHand): array
     {
@@ -44,20 +48,28 @@ final class ResultSummaryService
         $channelStats = [];
         foreach ($channels as $channel) {
             $times = $perChannelTimes[$channel];
+            $channelMeanMs = self::mean($times);
+            $channelSdMs = self::stddev($times);
             $channelStats[$channel] = [
-                'mean_ms' => self::mean($times),
+                'mean_ms' => $channelMeanMs,
                 'median_ms' => self::median($times),
                 'min_ms' => $times === [] ? null : min($times),
                 'max_ms' => $times === [] ? null : max($times),
+                'sd_ms' => $channelSdMs,
+                'cv' => self::coefficientOfVariation($channelSdMs, $channelMeanMs),
                 'timeouts' => $timeoutCounts[$channel],
                 'valid_count' => count($times),
             ];
         }
 
+        $overallMeanMs = self::mean($allTimes);
+        $overallSdMs = self::stddev($allTimes);
         $summary = [
             'overall' => [
-                'mean_ms' => self::mean($allTimes),
+                'mean_ms' => $overallMeanMs,
                 'median_ms' => self::median($allTimes),
+                'sd_ms' => $overallSdMs,
+                'cv' => self::coefficientOfVariation($overallSdMs, $overallMeanMs),
                 'valid_count' => count($allTimes),
             ],
             'channels' => $channelStats,
@@ -75,9 +87,14 @@ final class ResultSummaryService
             }
         }
 
-        $primaryMetricMs = self::mean($allTimes) ?? 0.0;
+        $primaryMetricMs = $overallMeanMs ?? 0.0;
 
-        return ['summary' => $summary, 'primaryMetricMs' => $primaryMetricMs];
+        return [
+            'summary' => $summary,
+            'primaryMetricMs' => $primaryMetricMs,
+            'sdMs' => $overallSdMs,
+            'cv' => self::coefficientOfVariation($overallSdMs, $overallMeanMs),
+        ];
     }
 
     /** @param array<int,float> $values */
@@ -87,6 +104,38 @@ final class ResultSummaryService
             return null;
         }
         return array_sum($values) / count($values);
+    }
+
+    /**
+     * Sample standard deviation (n-1 denominator) — the standard unbiased estimator when the
+     * values are a sample of a user's possible attempts, not the full population. Requires >=2
+     * values; a single-valid-trial submission has no meaningful spread, so this returns null
+     * rather than a fabricated 0.0 (0.0 would misleadingly imply "perfectly consistent").
+     * @param array<int,float> $values
+     */
+    private static function stddev(array $values): ?float
+    {
+        $n = count($values);
+        if ($n < 2) {
+            return null;
+        }
+        $mean = array_sum($values) / $n;
+        $sumSquaredDiffs = array_sum(array_map(static fn (float $v): float => ($v - $mean) ** 2, $values));
+        return sqrt($sumSquaredDiffs / ($n - 1));
+    }
+
+    /**
+     * Coefficient of variation = sd / mean — a scale-free measure of relative variability, useful
+     * for comparing consistency across users/tests with different average reaction times. Null
+     * whenever either input is null, or when mean is exactly 0 (division would be undefined/
+     * meaningless, not a real "perfectly variable" signal).
+     */
+    private static function coefficientOfVariation(?float $sdMs, ?float $meanMs): ?float
+    {
+        if ($sdMs === null || $meanMs === null || $meanMs === 0.0) {
+            return null;
+        }
+        return $sdMs / $meanMs;
     }
 
     /** @param array<int,float> $values */

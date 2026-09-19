@@ -6,6 +6,7 @@ namespace Reflexometr;
 
 use Reflexometr\Controllers\AdminCategoryController;
 use Reflexometr\Controllers\AdminPackageController;
+use Reflexometr\Controllers\AdminResultController;
 use Reflexometr\Controllers\AdminRTestController;
 use Reflexometr\Controllers\AuthController;
 use Reflexometr\Controllers\ConfigController;
@@ -58,6 +59,10 @@ final class Routes
         $router->add('DELETE', '/admin/packages/{id}', [AdminPackageController::class, 'delete']);
         $router->add('POST', '/admin/packages/{id}/r-tests', [AdminPackageController::class, 'addTest']);
         $router->add('DELETE', '/admin/packages/{id}/r-tests/{rTestId}', [AdminPackageController::class, 'removeTest']);
+
+        // Admin results approval queue (CR-AUTH-02, D19)
+        $router->add('GET', '/admin/results', [AdminResultController::class, 'listPending']);
+        $router->add('PATCH', '/admin/results/{id}', [AdminResultController::class, 'updateStatus']);
 
         // Run-token issuance + submission (CR-TEST-02, CR-TEST-06)
         $router->add('POST', '/r-tests/{slug}/runs', [RunController::class, 'start']);

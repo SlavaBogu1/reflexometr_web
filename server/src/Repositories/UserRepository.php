@@ -53,4 +53,24 @@ final class UserRepository
         $stmt = $this->db->prepare('UPDATE users SET preferred_locale = ? WHERE id = ?');
         $stmt->execute([$locale, $userId]);
     }
+
+    /** CR-AUTH-03: freeform, nullable, no uniqueness constraint — email remains the sole unique key. */
+    public function updateRealName(int $userId, ?string $value): void
+    {
+        $this->updateNameColumn($userId, 'real_name', $value);
+    }
+
+    /** CR-AUTH-03: freeform, nullable, no uniqueness constraint — email remains the sole unique key. */
+    public function updateDisplayName(int $userId, ?string $value): void
+    {
+        $this->updateNameColumn($userId, 'display_name', $value);
+    }
+
+    private function updateNameColumn(int $userId, string $column, ?string $value): void
+    {
+        // Column name is one of two fixed literals passed by this class's own methods above,
+        // never request input — safe to interpolate.
+        $stmt = $this->db->prepare("UPDATE users SET {$column} = ? WHERE id = ?");
+        $stmt->execute([$value, $userId]);
+    }
 }

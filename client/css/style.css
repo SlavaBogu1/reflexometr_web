@@ -207,6 +207,23 @@ tr.selectable:hover { background: var(--color-surface-alt); }
 }
 .segmented button.active { background: var(--color-accent); color: #05201d; }
 
+/* CR-UI-24: Test Description page's Mode card — runs-count field + "Run until I
+   quit" round-toggle, mutually exclusive. Approved mockup:
+   client/prototype-test-description-refresh.html. */
+.mode-card-row { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap; }
+.runs-row { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+.runs-count-field { display: flex; align-items: center; gap: 0.5rem; }
+.runs-count-field input[type="number"] { width: 4.5em; }
+.round-toggle {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  border: 1px solid var(--color-border); border-radius: 999px;
+  padding: 0.45rem 0.9rem; cursor: pointer; font-size: 0.88rem;
+  color: var(--color-text-dim); background: var(--color-surface);
+  user-select: none;
+}
+.round-toggle input { accent-color: var(--color-accent); }
+.round-toggle.active { border-color: var(--color-accent); color: var(--color-text); background: var(--color-surface-alt); }
+
 .notice {
   padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem; margin-bottom: 1rem;
 }
@@ -237,6 +254,13 @@ tr.selectable:hover { background: var(--color-surface-alt); }
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
   margin-top: 1.25rem;
+}
+/* CR-UI-23: below 760px, the auto-fit/minmax(220px) base rule alone controls
+   column count (collapsing as low as 1 on narrow viewports). At/above 760px,
+   this overrides it with a fixed 3-column track list — a deliberate breakpoint
+   swap, not an additive cap on the base rule's own auto-fit behavior. */
+@media (min-width: 760px) {
+  .grid { grid-template-columns: repeat(3, 1fr); }
 }
 .grid .card { margin-bottom: 0; }
 .source-list { font-size: 0.8rem; color: var(--color-text-dim); }
@@ -388,6 +412,11 @@ footer.site-footer {
   background: var(--color-surface-alt); border-left: 3px solid var(--color-accent);
   border-radius: 0 8px 8px 0; padding: 0.85rem 1rem; font-size: 0.93rem;
 }
+/* CR-UI-23: #path-list grid container. Reuses .grid's auto-fit-collapse-then-cap-at-3
+   behavior so paths.html's 10 entries render as a capped multi-column grid instead of
+   the single stacked column they rendered as before this container existed. */
+#path-list.grid { align-items: start; }
+#path-list.grid .path-card { margin-bottom: 0; }
 .path-card {
   border: 1px solid var(--color-border); border-radius: var(--radius); padding: 1.1rem 1.2rem;
   margin-bottom: 0.9rem; display: flex; justify-content: space-between; gap: 1rem;

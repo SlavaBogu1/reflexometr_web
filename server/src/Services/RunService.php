@@ -149,7 +149,7 @@ final class RunService
                 $dominantHand = null;
             }
 
-            ['summary' => $summary, 'primaryMetricMs' => $primaryMetricMs] =
+            ['summary' => $summary, 'primaryMetricMs' => $primaryMetricMs, 'sdMs' => $sdMs, 'cv' => $cv] =
                 ResultSummaryService::compute($schedule, $submittedTrials, $dominantHand);
 
             $resultId = $this->results->create(
@@ -162,6 +162,8 @@ final class RunService
                 json_encode($submittedTrials, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION),
                 json_encode($summary, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION),
                 $primaryMetricMs,
+                $sdMs,
+                $cv,
                 $clientStartedAtMs ?? (int) $runToken['issued_at_ms'],
                 $nowMs,
             );

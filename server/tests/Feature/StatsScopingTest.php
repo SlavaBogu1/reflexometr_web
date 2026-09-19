@@ -37,6 +37,20 @@ final class StatsScopingTest extends TestCase
         return $body['data']['result_id'];
     }
 
+    /**
+     * CR-AUTH-02/D19: a newly-submitted result starts `pending` and does not affect the peer
+     * comparison pool until an admin approves it — these pre-existing scoping tests care about
+     * pool composition, not the approval workflow itself, so approve immediately after submit to
+     * preserve their original intent (pool visibility as soon as a result is legitimately usable).
+     */
+    private function approve(string $adminToken, int $resultId): void
+    {
+        [$status, $body] = $this->dispatch($this->requestAs($adminToken, 'PATCH', "/admin/results/{$resultId}", [
+            'approval_status' => 'approved',
+        ]));
+        self::assertSame(200, $status, (string) json_encode($body));
+    }
+
     public function testHistoryAndComparisonNeverMixVersions(): void
     {
         ['token' => $adminToken] = $this->registerAdmin();
@@ -49,13 +63,16 @@ final class StatsScopingTest extends TestCase
         self::assertSame(1, $showV1['data']['current_version']);
 
         $r1 = $this->runAndSubmit($userToken, null, 200);
+        $this->approve($adminToken, $r1);
         $r2 = $this->runAndSubmit($userToken, 1, 220);
+        $this->approve($adminToken, $r2);
 
         $this->dispatch($this->requestAs($adminToken, 'POST', '/admin/r-tests/simple-reaction/versions', ['content' => self::CONTENT_V2]));
         [, $showV2] = $this->dispatch($this->requestAs(null, 'GET', '/r-tests/simple-reaction'));
         self::assertSame(2, $showV2['data']['current_version']);
 
         $r3 = $this->runAndSubmit($userToken, null, 300); // lands on v2 (now active)
+        $this->approve($adminToken, $r3);
 
         [$status, $historyV1] = $this->dispatch($this->requestAs($userToken, 'GET', '/r-tests/simple-reaction/versions/1/history'));
         self::assertSame(200, $status);
@@ -90,12 +107,17 @@ final class StatsScopingTest extends TestCase
         ]));
 
         $aliceResult = $this->runAndSubmit($aliceToken, null, 150); // faster
+        $this->approve($adminToken, $aliceResult);
         $bobResult = $this->runAndSubmit($bobToken, null, 350); // slower
+        $this->approve($adminToken, $bobResult);
 
         [, $aliceComparison] = $this->dispatch($this->requestAs($aliceToken, 'GET', "/results/{$aliceResult}/comparison"));
         $data = $aliceComparison['data'];
 
-        self::assertSame(['r_test_id', 'r_test_version_id', 'your_value_ms', 'percentile', 'rank', 'total_participants'], array_keys($data));
+        self::assertSame(
+            ['r_test_id', 'r_test_version_id', 'your_value_ms', 'your_sd_ms', 'your_cv', 'percentile', 'rank', 'total_participants', 'peer_sd_ms_median'],
+            array_keys($data)
+        );
         self::assertSame(2, $data['total_participants']);
         self::assertSame(1, $data['rank']); // Alice is faster -> rank 1
         self::assertEqualsWithDelta(100.0, $data['percentile'], 0.01); // faster than 100% of the field (Bob only)

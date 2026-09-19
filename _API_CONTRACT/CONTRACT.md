@@ -4,7 +4,8 @@
 Any change lands here first (version bump + changelog entry below), then the ProductOwner briefs
 ClientTeam on the diff (PRODUCT_OWNER_PROCESS.md § Contract Change Workflow).
 
-**Version:** v1.4 (Sprint 6) — CR-INFRA-02: new `GET /health` endpoint (see Changelog).
+**Version:** v1.5 (Sprint 9) — CR-AUTH-02 (admin approval queue), CR-STATS-08 (reaction-time
+variability), CR-AUTH-03 (optional name profile fields) — see Changelog.
 
 **Note for ClientTeam:** `client/js/mock-api.js` / `SPRINT1_REPORT.md` (ClientTeam's) list several
 assumed field names and behaviors made against the still-empty v0.1 contract. This document is now
@@ -62,13 +63,22 @@ Auth: required.
 200: `UserProfile`
 Errors: `AUTH_REQUIRED` (401, no/malformed token), `AUTH_SESSION_EXPIRED` (401, token unknown/expired)
 
-**`UserProfile`:** `{ "id": int, "email": string, "is_admin": bool, "dominant_hand": "left"|"right"|"none-recorded", "preferred_locale": string|null }`
+**`UserProfile`:** `{ "id": int, "email": string, "is_admin": bool, "dominant_hand": "left"|"right"|"none-recorded", "preferred_locale": string|null, "real_name": string|null, "display_name": string|null }`
+**CR-AUTH-03 (v1.5):** `real_name`/`display_name` are new, optional, freeform (<=100 chars),
+nullable profile fields — plain user-entered text, **not** login identifiers (email remains the
+sole unique account key; no uniqueness constraint on either). Neither field appears in any
+anonymized/peer-comparison payload (`GET /results/{id}/comparison` — D12 still applies in full).
 
 ### `PATCH /profile`
 Auth: required. Self-service only — no id param; always the authenticated user (D3 privacy rule).
-Body (at least one of): `{ "dominant_hand"?: "left"|"right"|"none-recorded", "preferred_locale"?: one of the 6 supported codes (`en`, `es`, `de`, `fr`, `zh-Hans`, `ru` — REQUIREMENTS/SHARED_CONSTANTS.md § Supported locales) }`
+Body (at least one of): `{ "dominant_hand"?: "left"|"right"|"none-recorded", "preferred_locale"?: one of the 6 supported codes (`en`, `es`, `de`, `fr`, `zh-Hans`, `ru` — REQUIREMENTS/SHARED_CONSTANTS.md § Supported locales), "real_name"?: string|null (<=100 chars), "display_name"?: string|null (<=100 chars) }`
 200: `UserProfile`
-Errors: `VALIDATION_ERROR` (400, bad `dominant_hand` or neither field given), `UNSUPPORTED_LOCALE` (400)
+Errors: `VALIDATION_ERROR` (400, bad `dominant_hand`, `real_name`/`display_name` over 100 chars, or no field given), `UNSUPPORTED_LOCALE` (400)
+
+**CR-AUTH-03 (v1.5):** `real_name`/`display_name` are plain freeform strings (send `null` to clear
+a previously-set value); over-length input (>100 chars) is rejected with `VALIDATION_ERROR`
+(`details.fields: ["real_name"]` or `["display_name"]`). No format/uniqueness validation beyond
+the length cap — these are display-only fields, never used for login or lookup.
 
 **CR-INFRA-01 (v1.3):** `preferred_locale` is now additionally validated against **this
 deployment's enabled locale set** (`GET /config/locales`' `enabled` list), not just the full
@@ -194,6 +204,34 @@ Auth: admin required (same 403/401 rules as above).
 
 ---
 
+## Admin results approval queue (CR-AUTH-02, v1.5, implements D19)
+
+Auth: admin required on every endpoint in this section (403 `ADMIN_REQUIRED` for any non-admin
+session; 401 `AUTH_REQUIRED`/`AUTH_SESSION_EXPIRED` if not authenticated at all). Mirrors
+`/admin/r-tests`'s existing pattern (`server/src/Routes.php`, `AdminRTestController`).
+
+### `GET /admin/results?status=pending`
+Paginated list of results in the given `approval_status` (`pending` default, or `approved`/
+`rejected`). **Never** exposes the submitting user's identity beyond existing admin-access norms
+(no email/user_id in the payload).
+
+Query params: `status` (optional, one of `pending`|`approved`|`rejected`, default `pending`),
+`limit` (optional positive int, default 50), `offset` (optional non-negative int, default 0).
+
+200: `{ "status": "pending", "total": int, "entries": [ { "id", "r_test_id", "r_test_slug", "r_test_version_id", "r_test_version", "primary_metric_ms", "submitted_at" }, ... ] }`
+Errors: `VALIDATION_ERROR` (400, malformed `status`/`limit`/`offset`)
+
+### `PATCH /admin/results/{id}`
+Transitions a result's `approval_status`. Rejecting **never deletes the row** (D19) — a rejected
+result simply never enters the approved comparison pool; it remains readable by its owning user
+via their own history exactly as before.
+
+Body: `{ "approval_status": "approved"|"rejected" }`
+200: `{ "id": int, "approval_status": "approved"|"rejected" }`
+Errors: `VALIDATION_ERROR` (400, missing/invalid `approval_status`), `NOT_FOUND` (404, unknown result id)
+
+---
+
 ## Run-token issuance + submission (CR-TEST-02, CR-TEST-06, D9, D11)
 
 Auth: required (the logged-in user).
@@ -266,8 +304,18 @@ Body:
 
 201:
 ```json
-{ "result_id": 42, "r_test_id": 1, "r_test_version_id": 7, "primary_metric_ms": 231.4, "summary": { "overall": {...}, "channels": {...}, "dominant_minus_nondominant_ms"?: -18.2 } }
+{ "result_id": 42, "r_test_id": 1, "r_test_version_id": 7, "primary_metric_ms": 231.4, "summary": { "overall": {..., "sd_ms": 12.3, "cv": 0.053}, "channels": {"primary": {..., "sd_ms": 12.3, "cv": 0.053}}, "dominant_minus_nondominant_ms"?: -18.2 } }
 ```
+**CR-STATS-08 (v1.5):** `summary.overall`/each `summary.channels.{channel}` entry gains `sd_ms`
+(sample standard deviation of that scope's valid reaction times, n-1 denominator) and `cv`
+(coefficient of variation, `sd_ms / mean_ms`) — both `null` if fewer than 2 valid readings exist
+for that scope (no fabricated `0.0`), and `cv` is additionally `null` if `mean_ms` is exactly `0`.
+These are also persisted on the result row (`sd_ms`/`cv` columns) and surfaced again, with a peer
+aggregate, by `GET /results/{id}/comparison` below.
+
+**CR-AUTH-02 (v1.5):** every newly-created result starts `approval_status = 'pending'` (new
+internal column, not returned by this endpoint) — see `GET /results/{id}/comparison` and the new
+`/admin/results` endpoints below for what this gates.
 
 **Validation (D9 — injection prevention only, no statistical/outlier filtering):**
 1. Token must exist and belong to the requesting session's user — otherwise `RUN_TOKEN_INVALID`
@@ -326,13 +374,29 @@ is still a ceiling.
 Anonymized aggregate comparison for one specific completed run (call right after submit, using its
 `result_id`). **Never** another user's identity, handle, or raw value (D12) — only this user's own
 value plus an aggregate percentile/rank/count.
-200: `{ "r_test_id", "r_test_version_id", "your_value_ms", "percentile": float|null, "rank": int, "total_participants": int }`
+200: `{ "r_test_id", "r_test_version_id", "your_value_ms", "your_sd_ms": float|null, "your_cv": float|null, "percentile": float|null, "rank": int, "total_participants": int, "peer_sd_ms_median": float|null }`
 `percentile` = share of *other* participants (self excluded from the denominator) this result is
 faster than (lower ms = faster); `null` if there are no other participants yet in this exact
 version's distribution. `rank` = 1-based position (1 = fastest) across the full distribution
 (self included).
 Errors: `NOT_FOUND` (404 — unknown result id, **or** a result belonging to another user; same code
 for both, an IDOR guard per D3's privacy rule)
+
+**CR-AUTH-02 (v1.5, implements D19):** the comparison **pool** underlying `percentile`/`rank`/
+`total_participants` is restricted to `approval_status = 'approved'` results only — a newly
+submitted (`pending`) or admin-`rejected` result never affects *other* users' figures until an
+admin approves it. This user's own `your_value_ms` (and `your_sd_ms`/`your_cv`, below) is read
+directly off their own result and is **completely unaffected** by their own result's approval
+status — they always see their own value immediately. If the caller's own result happens to
+already be `approved`, it is still excluded from its own "peers" denominator exactly as before
+(self-exclusion semantics are unchanged).
+
+**CR-STATS-08 (v1.5):** adds `your_sd_ms`/`your_cv` (this result's own persisted values, `null` if
+fewer than 2 valid trial readings were submitted) and `peer_sd_ms_median` — the median `sd_ms`
+across the same approved peer pool described above (self excluded), a real server-computed
+aggregate. `null` if no approved peer has a non-null `sd_ms` yet. Field name chosen over a
+percentile-style figure for simplicity; may be extended later if a percentile-of-variability view
+is wanted.
 
 ---
 
@@ -411,6 +475,20 @@ ProductOwner should schedule one before any of the above can be wired up for rea
 
 ## Changelog
 
+- v1.5 (2026-09-18) — Sprint 9: **CR-AUTH-02** (implements D19, admin approval queue) —
+  `results` gains `approval_status` (`pending`|`approved`|`rejected`, default `pending` on new
+  submissions; existing pre-Sprint-9 rows backfilled `approved`). `GET /results/{id}/comparison`'s
+  aggregate pool (`percentile`/`rank`/`total_participants`) now excludes non-`approved` results;
+  the caller's own `your_value_ms` is unaffected regardless of their own result's status. New
+  admin-only `GET /admin/results?status=pending` + `PATCH /admin/results/{id}`. **CR-STATS-08**
+  (reaction-time variability) — `results` gains `sd_ms`/`cv`, computed at submission time
+  (per-channel for two-hand tests, in `summary.channels.{channel}` and `summary.overall`);
+  `GET /results/{id}/comparison` gains `your_sd_ms`/`your_cv`/`peer_sd_ms_median` (peer aggregate
+  reuses CR-AUTH-02's `approval_status = 'approved'` filter — one gating mechanism, not two).
+  **CR-AUTH-03** (optional profile fields) — `users` gains nullable `real_name`/`display_name`
+  (<=100 chars, no uniqueness constraint); `UserProfile` and `PATCH /profile` extended to match;
+  neither field appears in any anonymized/peer-comparison payload. No other endpoint or response
+  shape changed.
 - v1.4 (2026-09-16) — Sprint 6: CR-INFRA-02 (CI/CD). New endpoint `GET /health` (no auth) —
   exercises a real DB round-trip, returns `{ "data": { "status": "ok" } }` on success or 503
   `INTERNAL_ERROR` on DB failure. Used as the deploy workflow's post-deploy smoke-check target.

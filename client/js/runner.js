@@ -60,6 +60,8 @@
     el.textContent = WHY_IT_MATTERS_PLACEHOLDER[slug] ||
       "Reaction-time measures are simple, objective, and repeatable — tracked over time, they can surface changes worth paying attention to.";
   }
+  // CR-UI-24 merged the old "Interpreting your results" + "Why this matters" cards into one
+  // "Test results analysis" card; renderWhyItMatters() (above) still fills its second half.
 
   function renderDescription() {
     document.getElementById("desc-name").textContent = t(meta.prefix + ".name");
@@ -80,19 +82,26 @@
     showPage("page-description");
   }
 
-  /** Bound once at boot (unlike renderDescription, which can re-run on a locale change). */
+  /**
+   * CR-UI-24: replaces the old Single/Series segmented control with a single
+   * "Number of runs" number input (default 1) + "Run until I quit" round-pill
+   * toggle, mutually exclusive — checking the toggle disables the number input
+   * (and vice versa isn't needed since the toggle always wins per the mockup's
+   * behavior notes). Bound once at boot (unlike renderDescription, which can
+   * re-run on a locale change).
+   */
   function wireModeSegmented() {
-    var modeSeg = document.getElementById("mode-segmented");
-    var seriesOptions = document.getElementById("series-options");
-    Reflx.util.qsa("button", modeSeg).forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        Reflx.util.qsa("button", modeSeg).forEach(function (b) { b.classList.remove("active"); });
-        btn.classList.add("active");
-        var isSeries = btn.dataset.mode === "series";
-        seriesOptions.style.display = isSeries ? "flex" : "none";
-        document.getElementById("btn-start").textContent = t(isSeries ? "runner.description.start_series" : "runner.description.start");
-      });
-    });
+    var runsInput = document.getElementById("runs-count");
+    var untilQuit = document.getElementById("until-quit");
+    var untilQuitToggle = document.getElementById("until-quit-toggle");
+
+    function syncToggleState() {
+      var checked = untilQuit.checked;
+      runsInput.disabled = checked;
+      untilQuitToggle.classList.toggle("active", checked);
+    }
+    untilQuit.addEventListener("change", syncToggleState);
+    syncToggleState();
   }
 
   function wireStart() {
@@ -108,13 +117,15 @@
         }
       }
 
-      var activeModeBtn = document.querySelector("#mode-segmented button.active");
-      runState.seriesMode = activeModeBtn.dataset.mode === "series";
+      // CR-UI-24: runs>1 OR "Run until I quit" checked both count as series mode;
+      // runs=1 with the toggle unchecked behaves exactly like today's Single test.
+      var untilQuit = document.getElementById("until-quit").checked;
+      var runsCount = parseInt(document.getElementById("runs-count").value, 10) || 1;
+      runState.seriesMode = untilQuit || runsCount > 1;
       runState.seriesId = runState.seriesMode ? Reflx.util.uid("series") : null;
       if (runState.seriesMode) {
-        var kind = document.querySelector('input[name="series-kind"]:checked').value;
-        runState.seriesKind = kind;
-        runState.seriesTarget = kind === "count" ? parseInt(document.getElementById("series-count").value, 10) : null;
+        runState.seriesKind = untilQuit ? "until-quit" : "count";
+        runState.seriesTarget = untilQuit ? null : runsCount;
       }
       runState.completedRuns = [];
       beginRun();
@@ -353,6 +364,14 @@
     renderResultActions(opts.finalized);
   }
 
+  /**
+   * CR-STATS-08: formats a variability figure from the server's authoritative
+   * `sd_ms` (CONTRACT.md v1.5 `summary.overall`/`summary.channels.{channel}`) —
+   * never a client recomputation. `null`/missing (fewer than 2 valid readings)
+   * renders as "—", matching this page's other not-yet-available figures.
+   */
+  function fmtVariability(sdMs) { return typeof sdMs === "number" ? fmtMs(sdMs) : "—"; }
+
   function renderSummary(last) {
     var box = document.getElementById("result-summary");
     box.innerHTML = "";
@@ -362,16 +381,21 @@
       ]));
     }
     var local = localTrialStats(last.kind, last.trials);
+    var summary = last.summary || {};
     if (last.kind === "two-hand") {
+      var channels = summary.channels || {};
       row(t("test.twohand.result.left_mean"), fmtMs(local.leftMean));
+      row(t("test.twohand.result.left_variability"), fmtVariability(channels.left && channels.left.sd_ms));
       row(t("test.twohand.result.right_mean"), fmtMs(local.rightMean));
-      var delta = last.summary && typeof last.summary.dominant_minus_nondominant_ms === "number" ? last.summary.dominant_minus_nondominant_ms : null;
+      row(t("test.twohand.result.right_variability"), fmtVariability(channels.right && channels.right.sd_ms));
+      var delta = typeof summary.dominant_minus_nondominant_ms === "number" ? summary.dominant_minus_nondominant_ms : null;
       row(t("test.twohand.result.delta_mean"), delta !== null ? fmtMs(delta) : "—");
       row(t("test.twohand.result.dominant"), Reflx.settings.get().dominantHand || t("settings.dominant.unset"));
     } else {
       row(t("runner.result.mean"), fmtMs(typeof last.primaryMetricMs === "number" ? last.primaryMetricMs : local.mean));
       row(t("runner.result.best"), fmtMs(local.best));
       row(t("runner.result.worst"), fmtMs(local.worst));
+      row(t("runner.result.variability"), fmtVariability(summary.overall && summary.overall.sd_ms));
     }
     row(t("runner.result.trials_recorded"), String(last.trials.length));
     row(t("runner.result.false_starts"), String(last.falseStarts));

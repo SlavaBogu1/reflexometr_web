@@ -124,7 +124,11 @@
 
     // --- CR-STATS-01 / CR-STATS-02 (auth required) ---
     getHistory: function (slug, version) { return request("GET", "/r-tests/" + encodeURIComponent(slug) + "/versions/" + version + "/history"); },
-    getComparison: function (resultId) { return request("GET", "/results/" + resultId + "/comparison"); }
+    getComparison: function (resultId) { return request("GET", "/results/" + resultId + "/comparison"); },
+
+    // --- CR-AUTH-02: admin results approval queue (admin-only, 403 enforced server-side) ---
+    listPendingResults: function (status) { return request("GET", "/admin/results?status=" + encodeURIComponent(status || "pending")); },
+    patchResultStatus: function (id, approvalStatus) { return request("PATCH", "/admin/results/" + id, { approval_status: approvalStatus }); }
   };
 
   Reflx.api = api;

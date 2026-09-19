@@ -17,6 +17,9 @@
     document.getElementById("auth-toggle").textContent = t(isLogin ? "auth.toggle_to_register" : "auth.toggle_to_login");
     document.getElementById("auth-password-hint").style.display = isLogin ? "none" : "inline";
     document.getElementById("auth-password").setAttribute("autocomplete", isLogin ? "current-password" : "new-password");
+    document.getElementById("auth-password-confirm-row").style.display = isLogin ? "none" : "flex";
+    // Reset on every mode switch so a stale value from a prior attempt can't cause a false mismatch later.
+    document.getElementById("auth-password-confirm").value = "";
     hideError();
   }
 
@@ -40,6 +43,12 @@
     hideError();
     var email = document.getElementById("auth-email").value.trim();
     var password = document.getElementById("auth-password").value;
+
+    if (mode === "register") {
+      var confirm = document.getElementById("auth-password-confirm").value;
+      if (confirm !== password) { showError("AUTH_PASSWORD_CONFIRM_MISMATCH"); return; }
+    }
+
     var submitBtn = document.getElementById("auth-submit");
     submitBtn.disabled = true;
     submitBtn.textContent = t(mode === "login" ? "auth.logging_in" : "auth.registering");
@@ -57,6 +66,7 @@
 
   document.getElementById("auth-submit").addEventListener("click", submit);
   document.getElementById("auth-password").addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });
+  document.getElementById("auth-password-confirm").addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });
   document.getElementById("auth-toggle").addEventListener("click", function (e) {
     e.preventDefault();
     setMode(mode === "login" ? "register" : "login");

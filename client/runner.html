@@ -12,33 +12,32 @@
   <main class="container">
     <div id="not-found" class="notice danger" data-i18n="runner.not_found" style="display:none;"></div>
 
-    <!-- Page 1: Description (CR-TEST-02) — shown only when entering from the library this session -->
+    <!-- Page 1: Description (CR-TEST-02) — shown only when entering from the library this session.
+         Card order per CR-UI-24's approved mockup (client/prototype-test-description-refresh.html):
+         Test Description → Mode → [dominant-hand prompt, if applicable] → Test results analysis. -->
     <section class="page" id="page-description">
       <h1 id="desc-name"></h1>
-      <p id="desc-description"></p>
 
       <div class="card">
-        <h3 data-i18n="runner.description.expected_actions">What you'll do</h3>
+        <h3 data-i18n="runner.description.heading">Test Description</h3>
+        <p id="desc-description"></p>
         <ul id="desc-expected"></ul>
       </div>
 
       <div class="card">
-        <h3 data-i18n="runner.description.guidance">Interpreting your results</h3>
-        <p id="desc-guidance"></p>
-      </div>
-
-      <!--
-        CR-UI-08 (Sprint 3, design-prototype consolidated directly into the live
-        Description page per the approved mockup): a short "Why this matters"
-        research-basis blurb. Placeholder/illustrative copy only (not sourced
-        verbatim from the private KB/) — real per-method copy lands with
-        CR-TEST-17. Deliberately not run through the i18n mechanism (renders in
-        English regardless of site locale) per CR-UI-08's explicit "i18n: none,
-        single locale" scope until the real content task authors final strings.
-      -->
-      <div class="card">
-        <h3>Why this matters</h3>
-        <div class="research-blurb" id="desc-why-it-matters"></div>
+        <div class="mode-card-row">
+          <div class="runs-row">
+            <div class="runs-count-field">
+              <label for="runs-count" data-i18n="runner.description.series_count">Number of runs</label>
+              <input type="number" id="runs-count" min="1" max="50" value="1">
+            </div>
+            <label class="round-toggle" id="until-quit-toggle" for="until-quit">
+              <input type="checkbox" id="until-quit">
+              <span data-i18n="runner.description.series_until_quit">Run until I quit</span>
+            </label>
+          </div>
+          <button class="btn" id="btn-start" data-i18n="runner.description.start">Start Test</button>
+        </div>
       </div>
 
       <div class="card" id="dominant-hand-prompt" style="display:none;">
@@ -51,23 +50,22 @@
         </select>
       </div>
 
-      <div class="card">
-        <div class="field-row">
-          <label data-i18n="runner.description.mode">Mode</label>
-          <div class="segmented" id="mode-segmented">
-            <button data-mode="single" class="active" data-i18n="runner.description.mode_single">Single test</button>
-            <button data-mode="series" data-i18n="runner.description.mode_series">Series</button>
-          </div>
-        </div>
-        <div class="field-row" id="series-options" style="display:none;">
-          <label><input type="radio" name="series-kind" value="count" checked> <span data-i18n="runner.description.series_count">Number of runs</span></label>
-          <input type="number" id="series-count" min="2" max="50" value="5" style="width:5em;">
-          <label><input type="radio" name="series-kind" value="until-quit"> <span data-i18n="runner.description.series_until_quit">Run until I quit</span></label>
-        </div>
-      </div>
+      <!--
+        CR-UI-08 (Sprint 3, design-prototype consolidated directly into the live
+        Description page per the approved mockup): a short "Why this matters"
+        research-basis blurb. Placeholder/illustrative copy only (not sourced
+        verbatim from the private KB/) — real per-method copy lands with
+        CR-TEST-17. Deliberately not run through the i18n mechanism (renders in
+        English regardless of site locale) per CR-UI-08's explicit "i18n: none,
+        single locale" scope until the real content task authors final strings.
 
-      <div class="btn-row">
-        <button class="btn" id="btn-start" data-i18n="runner.description.start">Start test</button>
+        CR-UI-24: merged with the old "Interpreting your results" card into one
+        "Test results analysis" card.
+      -->
+      <div class="card">
+        <h3 data-i18n="runner.description.results_analysis">Test results analysis</h3>
+        <p id="desc-guidance"></p>
+        <div class="research-blurb" id="desc-why-it-matters"></div>
       </div>
     </section>
 

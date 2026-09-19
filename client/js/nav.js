@@ -78,7 +78,10 @@
         { href: "settings.html", key: "nav.settings", page: "settings" }
       ];
       if (user) links.push({ href: "stats.html", key: "nav.stats", page: "stats" });
-      if (Reflx.session.isAdmin()) links.push({ href: "library.html", key: "nav.library", page: "library" });
+      if (Reflx.session.isAdmin()) {
+        links.push({ href: "library.html", key: "nav.library", page: "library" });
+        links.push({ href: "admin-results.html", key: "nav.admin_results", page: "admin-results" });
+      }
 
       var nav = Reflx.util.el("nav", { class: "site-nav" }, [
         Reflx.util.el("a", { class: "brand", href: "index.html", "data-i18n": "nav.brand" }),
@@ -89,7 +92,8 @@
       });
 
       if (user) {
-        nav.appendChild(Reflx.util.el("span", { class: "chip" }, [user.email]));
+        // CR-AUTH-03: Display name > User name (real_name) > email precedence.
+        nav.appendChild(Reflx.util.el("span", { class: "chip" }, [user.display_name || user.real_name || user.email]));
         nav.appendChild(Reflx.util.el("a", {
           href: "#", "data-i18n": "nav.logout", class: activePage === "login" ? "active" : "",
           onclick: function (e) {

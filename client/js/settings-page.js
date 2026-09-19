@@ -27,6 +27,14 @@
     document.getElementById("countdown-seconds").value = s.countdownSeconds;
     document.getElementById("language-select").value = s.locale || "__auto__";
     document.getElementById("login-note").textContent = t(Reflx.session.isLoggedIn() ? "settings.synced_note" : "settings.login_note");
+
+    // CR-AUTH-03: server-backed only, no local settings fallback — blank when
+    // logged out (fields themselves stay editable-looking but changes only
+    // persist while logged in, same as dominant-hand's sync-only-if-logged-in
+    // behavior below).
+    var user = Reflx.session.getUser();
+    document.getElementById("realname-input").value = (user && user.real_name) || "";
+    document.getElementById("displayname-input").value = (user && user.display_name) || "";
   }
 
   function populateLanguageSelect() {
@@ -123,6 +131,24 @@
       }
       flashSaved();
     });
+
+    function wireNameField(inputId, profileKey) {
+      document.getElementById(inputId).addEventListener("change", function (e) {
+        var value = e.target.value.trim() || null;
+        if (!Reflx.session.isLoggedIn()) return; // server-backed only — no-op while logged out
+        var patch = {};
+        patch[profileKey] = value;
+        api.patchProfile(patch).then(function (res) {
+          if (!res.ok) { alert(api.messageFor(res.code)); renderValues(); return; }
+          var update = {};
+          update[profileKey] = res.data[profileKey];
+          Reflx.session.updateUser(update);
+          flashSaved();
+        });
+      });
+    }
+    wireNameField("realname-input", "real_name");
+    wireNameField("displayname-input", "display_name");
 
     document.getElementById("countdown-seconds").addEventListener("change", function (e) {
       // 0 is a valid "disable countdown" value, not an error — clamp to the

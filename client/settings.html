@@ -152,6 +152,25 @@
         </select>
       </div>
 
+      <!-- CR-AUTH-03: optional profile fields, server-backed only (no anonymous
+           local-first fallback like dominant-hand/language above — these have no
+           meaning without a logged-in account). -->
+      <div class="field-row">
+        <div>
+          <label data-i18n="settings.realname.label">User name</label>
+          <div class="field-desc" data-i18n="settings.realname.desc"></div>
+        </div>
+        <input type="text" id="realname-input" maxlength="100">
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label data-i18n="settings.displayname.label">Display name</label>
+          <div class="field-desc" data-i18n="settings.displayname.desc"></div>
+        </div>
+        <input type="text" id="displayname-input" maxlength="100">
+      </div>
+
       <div class="field-row">
         <div>
           <label data-i18n="settings.language.label">Language</label>
