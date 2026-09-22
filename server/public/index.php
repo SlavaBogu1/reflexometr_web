@@ -20,6 +20,7 @@ use Reflexometr\Http\Request;
 use Reflexometr\Http\Response;
 use Reflexometr\Http\Router;
 use Reflexometr\Routes;
+use Reflexometr\Support\DebugLog;
 
 Config::load();
 
@@ -28,11 +29,21 @@ Routes::register($router);
 
 $request = Request::capture();
 
+// HF-02: prove the request reached PHP at all, before dispatch can throw/hang.
+DebugLog::write('request.start', ['method' => $request->method, 'path' => $request->path]);
+
 try {
     [$status, $body] = $router->dispatch($request);
+    DebugLog::write('request.done', ['status' => $status]);
 } catch (\Throwable $e) {
     // Last-resort safety net — never leak an English exception message to the client (CR-UI-02).
     error_log('[reflexometr] unhandled: ' . $e->getMessage());
+    DebugLog::write('request.exception', [
+        'class' => get_class($e),
+        'message' => $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+    ]);
     [$status, $body] = Response::error(ErrorCode::INTERNAL_ERROR, 500);
 }
 

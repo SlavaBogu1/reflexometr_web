@@ -64,3 +64,8 @@ server/.phpunit.cache/
 # HF-01 / CR-TEST-21: deploy-generated one-time OPcache reset token — never committed, written
 # fresh by .github/workflows/deploy.yml and deleted from the live host after each deploy.
 server/public/opcache-reset.token
+
+# HF-02: temporary debug log for the final-trial-hang investigation — WebHostMost has no accessible
+# PHP error log, so this writes to server/storage/ (non-web-servable) instead. Never committed;
+# remove the instrumentation once the root cause is found.
+server/storage/debug.log

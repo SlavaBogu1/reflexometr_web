@@ -14,6 +14,7 @@ use Reflexometr\Repositories\RTestRepository;
 use Reflexometr\Repositories\RTestVersionRepository;
 use Reflexometr\Repositories\RunTokenRepository;
 use Reflexometr\Support\Clock;
+use Reflexometr\Support\DebugLog;
 use Reflexometr\Support\Rand;
 
 /**
@@ -119,6 +120,9 @@ final class RunService
         ?int $clientStartedAtMs,
         ?string $dominantHandAtSubmission,
     ): array {
+        // HF-02: prove submitRun was actually called, and with what trial count.
+        DebugLog::write('submitRun.start', ['token_prefix' => substr($token, 0, 8), 'trial_count' => count($submittedTrials)]);
+
         $runToken = $this->tokens->findByToken($token);
         if ($runToken === null || (int) $runToken['user_id'] !== $userId) {
             // Same error for "doesn't exist" and "belongs to someone else" — never leak which.
@@ -135,6 +139,7 @@ final class RunService
 
         $schedule = json_decode((string) $runToken['schedule_json'], true);
         $this->validateTrialLog($schedule, $submittedTrials, (int) $runToken['issued_at_ms'], $nowMs);
+        DebugLog::write('submitRun.validated', ['channels' => $schedule['response_channels'] ?? null]);
 
         $this->db->beginTransaction();
         try {
@@ -151,6 +156,7 @@ final class RunService
 
             ['summary' => $summary, 'primaryMetricMs' => $primaryMetricMs, 'sdMs' => $sdMs, 'cv' => $cv] =
                 ResultSummaryService::compute($schedule, $submittedTrials, $dominantHand);
+            DebugLog::write('submitRun.summaryComputed', ['primaryMetricMs' => $primaryMetricMs, 'sdMs' => $sdMs, 'cv' => $cv]);
 
             $resultId = $this->results->create(
                 $userId,
@@ -169,15 +175,23 @@ final class RunService
             );
 
             $this->db->commit();
+            DebugLog::write('submitRun.committed', ['result_id' => $resultId]);
         } catch (ApiException $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
+            DebugLog::write('submitRun.apiException', ['message' => $e->getMessage()]);
             throw $e;
         } catch (\Throwable $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
+            DebugLog::write('submitRun.throwable', [
+                'class' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
             throw $e;
         }
 
