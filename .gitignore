@@ -12,6 +12,7 @@ ProductOwner_records/
 /PRODUCT_OWNER_INBOX.md
 **/requirements/
 TASKS.md
+**/history/
 
 # Tester (QA) sub-team: validates only, never ships production code —
 # entire directory is SDLC tooling (router.php is local dev infra, not a deliverable).
@@ -59,3 +60,7 @@ Thumbs.db
 vendor/
 server/storage/*.sqlite
 server/.phpunit.cache/
+
+# HF-01 / CR-TEST-21: deploy-generated one-time OPcache reset token — never committed, written
+# fresh by .github/workflows/deploy.yml and deleted from the live host after each deploy.
+server/public/opcache-reset.token

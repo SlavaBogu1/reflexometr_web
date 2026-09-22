@@ -26,6 +26,10 @@ name: Deploy to WebHostMost (sandbox.bogushevich.ru/rtest)
 #                      ~/.ssh/authorized_keys on the target — never a password
 #   DEPLOY_SSH_PORT  - optional; only needed if the host uses a non-default SSH port (defaults to
 #                      22 below if the secret is unset)
+#   OPCACHE_RESET_TOKEN - HF-01 (CR-TEST-21): random shared secret, compared with hash_equals() by
+#                      api/opcache-reset.php. Generated fresh into the deployed script on every
+#                      deploy (never committed) so the endpoint can't be triggered by anyone but
+#                      this workflow. Set to any long random string in repo secrets once.
 #
 # --- Target layout (D16, revised 2026-09-17) -------------------------------------------------
 # WebHostMost's addon-domain document root is ~/domains/<domain>/public_html/ , NOT ~/ (confirmed
@@ -50,6 +54,19 @@ name: Deploy to WebHostMost (sandbox.bogushevich.ru/rtest)
 # credentials — deliberately excluded from the server sync payload below and never generated,
 # uploaded, or overwritten by this workflow. Config.php's real-env-wins precedent means an
 # untouched .env on the target continues to override any bundled defaults.
+#
+# --- OPcache reset on every deploy (HF-01 / CR-TEST-21, 2026-09-18) -----------------------------
+# Root cause of the Two-Hand Reaction Time 500-on-timeout production bug: WebHostMost's LiteSpeed
+# PHP runs with OPcache enabled and long-lived worker processes, so uploading new source files does
+# not guarantee the running workers execute them (same class of staleness as D22's browser-JS-
+# caching finding, just server-side). The Sprint 9 code that reached production was correct on
+# disk; some workers kept serving a stale pre-fix compiled version indefinitely. There is no
+# assumed shell-level access to restart PHP-FPM/LSAPI on this shared host, so the fix calls
+# opcache_reset() from *inside* a PHP request handled by the live web SAPI itself — the only
+# mechanism guaranteed to hit the exact OPcache instance serving real traffic, regardless of
+# process manager. api/opcache-reset.php is generated fresh (with a random one-time token neither
+# committed nor reused) after every server deploy, hit once over HTTPS, and then deleted so it
+# never exists as a standing endpoint between deploys.
 #
 # --- Sync method note (2026-09-17) ------------------------------------------------------------
 # rsync is NOT available on the target (confirmed live: `which rsync` finds nothing in this
@@ -147,6 +164,51 @@ jobs:
             cp -a public/. ~/${{ env.RTEST_PATH }}/api/
             rm -rf tests CLAUDE.md TASKS.md requirements public
             echo "<?php return '$(pwd)';" > ~/${{ env.RTEST_PATH }}/api/app-path.php
+
+      - name: Write a fresh one-time OPcache reset token (HF-01 / CR-TEST-21)
+        env:
+          OPCACHE_RESET_TOKEN: ${{ secrets.OPCACHE_RESET_TOKEN }}
+        run: |
+          if [ -z "$OPCACHE_RESET_TOKEN" ]; then
+            echo "::error::OPCACHE_RESET_TOKEN secret is not set — add it (any long random string) in repo Settings > Secrets and re-run. server/public/opcache-reset.php refuses to run without a matching token file, so this is required, not optional."
+            exit 1
+          fi
+          echo -n "$OPCACHE_RESET_TOKEN" > /tmp/opcache-reset.token
+
+      - name: Upload the OPcache reset token next to the already-deployed script
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          source: "/tmp/opcache-reset.token"
+          target: "~/${{ env.RTEST_PATH }}/api"
+          strip_components: 1
+
+      - name: Trigger the OPcache reset on the live web SAPI, then remove both files
+        env:
+          OPCACHE_RESET_TOKEN: ${{ secrets.OPCACHE_RESET_TOKEN }}
+        run: |
+          status=$(curl -s -o /tmp/opcache_reset_body -w "%{http_code}" "https://${{ secrets.DEPLOY_SSH_HOST }}/rtest/api/opcache-reset.php?token=${OPCACHE_RESET_TOKEN}")
+          echo "OPcache reset HTTP status: $status"
+          cat /tmp/opcache_reset_body
+          echo
+          if [ "$status" != "200" ]; then
+            echo "::error::OPcache reset request failed (HTTP $status) — live workers may still be serving stale bytecode."
+            exit 1
+          fi
+
+      - name: Remove the OPcache reset token + script from the live host
+        if: always()
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          script: |
+            rm -f ~/${{ env.RTEST_PATH }}/api/opcache-reset.token ~/${{ env.RTEST_PATH }}/api/opcache-reset.php
 
       - name: Post-deploy health check
         run: |
