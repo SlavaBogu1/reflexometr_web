@@ -20,11 +20,22 @@ if (!is_file($schemaFile)) {
 $sql = file_get_contents($schemaFile);
 $db = Database::connection();
 
-foreach (array_filter(array_map('trim', explode(';', $sql))) as $statement) {
+// HF-02 follow-up: strip `-- ...` line comments before splitting on `;` — a bare explode() would
+// break mid-statement whenever a comment happens to contain a literal semicolon (English prose
+// often does), producing a garbage fragment PDO then rejects with a confusing syntax error. Only
+// removes `--` comment lines, never touches semicolons inside an actual SQL statement.
+$withoutComments = preg_replace('/^\s*--.*$/m', '', $sql);
+
+foreach (array_filter(array_map('trim', explode(';', $withoutComments))) as $statement) {
     if ($statement === '') {
         continue;
     }
-    $db->exec($statement);
+    // query()->closeCursor(), not exec() — MySQL's PREPARE/EXECUTE/DEALLOCATE PREPARE sequence
+    // (used by this schema file's idempotent ADD-COLUMN-IF-MISSING guards) behaves like a
+    // multi-result-set call under real (non-emulated) prepared statements; exec() alone leaves a
+    // result set open and the next exec() fails with "Cannot execute queries while other
+    // unbuffered queries are active." query() + closeCursor() fully drains each statement first.
+    $db->query($statement)->closeCursor();
 }
 
 echo "Migrated ({$driver} driver): {$schemaFile}\n";
