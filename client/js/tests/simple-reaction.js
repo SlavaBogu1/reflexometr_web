@@ -67,7 +67,11 @@
 
         stopWatchers();
         watchers.push(Reflx.inputCapture.watch({ type: "keyboard", code: settings.keyboardKey }, onInput));
-        watchers.push(Reflx.inputCapture.watch({ type: "mouse", target: orbEl }, onInput));
+        // CR-TEST-22: bind to the outer .stimulus-stage card (orb), not just the
+        // .orb circle (orbEl) — mousedown bubbles from any descendant (trial-
+        // progress text, empty card background, the circle itself) up to this
+        // target, so a click anywhere in the visible card box registers.
+        watchers.push(Reflx.inputCapture.watch({ type: "mouse", target: orb }, onInput));
         watchers.push(Reflx.inputCapture.watch({ type: "gamepad", index: settings.gamepadButtonIndex }, onInput));
 
         armTimer = setTimeout(function () {

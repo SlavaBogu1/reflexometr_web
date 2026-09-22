@@ -221,6 +221,7 @@
     "settings.press_prompt": "Taste drücken…",
     "settings.press_prompt_gamepad": "Gamepad-Taste drücken…",
     "settings.saved": "Gespeichert.",
+    "settings.savefield.label": "Speichern",
     "settings.reset": "Auf Standard zurücksetzen",
     "settings.login_note": "Melde dich an, um deine Sprache und dominante Hand geräteübergreifend zu synchronisieren.",
     "settings.synced_note": "Sprache und dominante Hand sind mit deinem Konto synchronisiert.",
@@ -279,7 +280,6 @@
     "admin_results.status.rejected": "Abgelehnt",
 
     "browse.title": "Test durchführen",
-    "browse.intro": "Wähle unten einen R-Test aus. Gerät und Tastenbelegung stammen aus den Einstellungen.",
     "browse.start": "Start",
     "browse.empty": "Noch keine aktiven R-Tests verfügbar.",
     "browse.current_version": "aktuelle Version",

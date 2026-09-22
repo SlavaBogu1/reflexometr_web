@@ -33,8 +33,42 @@
     // persist while logged in, same as dominant-hand's sync-only-if-logged-in
     // behavior below).
     var user = Reflx.session.getUser();
-    document.getElementById("realname-input").value = (user && user.real_name) || "";
-    document.getElementById("displayname-input").value = (user && user.display_name) || "";
+    var realNameVal = (user && user.real_name) || "";
+    var displayNameVal = (user && user.display_name) || "";
+    document.getElementById("realname-input").value = realNameVal;
+    document.getElementById("displayname-input").value = displayNameVal;
+    // Reopened 2026-09-18: (re)establish the "last-saved" baseline every time
+    // values are (re)rendered from server/session truth (initial load, reload,
+    // login/logout) so the save buttons start/return to disabled here, not just
+    // right after a successful save.
+    setSavedBaseline("realname-input", "realname-save", realNameVal);
+    setSavedBaseline("displayname-input", "displayname-save", displayNameVal);
+  }
+
+  // CR-AUTH-03 (reopened): per-field checkmark save-button state, replacing the
+  // change-event auto-save that silently missed non-blur navigate-aways.
+  // Keyed by inputId; caches the resolved elements alongside the last-saved
+  // baseline so the input/click handlers don't re-query the DOM by id on
+  // every keystroke.
+  var nameFields = {};
+
+  function nameField(inputId, btnId) {
+    if (!nameFields[inputId]) {
+      nameFields[inputId] = { input: document.getElementById(inputId), btn: document.getElementById(btnId), baseline: "" };
+    }
+    return nameFields[inputId];
+  }
+
+  function setSavedBaseline(inputId, btnId, value) {
+    nameField(inputId, btnId).baseline = value;
+    updateSaveButtonState(inputId, btnId);
+  }
+
+  function updateSaveButtonState(inputId, btnId) {
+    var f = nameField(inputId, btnId);
+    var dirty = f.input.value.trim() !== f.baseline;
+    f.btn.disabled = !dirty;
+    f.btn.classList.toggle("enabled", dirty);
   }
 
   function populateLanguageSelect() {
@@ -132,23 +166,37 @@
       flashSaved();
     });
 
-    function wireNameField(inputId, profileKey) {
-      document.getElementById(inputId).addEventListener("change", function (e) {
-        var value = e.target.value.trim() || null;
+    // CR-AUTH-03 (reopened): explicit per-field checkmark save button instead of
+    // change-event auto-save — `change` only fires on blur for a text `<input>`,
+    // so a user who types then navigates away without a distinct blur (e.g.
+    // clicking a nav link with focus still in the field) previously lost the
+    // edit silently. The button's own enabled/disabled state is now the visible
+    // "unsaved" vs. "saved" signal; no save happens without an explicit click.
+    function wireNameField(inputId, btnId, profileKey) {
+      var f = nameField(inputId, btnId);
+      var input = f.input, btn = f.btn;
+
+      input.addEventListener("input", function () {
+        updateSaveButtonState(inputId, btnId);
+      });
+
+      btn.addEventListener("click", function () {
         if (!Reflx.session.isLoggedIn()) return; // server-backed only — no-op while logged out
+        var value = input.value.trim() || null;
         var patch = {};
         patch[profileKey] = value;
         api.patchProfile(patch).then(function (res) {
-          if (!res.ok) { alert(api.messageFor(res.code)); renderValues(); return; }
+          if (!res.ok) { alert(api.messageFor(res.code)); return; } // leave button enabled — retry without re-typing
           var update = {};
           update[profileKey] = res.data[profileKey];
           Reflx.session.updateUser(update);
+          setSavedBaseline(inputId, btnId, res.data[profileKey] || "");
           flashSaved();
         });
       });
     }
-    wireNameField("realname-input", "real_name");
-    wireNameField("displayname-input", "display_name");
+    wireNameField("realname-input", "realname-save", "real_name");
+    wireNameField("displayname-input", "displayname-save", "display_name");
 
     document.getElementById("countdown-seconds").addEventListener("change", function (e) {
       // 0 is a valid "disable countdown" value, not an error — clamp to the

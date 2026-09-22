@@ -12,6 +12,11 @@
    * Watch a single input channel until stopped or (optionally) until it fires once.
    * spec: { type: "keyboard", code } | { type: "mouse", target } | { type: "gamepad", index }
    * onFire(perfNowTimestamp) is called every time the channel is actuated while active.
+   *
+   * For type: "mouse", pass the outer stage/card container as `target`, not an inner
+   * stimulus graphic — `mousedown` bubbles up from any descendant, so binding to the
+   * full visible card (not just e.g. the response circle) gives the whole card a hit
+   * area matching what the user sees as clickable (CR-TEST-22).
    */
   function watch(spec, onFire) {
     var active = true;

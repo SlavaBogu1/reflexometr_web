@@ -17,6 +17,21 @@
     .device-group-heading:not(:first-child) { margin-top: 1.25rem; }
     .device-group-heading h3 { margin: 0; font-size: 1rem; }
     .device-subitem { padding-left: 2.15rem; }
+
+    /* CR-AUTH-03 (reopened): per-field checkmark save button for the User
+       name / Display name text inputs. Layout approved:
+       prototype-settings-namefields-savebutton.html. */
+    .field-input-row { display: flex; align-items: center; gap: 0.4rem; }
+    .save-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 2.1rem; height: 2.1rem; flex: 0 0 auto;
+      background: var(--color-surface-alt); border: 1px solid var(--color-border);
+      border-radius: 6px; color: var(--color-text-dim); cursor: pointer; padding: 0;
+    }
+    .save-btn svg { width: 1.1rem; height: 1.1rem; }
+    .save-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .save-btn.enabled { color: var(--color-accent); border-color: var(--color-accent-dim); cursor: pointer; opacity: 1; }
+    .save-btn.enabled:hover { background: var(--color-accent); color: #05201d; }
   </style>
 </head>
 <body>
@@ -154,13 +169,26 @@
 
       <!-- CR-AUTH-03: optional profile fields, server-backed only (no anonymous
            local-first fallback like dominant-hand/language above — these have no
-           meaning without a logged-in account). -->
+           meaning without a logged-in account).
+           Reopened 2026-09-18: replaced change-event auto-save (missed on
+           navigate-away-without-blur) with an explicit per-field checkmark save
+           button — disabled by default/at baseline, enabled while the field
+           differs from its last-saved value. Layout approved:
+           prototype-settings-namefields-savebutton.html. -->
       <div class="field-row">
         <div>
           <label data-i18n="settings.realname.label">User name</label>
           <div class="field-desc" data-i18n="settings.realname.desc"></div>
         </div>
-        <input type="text" id="realname-input" maxlength="100">
+        <div class="field-input-row">
+          <input type="text" id="realname-input" maxlength="100">
+          <button type="button" class="save-btn" id="realname-save" disabled
+                  data-i18n-attr="aria-label:settings.savefield.label;title:settings.savefield.label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 12l5 5L20 6"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="field-row">
@@ -168,7 +196,15 @@
           <label data-i18n="settings.displayname.label">Display name</label>
           <div class="field-desc" data-i18n="settings.displayname.desc"></div>
         </div>
-        <input type="text" id="displayname-input" maxlength="100">
+        <div class="field-input-row">
+          <input type="text" id="displayname-input" maxlength="100">
+          <button type="button" class="save-btn" id="displayname-save" disabled
+                  data-i18n-attr="aria-label:settings.savefield.label;title:settings.savefield.label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 12l5 5L20 6"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="field-row">

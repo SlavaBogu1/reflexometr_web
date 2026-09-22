@@ -221,6 +221,7 @@
     "settings.press_prompt": "Press a key…",
     "settings.press_prompt_gamepad": "Press a gamepad button…",
     "settings.saved": "Saved.",
+    "settings.savefield.label": "Save",
     "settings.reset": "Reset to defaults",
     "settings.login_note": "Log in to sync your language and dominant hand to your account across devices.",
     "settings.synced_note": "Language and dominant hand are synced to your account.",
@@ -279,7 +280,6 @@
     "admin_results.status.rejected": "Rejected",
 
     "browse.title": "Take a test",
-    "browse.intro": "Pick an r-test below. Your device and key bindings come from Settings.",
     "browse.start": "Start",
     "browse.empty": "No active r-tests are available yet.",
     "browse.current_version": "current version",

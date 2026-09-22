@@ -221,6 +221,7 @@
     "settings.press_prompt": "请按一个键…",
     "settings.press_prompt_gamepad": "请按手柄上的一个按钮…",
     "settings.saved": "已保存。",
+    "settings.savefield.label": "保存",
     "settings.reset": "恢复默认设置",
     "settings.login_note": "登录后可在各设备间同步你的语言和惯用手设置。",
     "settings.synced_note": "语言和惯用手设置已与你的账户同步。",
@@ -279,7 +280,6 @@
     "admin_results.status.rejected": "已拒绝",
 
     "browse.title": "进行测试",
-    "browse.intro": "从下方选择一个反应测试。你的设备和按键绑定来自设置。",
     "browse.start": "开始",
     "browse.empty": "目前还没有可用的启用中反应测试。",
     "browse.current_version": "当前版本",

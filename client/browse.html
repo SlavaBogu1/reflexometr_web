@@ -11,7 +11,6 @@
 
   <main class="container">
     <h1 data-i18n="browse.title">Take a test</h1>
-    <p class="field-desc" data-i18n="browse.intro"></p>
     <div id="test-list" class="grid"></div>
   </main>
 
@@ -63,8 +62,13 @@
                 : t("browse.uncategorized");
               var card = Reflx.util.el("div", { class: "card" }, [
                 Reflx.util.el("h3", {}, [displayName]),
-                Reflx.util.el("span", { class: "chip" }, [categoryName]),
-                Reflx.util.el("span", { class: "chip version" }, [t("browse.current_version") + " v" + item.current_version]),
+                // CR-UI-25: category chip is now the bright/accent one (new page-scoped
+                // class, not the shared .chip.version rule); version chip drops the
+                // "version" modifier to fall back to the muted base .chip style. The
+                // shared .chip.version rule itself is untouched — still used bright by
+                // the admin Library table (js/library.js).
+                Reflx.util.el("span", { class: "chip category-highlight" }, [categoryName]),
+                Reflx.util.el("span", { class: "chip" }, [t("browse.current_version") + " v" + item.current_version]),
                 Reflx.util.el("div", { class: "btn-row" }, [
                   Reflx.util.el("a", {
                     class: "btn", href: "runner.html?slug=" + encodeURIComponent(item.slug) + "&entry=library",

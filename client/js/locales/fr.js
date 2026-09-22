@@ -221,6 +221,7 @@
     "settings.press_prompt": "Appuyez sur une touche…",
     "settings.press_prompt_gamepad": "Appuyez sur un bouton de manette…",
     "settings.saved": "Enregistré.",
+    "settings.savefield.label": "Enregistrer",
     "settings.reset": "Réinitialiser aux valeurs par défaut",
     "settings.login_note": "Connectez-vous pour synchroniser votre langue et votre main dominante entre appareils.",
     "settings.synced_note": "La langue et la main dominante sont synchronisées avec votre compte.",
@@ -279,7 +280,6 @@
     "admin_results.status.rejected": "Rejeté",
 
     "browse.title": "Passer un test",
-    "browse.intro": "Choisissez un r-test ci-dessous. Votre périphérique et vos raccourcis proviennent des Paramètres.",
     "browse.start": "Démarrer",
     "browse.empty": "Aucun r-test actif disponible pour le moment.",
     "browse.current_version": "version actuelle",

@@ -158,7 +158,13 @@ h1, h2, h3 { line-height: 1.25; }
   color: var(--color-text-dim);
   margin-right: 0.3rem;
 }
-.chip.version { color: var(--color-accent); border-color: var(--color-accent-dim); }
+/* CR-UI-25: .category-highlight is a separate class from .version (not merged)
+   so the admin Library table's version chip (js/library.js) keeps its current
+   bright style unaffected by any future divergence — but both share the same
+   accent color/border via this combined selector rather than duplicating the
+   two declarations. */
+.chip.version, .chip.category-highlight { color: var(--color-accent); border-color: var(--color-accent-dim); }
+.chip.category-highlight { font-weight: 600; }
 
 .field-row {
   display: flex;

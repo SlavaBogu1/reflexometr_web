@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CR-UI-25 mockup — "Take a test" (no intro, swapped chip hierarchy)</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Mockup-only: the new bright category-chip class this CR introduces.
+       ClientTeam picks the final name; this is illustrative. */
+    .chip.category-highlight { color: var(--color-accent); border-color: var(--color-accent-dim); font-weight: 600; }
+    .mockup-note { background: var(--color-warn); color: #2b1c05; padding: 0.5rem 1rem; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <div class="mockup-note">MOCKUP — CR-UI-25 — not wired to live data, static illustration only</div>
+  <div id="site-nav" style="padding:0.75rem 1.25rem; border-bottom:1px solid var(--color-border); color:var(--color-text-dim); font-size:0.9rem;">
+    Reflexometr &nbsp;|&nbsp; Take a test &nbsp;|&nbsp; The Research &nbsp;|&nbsp; All Paths &nbsp;|&nbsp; Settings
+  </div>
+
+  <main class="container">
+    <h1>Take a test</h1>
+    <!-- CR-UI-25 change 1: intro paragraph removed — h1 is followed directly by the card grid -->
+    <div id="test-list" class="grid">
+
+      <div class="card">
+        <h3>Simple Visual Reaction Time</h3>
+        <span class="chip category-highlight">Reflex</span>
+        <span class="chip">Current version v3</span>
+        <div class="btn-row">
+          <a class="btn" href="#">Start</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Two-Hand Reaction Time</h3>
+        <span class="chip category-highlight">Reflex</span>
+        <span class="chip">Current version v2</span>
+        <div class="btn-row">
+          <a class="btn" href="#">Start</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Go/No-Go Discrimination</h3>
+        <span class="chip category-highlight">Inhibitory control</span>
+        <span class="chip">Current version v1</span>
+        <div class="btn-row">
+          <a class="btn" href="#">Start</a>
+        </div>
+        <p class="field-desc">Login required to save your result.</p>
+      </div>
+
+    </div>
+  </main>
+
+  <div style="max-width:960px; margin:2rem auto; padding:0 1.25rem; color:var(--color-text-dim); font-size:0.85rem;">
+    <p><strong>What changed vs. today:</strong></p>
+    <ul>
+      <li>Intro paragraph below the "Take a test" heading is removed.</li>
+      <li>The category chip ("Reflex", "Inhibitory control") is now the bright/accent chip — previously muted.</li>
+      <li>The version chip ("Current version vN") is now the muted/plain chip — previously bright/accent.</li>
+      <li>Card content, Start button, login-required note, and the 3-column grid cap are otherwise unchanged.</li>
+    </ul>
+  </div>
+</body>
+</html>

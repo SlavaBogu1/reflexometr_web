@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CR-AUTH-03 mockup — Profile name fields, per-field checkmark save button</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .mockup-note { background: var(--color-warn); color: #2b1c05; padding: 0.5rem 1rem; font-size: 0.85rem; }
+    /* Mockup-only: the new save-button element this CR introduces next to each
+       of the two text fields. */
+    .field-input-row { display: flex; align-items: center; gap: 0.4rem; }
+    .save-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 2.1rem; height: 2.1rem; flex: 0 0 auto;
+      background: var(--color-surface-alt); border: 1px solid var(--color-border);
+      border-radius: 6px; color: var(--color-text-dim); cursor: pointer; padding: 0;
+    }
+    .save-btn svg { width: 1.1rem; height: 1.1rem; }
+    .save-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .save-btn.enabled { color: var(--color-accent); border-color: var(--color-accent-dim); cursor: pointer; opacity: 1; }
+    .save-btn.enabled:hover { background: var(--color-accent); color: #05201d; }
+  </style>
+</head>
+<body>
+  <div class="mockup-note">MOCKUP — CR-AUTH-03 (reopened) — static illustration of both button states, not wired to live data</div>
+  <div id="site-nav" style="padding:0.75rem 1.25rem; border-bottom:1px solid var(--color-border); color:var(--color-text-dim); font-size:0.9rem;">
+    Reflexometr &nbsp;|&nbsp; Take a test &nbsp;|&nbsp; Settings &nbsp;|&nbsp; V. Bogushevich
+  </div>
+
+  <main class="container">
+    <h1>Settings</h1>
+
+    <div class="card">
+      <h2>Profile</h2>
+      <p class="field-desc" style="margin-top:-0.5rem; margin-bottom:1rem;">Synced to your account.</p>
+
+      <div class="field-row">
+        <div>
+          <label>Dominant hand</label>
+          <div class="field-desc">Used to compute left/right delta on two-hand tests.</div>
+        </div>
+        <select><option>Right</option></select>
+      </div>
+
+      <!-- CR-AUTH-03 change: each text field gets its own checkmark save button. -->
+      <div class="field-row">
+        <div>
+          <label>User name</label>
+          <div class="field-desc">Your real/legal name (optional, for future certification use).</div>
+        </div>
+        <div class="field-input-row">
+          <input type="text" value="Slava Bogushevich" maxlength="100">
+          <!-- State: unedited since last save -> button disabled -->
+          <button class="save-btn" disabled aria-label="Save" title="No changes to save">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 12l5 5L20 6"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label>Display name</label>
+          <div class="field-desc">Short nickname shown in the top nav instead of your email.</div>
+        </div>
+        <div class="field-input-row">
+          <input type="text" value="Slava B.">
+          <!-- State: user has typed an unsaved edit -> button enabled/accent -->
+          <button class="save-btn enabled" aria-label="Save" title="Click to save">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 12l5 5L20 6"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label>Language</label>
+          <div class="field-desc">Interface language.</div>
+        </div>
+        <select><option>English</option></select>
+      </div>
+    </div>
+  </main>
+
+  <div style="max-width:960px; margin:2rem auto; padding:0 1.25rem; color:var(--color-text-dim); font-size:0.85rem;">
+    <p><strong>What changed vs. today:</strong></p>
+    <ul>
+      <li>User name and Display name each get a small square checkmark button to the right of the input.</li>
+      <li><strong>Disabled state</strong> (shown on User name above, muted/grey): field matches its last-saved value — nothing to save.</li>
+      <li><strong>Enabled state</strong> (shown on Display name above, accent-colored): field has an unsaved edit — clicking saves it via <code>PATCH /profile</code>, then the button returns to disabled.</li>
+      <li>No more silent auto-save-on-blur — the button's state is now the visible "saved" vs. "unsaved" signal.</li>
+      <li>Dominant hand / Language <code>&lt;select&gt;</code> fields are unchanged (still auto-save on <code>change</code>, no button).</li>
+    </ul>
+  </div>
+</body>
+</html>

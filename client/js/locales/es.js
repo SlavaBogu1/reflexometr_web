@@ -221,6 +221,7 @@
     "settings.press_prompt": "Pulsa una tecla…",
     "settings.press_prompt_gamepad": "Pulsa un botón del mando…",
     "settings.saved": "Guardado.",
+    "settings.savefield.label": "Guardar",
     "settings.reset": "Restablecer valores predeterminados",
     "settings.login_note": "Inicia sesión para sincronizar tu idioma y tu mano dominante en todos tus dispositivos.",
     "settings.synced_note": "El idioma y la mano dominante están sincronizados con tu cuenta.",
@@ -279,7 +280,6 @@
     "admin_results.status.rejected": "Rechazado",
 
     "browse.title": "Hacer una prueba",
-    "browse.intro": "Elige un r-test a continuación. Tu dispositivo y asignación de teclas vienen de Ajustes.",
     "browse.start": "Empezar",
     "browse.empty": "Aún no hay r-tests activos disponibles.",
     "browse.current_version": "versión actual",

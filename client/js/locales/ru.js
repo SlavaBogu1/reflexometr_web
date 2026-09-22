@@ -221,6 +221,7 @@
     "settings.press_prompt": "Нажмите клавишу…",
     "settings.press_prompt_gamepad": "Нажмите кнопку геймпада…",
     "settings.saved": "Сохранено.",
+    "settings.savefield.label": "Сохранить",
     "settings.reset": "Сброс по умолчанию",
     "settings.login_note": "Войдите, чтобы синхронизировать язык и доминирующую руку с вашей учетной записью на разных устройствах.",
     "settings.synced_note": "Язык и доминирующая рука синхронизированы с вашей учетной записью.",
@@ -279,7 +280,6 @@
     "admin_results.status.rejected": "Отклонено",
 
     "browse.title": "Пройти тест",
-    "browse.intro": "Выберите тест ниже. Ваше устройство и привязки клавиш берутся из настроек.",
     "browse.start": "Начать",
     "browse.empty": "Пока нет активных тестов.",
     "browse.current_version": "текущая версия",
