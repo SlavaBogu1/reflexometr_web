@@ -173,7 +173,12 @@ jobs:
             echo "::error::OPCACHE_RESET_TOKEN secret is not set — add it (any long random string) in repo Settings > Secrets and re-run. server/public/opcache-reset.php refuses to run without a matching token file, so this is required, not optional."
             exit 1
           fi
-          echo -n "$OPCACHE_RESET_TOKEN" > /tmp/opcache-reset.token
+          # scp-action runs as a Docker container that only mounts $GITHUB_WORKSPACE
+          # (see the working "Deploy server/" step's source: "server" above) — a
+          # /tmp file written by this native `run:` step on the runner host is NOT
+          # visible inside that container, so the upload silently sourced an empty
+          # path ("tar: empty archive"). Write inside the workspace instead.
+          echo -n "$OPCACHE_RESET_TOKEN" > "$GITHUB_WORKSPACE/opcache-reset.token"
 
       - name: Upload the OPcache reset token next to the already-deployed script
         uses: appleboy/scp-action@v0.1.7
@@ -182,9 +187,8 @@ jobs:
           username: ${{ secrets.DEPLOY_SSH_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
-          source: "/tmp/opcache-reset.token"
+          source: "opcache-reset.token"
           target: "~/${{ env.RTEST_PATH }}/api"
-          strip_components: 1
 
       - name: Trigger the OPcache reset on the live web SAPI, then remove both files
         env:
