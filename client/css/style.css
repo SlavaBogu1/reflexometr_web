@@ -328,6 +328,33 @@ tr.selectable:hover { background: var(--color-surface-alt); }
 /* CR-TEST-20: visible false-start feedback — reuses --color-warn. */
 .orb.false-start { background: var(--color-warn); }
 
+/* CR-TEST-23/24: Circle Collision (Simple/Complex) stage — reuses .stimulus-stage's box
+   treatment (border/radius/background) but with two independently-positioned circles
+   instead of one centered orb. Approved mockup: client/prototype-circle-collision-stage.html.
+   No color-change stimulus like the other tests — the "stimulus" is the predicted
+   collision moment itself; circles stay the accent color throughout. Circles' `left`
+   percentage is driven by js/tests/circle-collision-simple.js's requestAnimationFrame
+   loop (positionCircles()); width/height are set per-trial from the resolved radius. */
+.collision-stage {
+  display: block;
+  height: 320px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  position: relative;
+  user-select: none;
+  overflow: hidden;
+}
+.collision-stage #trial-progress {
+  position: absolute; top: 1rem; left: 50%; transform: translateX(-50%);
+}
+.collision-circle {
+  position: absolute; top: 50%; border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 40px rgba(0,0,0,0.25);
+  transform: translate(-50%, -50%);
+}
+
 .two-hand-stage {
   display: flex; align-items: center; justify-content: space-between;
   gap: 1rem; height: 320px; background: var(--color-bg-alt);
