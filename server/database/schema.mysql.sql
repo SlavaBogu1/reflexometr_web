@@ -2,6 +2,30 @@
 -- Equivalent SQLite schema (local-dev-only substitute) lives at schema.sqlite.sql —
 -- keep the two in sync when either changes.
 
+-- CR-TEST-25 (Sprint 11): rename r_test_categories -> r_test_tags MUST run before this file's own
+-- `CREATE TABLE IF NOT EXISTS r_test_tags` further down — this file is re-exec'd in full on every
+-- bin/migrate.php invocation (see that file's header), so on an already-deployed database that
+-- still has the old table name, the guard below only sees @new_table_exists = 0 if it runs before
+-- the CREATE TABLE IF NOT EXISTS. (A first version of this migration put this block AFTER the
+-- CREATE TABLE, which silently created an empty r_test_tags first, made @new_table_exists = 1 by
+-- the time this guard ran, and the RENAME never fired — caught by verifying against a real
+-- disposable MySQL container with pre-existing data per HF-02's lesson, not by a syntax read-
+-- through; see server/requirements/SPRINT11_REPORT.md.) A brand-new install has neither table yet,
+-- so @old_table_exists = 0 here and this whole block is a no-op — the CREATE TABLE further down
+-- creates r_test_tags directly with the right name.
+SET @old_table_exists = (
+    SELECT COUNT(*) FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'r_test_categories'
+);
+SET @new_table_exists = (
+    SELECT COUNT(*) FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'r_test_tags'
+);
+SET @ddl = IF(@old_table_exists = 1 AND @new_table_exists = 0, 'RENAME TABLE r_test_categories TO r_test_tags', 'SELECT 1');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 CREATE TABLE IF NOT EXISTS users (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL,
@@ -29,13 +53,21 @@ CREATE TABLE IF NOT EXISTS sessions (
     CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS r_test_categories (
+-- CR-TEST-25 (Sprint 11): this table was named r_test_categories through Sprint 10 — renamed to
+-- r_test_tags as part of the move to a real many-to-many tag model (see the idempotent
+-- RENAME TABLE upgrade block further down, which handles an already-deployed database that still
+-- has the old name; a brand-new install only ever sees this CREATE TABLE, never the old name).
+CREATE TABLE IF NOT EXISTS r_test_tags (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_categories_name (name)
+    UNIQUE KEY uq_tags_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- category_id is kept only as inert legacy data post-CR-TEST-25 (see the r_test_tag_links
+-- migration block further down for the full rationale) — the FK now points at r_test_tags since
+-- that's the table's name on a fresh install; an upgrading database's FK is carried over
+-- automatically by MySQL's RENAME TABLE (which preserves FK definitions).
 CREATE TABLE IF NOT EXISTS r_tests (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     slug VARCHAR(100) NOT NULL,
@@ -45,7 +77,7 @@ CREATE TABLE IF NOT EXISTS r_tests (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_rtests_slug (slug),
     KEY ix_rtests_category (category_id),
-    CONSTRAINT fk_rtests_category FOREIGN KEY (category_id) REFERENCES r_test_categories (id) ON DELETE SET NULL
+    CONSTRAINT fk_rtests_category FOREIGN KEY (category_id) REFERENCES r_test_tags (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- The imported description is opaque textual/JSON data (D11) — never parsed/exposed to the
@@ -225,3 +257,34 @@ UPDATE results
     JOIN (SELECT applied_at FROM schema_migrations WHERE migration = 'sprint9_backfill_results_approval_status') AS applied
     SET results.approval_status = 'approved'
     WHERE results.created_at <= applied.applied_at;
+
+-- CR-TEST-25 (Sprint 11): replace the single category_id FK on r_tests with a real many-to-many
+-- tag model. The r_test_categories -> r_test_tags RENAME itself runs at the very top of this file
+-- (must happen before this file's own CREATE TABLE IF NOT EXISTS r_test_tags — see the comment
+-- there for why). What's left here is the join table + the backward-compatible data migration.
+
+-- Many-to-many join table: an r-test can carry any number of tags (including zero), a tag can
+-- apply to any number of r-tests. Composite PK doubles as the uniqueness guard (no duplicate
+-- (r_test_id, tag_id) pair) and as the natural lookup index for "tags of this r-test".
+CREATE TABLE IF NOT EXISTS r_test_tag_links (
+    r_test_id INT UNSIGNED NOT NULL,
+    tag_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (r_test_id, tag_id),
+    KEY ix_tag_links_tag (tag_id),
+    CONSTRAINT fk_tag_links_test FOREIGN KEY (r_test_id) REFERENCES r_tests (id) ON DELETE CASCADE,
+    CONSTRAINT fk_tag_links_tag FOREIGN KEY (tag_id) REFERENCES r_test_tags (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Backward-compatible data migration: every existing r_tests.category_id value becomes one row
+-- in the new link table. Safe to re-run indefinitely (INSERT IGNORE on the composite PK — a
+-- link that already exists, e.g. because an admin has since also tag_ids-assigned the same tag
+-- again, is silently skipped, never duplicated or errored).
+INSERT IGNORE INTO r_test_tag_links (r_test_id, tag_id)
+    SELECT id, category_id FROM r_tests WHERE category_id IS NOT NULL;
+
+-- r_tests.category_id is DELIBERATELY KEPT (not dropped) this sprint — SI-11.2's stated migration
+-- safety margin: drop only after the link table is confirmed populated and stable in production.
+-- Application code (RTestRepository, ImportService, controllers) no longer reads or writes this
+-- column as of this sprint; it is inert legacy data, safe to drop in a clearly-labeled follow-up
+-- CR once a production cycle has passed with the link table proven correct (see
+-- server/requirements/SPRINT11_REPORT.md).

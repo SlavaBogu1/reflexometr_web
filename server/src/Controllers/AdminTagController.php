@@ -10,20 +10,27 @@ use Reflexometr\Http\ApiException;
 use Reflexometr\Http\ErrorCode;
 use Reflexometr\Http\Request;
 use Reflexometr\Http\Response;
-use Reflexometr\Repositories\CategoryRepository;
+use Reflexometr\Repositories\TagRepository;
 use Reflexometr\Support\Validation;
 
-/** CR-TEST-05: admin-only category CRUD (D7). Public read is exposed separately via RTestController::categories(). */
-final class AdminCategoryController
+/**
+ * CR-TEST-25 (Sprint 11): replaces AdminCategoryController — admin-only tag CRUD (D7), same
+ * enforcement pattern. Public read is exposed separately via RTestController::tags().
+ * `/admin/categories`/`/categories` are renamed to `/admin/tags`/`/tags` (clean rename, no
+ * deprecated alias kept server-side — no external consumer existed yet per the v1.6 contract
+ * note); `GET /r-tests?category_id=` is the one place a deprecated alias IS kept, since r-test
+ * browsing already has real client traffic risk once ClientTeam integrates.
+ */
+final class AdminTagController
 {
     public static function create(Request $request): array
     {
         (new AuthService())->requireAdmin($request);
         $name = Validation::requireString($request->all(), 'name');
 
-        $repo = new CategoryRepository(Database::connection());
+        $repo = new TagRepository(Database::connection());
         if ($repo->findByName($name) !== null) {
-            throw new ApiException(ErrorCode::CATEGORY_NAME_TAKEN, 409);
+            throw new ApiException(ErrorCode::TAG_NAME_TAKEN, 409);
         }
         $id = $repo->create($name);
         return Response::json(['id' => $id, 'name' => $name], 201);
@@ -35,9 +42,9 @@ final class AdminCategoryController
         $id = (int) $request->param('id');
         $name = Validation::requireString($request->all(), 'name');
 
-        $repo = new CategoryRepository(Database::connection());
+        $repo = new TagRepository(Database::connection());
         if ($repo->findById($id) === null) {
-            throw new ApiException(ErrorCode::CATEGORY_NOT_FOUND, 404);
+            throw new ApiException(ErrorCode::TAG_NOT_FOUND, 404);
         }
         $repo->rename($id, $name);
         return Response::json(['id' => $id, 'name' => $name]);
@@ -48,9 +55,9 @@ final class AdminCategoryController
         (new AuthService())->requireAdmin($request);
         $id = (int) $request->param('id');
 
-        $repo = new CategoryRepository(Database::connection());
+        $repo = new TagRepository(Database::connection());
         if ($repo->findById($id) === null) {
-            throw new ApiException(ErrorCode::CATEGORY_NOT_FOUND, 404);
+            throw new ApiException(ErrorCode::TAG_NOT_FOUND, 404);
         }
         $repo->delete($id);
         return Response::json(['deleted' => true]);

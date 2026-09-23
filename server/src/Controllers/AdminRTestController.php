@@ -12,6 +12,7 @@ use Reflexometr\Http\Request;
 use Reflexometr\Http\Response;
 use Reflexometr\Repositories\RTestRepository;
 use Reflexometr\Repositories\RTestVersionRepository;
+use Reflexometr\Repositories\TagRepository;
 use Reflexometr\Services\ImportService;
 use Reflexometr\Support\Validation;
 
@@ -28,17 +29,21 @@ final class AdminRTestController
         $db = Database::connection();
         $rTests = new RTestRepository($db);
         $versions = new RTestVersionRepository($db);
+        $tags = new TagRepository($db);
+
+        $allTests = $rTests->listAll();
+        $tagsByTest = $tags->tagsForTests(array_map(static fn (array $t): int => (int) $t['id'], $allTests));
 
         $out = [];
-        foreach ($rTests->listAll() as $rTest) {
+        foreach ($allTests as $rTest) {
             $versionRows = $versions->listForTest((int) $rTest['id']);
             $out[] = [
                 'id' => (int) $rTest['id'],
                 'slug' => $rTest['slug'],
                 'name' => $rTest['name'],
                 'description' => $rTest['description'],
-                'category_id' => $rTest['category_id'] !== null ? (int) $rTest['category_id'] : null,
-                'category_name' => $rTest['category_name'],
+                // CR-TEST-25 (v1.6): tags: [] replaces category_id/category_name.
+                'tags' => $tagsByTest[(int) $rTest['id']],
                 'versions' => array_map(static fn (array $v): array => [
                     'id' => (int) $v['id'],
                     'version' => (int) $v['version'],
@@ -62,13 +67,11 @@ final class AdminRTestController
         $slug = Validation::requireString($body, 'slug');
         $name = Validation::requireString($body, 'name');
         $metaDescription = is_string($body['description'] ?? null) ? $body['description'] : null;
-        $categoryId = isset($body['category_id']) && $body['category_id'] !== null
-            ? Validation::requireInt($body, 'category_id')
-            : null;
+        $tagIds = self::readTagIds($body);
 
         $rawDescription = self::readDescriptionPayload($request);
 
-        $result = (new ImportService())->importNewTest($slug, $name, $metaDescription, $categoryId, $rawDescription);
+        $result = (new ImportService())->importNewTest($slug, $name, $metaDescription, $tagIds, $rawDescription);
         return Response::json([
             'r_test' => [
                 'id' => (int) $result['r_test']['id'],
@@ -116,12 +119,34 @@ final class AdminRTestController
         $body = $request->all();
         $name = is_string($body['name'] ?? null) ? $body['name'] : null;
         $description = is_string($body['description'] ?? null) ? $body['description'] : null;
-        $categoryProvided = array_key_exists('category_id', $body);
-        $categoryId = $categoryProvided && $body['category_id'] !== null ? (int) $body['category_id'] : null;
 
-        $rTests->updateMeta((int) $rTest['id'], $name, $description, $categoryId, $categoryProvided);
+        $rTests->updateMeta((int) $rTest['id'], $name, $description);
+
+        // CR-TEST-25 (v1.6): tag_ids, when present, REPLACES the full tag set (not additive) —
+        // omitted key means "leave tags alone"; an explicit empty array means "clear all tags".
+        if (array_key_exists('tag_ids', $body)) {
+            $tagIds = self::readTagIds($body) ?? [];
+            (new TagRepository($db))->setTagsForTest((int) $rTest['id'], $tagIds);
+        }
 
         return Response::json(['updated' => true]);
+    }
+
+    /**
+     * @param array<string,mixed> $body
+     * @return array<int,int>|null null if tag_ids wasn't provided at all (distinct from an
+     *     explicit empty array, which means "no tags").
+     */
+    private static function readTagIds(array $body): ?array
+    {
+        if (!array_key_exists('tag_ids', $body) || $body['tag_ids'] === null) {
+            return null;
+        }
+        $raw = $body['tag_ids'];
+        if (!is_array($raw) || array_filter($raw, static fn ($v) => !is_int($v) && !(is_string($v) && ctype_digit($v))) !== []) {
+            throw new ApiException(ErrorCode::VALIDATION_ERROR, 400, ['fields' => ['tag_ids']]);
+        }
+        return array_values(array_map('intval', $raw));
     }
 
     /** Accepts either a multipart `description_file` upload or an inline `content` JSON-text field. */

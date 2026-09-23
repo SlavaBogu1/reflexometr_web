@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Reflexometr;
 
-use Reflexometr\Controllers\AdminCategoryController;
 use Reflexometr\Controllers\AdminPackageController;
 use Reflexometr\Controllers\AdminResultController;
 use Reflexometr\Controllers\AdminRTestController;
+use Reflexometr\Controllers\AdminTagController;
 use Reflexometr\Controllers\AuthController;
 use Reflexometr\Controllers\ConfigController;
 use Reflexometr\Controllers\HealthController;
@@ -37,10 +37,10 @@ final class Routes
         // Health check (CR-INFRA-02) — no auth required; post-deploy smoke-check target
         $router->add('GET', '/health', [HealthController::class, 'check']);
 
-        // Public r-test browsing (CR-TEST-01, CR-TEST-05)
+        // Public r-test browsing (CR-TEST-01, CR-TEST-05, CR-TEST-25)
         $router->add('GET', '/r-tests', [RTestController::class, 'list']);
         $router->add('GET', '/r-tests/{slug}', [RTestController::class, 'show']);
-        $router->add('GET', '/categories', [RTestController::class, 'categories']);
+        $router->add('GET', '/tags', [RTestController::class, 'tags']);
         $router->add('GET', '/packages', [RTestController::class, 'packages']);
 
         // Admin r-test import/export (CR-TEST-01)
@@ -50,10 +50,10 @@ final class Routes
         $router->add('POST', '/admin/r-tests/{slug}/versions', [AdminRTestController::class, 'importVersion']);
         $router->add('GET', '/admin/r-tests/{slug}/versions/{version}/export', [AdminRTestController::class, 'exportVersion']);
 
-        // Admin categories & packages (CR-TEST-05)
-        $router->add('POST', '/admin/categories', [AdminCategoryController::class, 'create']);
-        $router->add('PATCH', '/admin/categories/{id}', [AdminCategoryController::class, 'update']);
-        $router->add('DELETE', '/admin/categories/{id}', [AdminCategoryController::class, 'delete']);
+        // Admin tags & packages (CR-TEST-05, CR-TEST-25)
+        $router->add('POST', '/admin/tags', [AdminTagController::class, 'create']);
+        $router->add('PATCH', '/admin/tags/{id}', [AdminTagController::class, 'update']);
+        $router->add('DELETE', '/admin/tags/{id}', [AdminTagController::class, 'delete']);
         $router->add('POST', '/admin/packages', [AdminPackageController::class, 'create']);
         $router->add('PATCH', '/admin/packages/{id}', [AdminPackageController::class, 'update']);
         $router->add('DELETE', '/admin/packages/{id}', [AdminPackageController::class, 'delete']);
