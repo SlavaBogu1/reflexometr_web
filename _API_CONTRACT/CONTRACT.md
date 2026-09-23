@@ -4,8 +4,8 @@
 Any change lands here first (version bump + changelog entry below), then the ProductOwner briefs
 ClientTeam on the diff (PRODUCT_OWNER_PROCESS.md § Contract Change Workflow).
 
-**Version:** v1.5 (Sprint 9) — CR-AUTH-02 (admin approval queue), CR-STATS-08 (reaction-time
-variability), CR-AUTH-03 (optional name profile fields) — see Changelog.
+**Version:** v1.6 (Sprint 11) — CR-TEST-25 (multi-tag r-test categorization), CR-TEST-23 (Circle
+Collision Simple), CR-TEST-24 (Circle Collision Complex) — see Changelog.
 
 **Note for ClientTeam:** `client/js/mock-api.js` / `SPRINT1_REPORT.md` (ClientTeam's) list several
 assumed field names and behaviors made against the still-empty v0.1 contract. This document is now
@@ -130,22 +130,31 @@ Exercises a real DB round-trip (`SELECT 1`), not just "PHP responded" — a miss
 
 ---
 
-## Public r-test browsing (CR-TEST-01, CR-TEST-05)
+## Public r-test browsing (CR-TEST-01, CR-TEST-05, CR-TEST-25)
 
 Read-only, no auth required. The test-taking client selects/displays an r-test's **current
 version** from this data — never hardcoded client-side. Never exposes a version's raw imported
 description (D11) — only metadata (version number, active flag).
 
-### `GET /r-tests?category_id={id}`
-200: `[ { "id", "slug", "name", "description", "category_id", "current_version": int|null, "current_version_id": int|null }, ... ]`
-`category_id` query param is optional (filters the list).
+### `GET /r-tests?tag_id={id}`
+200: `[ { "id", "slug", "name", "description", "tags": [{ "id", "name" }, ...], "current_version": int|null, "current_version_id": int|null }, ... ]`
+`tag_id` query param is optional (filters the list to r-tests carrying that one tag, among
+possibly several). `category_id` is accepted as a **deprecated alias** for `tag_id` (same
+filtering semantics against the renamed tag model) — prefer `tag_id` in new code.
+
+**CR-TEST-25 (v1.6):** `category_id`/`category_name` (singular FK) is **replaced** by `tags`
+(array, possibly empty — an r-test can carry any number of tags, including zero).
 
 ### `GET /r-tests/{slug}`
 200: same shape as above plus `"packages": [{ "id", "name" }, ...]`
 Errors: `RTEST_NOT_FOUND` (404)
 
-### `GET /categories`
+### `GET /tags`
 200: `[ { "id", "name" }, ... ]`
+**CR-TEST-25 (v1.6):** renamed from `GET /categories` (same underlying renamed table, clean
+rename — no deprecated alias kept for this specific endpoint since no external consumer existed
+yet; contrast with `GET /r-tests`'s `category_id` alias above, which is kept because real client
+traffic risk exists there).
 
 ### `GET /packages`
 200: `[ { "id", "name", "description", "r_tests": [{ "id", "slug", "name" }, ...] }, ... ]`
@@ -162,14 +171,19 @@ admin never hand-edits its content, only `r_tests` metadata (name/description/ca
 "Description JSON format" below for what ServerTeam expects inside it.
 
 ### `GET /admin/r-tests`
-200: `[ { "id", "slug", "name", "description", "category_id", "category_name", "versions": [{ "id", "version", "is_active", "created_at" }, ...] }, ... ]`
+200: `[ { "id", "slug", "name", "description", "tags": [{ "id", "name" }, ...], "versions": [{ "id", "version", "is_active", "created_at" }, ...] }, ... ]`
 (Raw description content is *not* included here — use the export endpoint.)
+**CR-TEST-25 (v1.6):** `category_id`/`category_name` replaced by `tags` (array, possibly empty) —
+same shape change as the public `GET /r-tests` above.
 
 ### `POST /admin/r-tests`
 Creates a new r-test + its v1 version in one call.
-Body (JSON or `multipart/form-data`): `{ "slug": string (lowercase, hyphen-separated), "name": string, "description"?: string (human-readable r_tests metadata text), "category_id"?: int, "content": string (the version's raw JSON description) }`. Multipart alternative: send the description file as field `description_file` instead of inline `content`.
+Body (JSON or `multipart/form-data`): `{ "slug": string (lowercase, hyphen-separated), "name": string, "description"?: string (human-readable r_tests metadata text), "tag_ids"?: int[], "content": string (the version's raw JSON description) }`. Multipart alternative: send the description file as field `description_file` instead of inline `content`.
 201: `{ "r_test": { "id", "slug", "name" }, "version": 1 }`
-Errors: `VALIDATION_ERROR` (400, malformed slug/description JSON), `RTEST_SLUG_TAKEN` (409)
+Errors: `VALIDATION_ERROR` (400, malformed slug/description JSON/`tag_ids`), `RTEST_SLUG_TAKEN` (409)
+**CR-TEST-25 (v1.6):** `category_id?: int` replaced by `tag_ids?: int[]` — assigns the full initial
+tag set (omitted/empty = no tags). Unknown tag ids are silently dropped, never a hard failure
+(matches the old `category_id`'s lack of existence validation beyond the FK itself).
 
 ### `POST /admin/r-tests/{slug}/versions`
 Imports a new version of an existing r-test. It automatically becomes the "current" (active)
@@ -185,17 +199,29 @@ Errors: `RTEST_NOT_FOUND` (404), `VALIDATION_ERROR` (400)
 Errors: `RTEST_NOT_FOUND` (404), `RTEST_VERSION_NOT_FOUND` (404)
 
 ### `PATCH /admin/r-tests/{slug}`
-Metadata-only edit (name/description/category) — never touches version content.
-Body: `{ "name"?, "description"?, "category_id"?: int|null }`
+Metadata-only edit (name/description/tags) — never touches version content.
+Body: `{ "name"?, "description"?, "tag_ids"?: int[] }`
 200: `{ "updated": true }`
+**CR-TEST-25 (v1.6):** `category_id?: int|null` replaced by `tag_ids?: int[]`. `tag_ids`, when
+present, **replaces the full tag set** (not additive/merging) — an explicit empty array `[]`
+clears all tags without deleting the r-test itself; **omitting** the key entirely leaves the
+r-test's existing tags untouched (distinguish "clear" from "don't touch" the same way `category_id:
+null` used to mean "clear" while an omitted `category_id` meant "don't touch").
 
-## Admin categories & packages (CR-TEST-05)
+## Admin tags & packages (CR-TEST-05, CR-TEST-25)
 
 Auth: admin required (same 403/401 rules as above).
 
-- `POST /admin/categories` `{ "name": string }` → 201 `{ "id", "name" }` (409 `CATEGORY_NAME_TAKEN` on duplicate)
-- `PATCH /admin/categories/{id}` `{ "name": string }` → 200 (404 `CATEGORY_NOT_FOUND`)
-- `DELETE /admin/categories/{id}` → 200 `{ "deleted": true }`
+**CR-TEST-25 (v1.6):** `/admin/categories` renamed to `/admin/tags` — same underlying renamed
+table, clean rename (no deprecated alias kept server-side; no external consumer existed yet).
+`CATEGORY_NOT_FOUND`/`CATEGORY_NAME_TAKEN` error codes renamed to `TAG_NOT_FOUND`/`TAG_NAME_TAKEN`.
+
+- `POST /admin/tags` `{ "name": string }` → 201 `{ "id", "name" }` (409 `TAG_NAME_TAKEN` on duplicate)
+- `PATCH /admin/tags/{id}` `{ "name": string }` → 200 (404 `TAG_NOT_FOUND`)
+- `DELETE /admin/tags/{id}` → 200 `{ "deleted": true }` (cascades: removes this tag's links from
+  every r-test that carried it, but never deletes the r-tests themselves — same "removing the
+  taxonomy entry never removes the content it classified" semantics the old category FK's
+  `ON DELETE SET NULL` had)
 - `POST /admin/packages` `{ "name": string, "description"?: string }` → 201
 - `PATCH /admin/packages/{id}` `{ "name"?, "description"? }` → 200 (404 `PACKAGE_NOT_FOUND`)
 - `DELETE /admin/packages/{id}` → 200
@@ -264,6 +290,25 @@ Body: `{ "version"?: int (defaults to the r-test's current active version), "mod
 ```
 Errors: `RTEST_NOT_FOUND` (404), `RTEST_VERSION_NOT_FOUND` (404), `SERIES_MODE_INVALID` (400)
 
+**CR-TEST-23/24 (v1.6):** a coincidence-anticipation test's `schedule` gains these fields — all new,
+optional, additive; every existing test type's schedule shape is completely unchanged when its
+description doesn't set them:
+- `"allow_early_response": true` (schedule-level) — this run's submission validation accepts a
+  response any time after motion starts, including before the resolved reference instant
+  (`stimulus_at`); see submit validation below.
+- **Circle Collision Simple (CR-TEST-23):** `"circle_radius_px": 40` (schedule-level, constant for
+  this variant) and each `trials[]` entry gains `"motion_duration_ms": 3210` (resolved per-trial,
+  same over-provisioned-buffer pattern as `delay_ms` — a fresh random draw per trial, 1-5s range).
+- **Circle Collision Complex (CR-TEST-24):** extends Simple — `circle_radius_px` is **not**
+  schedule-level here; instead each `trials[]` entry carries `"circle_radius_px": { "a": 36, "b": 44 }`
+  (independently resolved per circle per trial, ±20% of the baseline). Each `trials[]` entry also
+  carries `"motion_speed_profile": { "start_speed_px_per_s": 320, "mid_speed_px_per_s": 480, "end_speed_px_per_s": 250, "duration_ms": 2450 }`
+  instead of `motion_duration_ms` — three resolved waypoint speeds the client linearly interpolates
+  between (start→mid over the first half of `travel_distance_px`, mid→end over the second half);
+  `duration_ms` is the server-verified total elapsed time this profile implies, always in the 1-5s
+  range (the server rejects-and-rerolls internally rather than ever compiling/shipping an
+  out-of-bound profile — see the Description JSON format section below).
+
 **Reading `schedule`:** `response_channels` names the input channel(s) this trial needs a response
 from (`["primary"]` for a single-response test like `simple-reaction`; `["left","right"]` for
 `two-hand-reaction`). `trials` has **`trial_count` + `buffer_trials` entries** — deliberately more
@@ -313,6 +358,13 @@ for that scope (no fabricated `0.0`), and `cv` is additionally `null` if `mean_m
 These are also persisted on the result row (`sd_ms`/`cv` columns) and surfaced again, with a peer
 aggregate, by `GET /results/{id}/comparison` below.
 
+**CR-TEST-23/24 (v1.6):** for a schedule with `allow_early_response: true`, a per-trial "reaction
+time" can be **negative** (the response happened before `stimulus_at` — a genuine early
+anticipation, not an error) — `primary_metric_ms`, `summary.overall.mean_ms`/`median_ms`/`min_ms`/
+`max_ms`, and each `summary.channels.{channel}` entry are all genuinely signed in this case, never
+clamped to a floor of `0`. A mixed set of early (negative) and late (positive) responses averages
+normally (e.g. a -200ms and a +300ms trial mean to +50ms, not `(200+300)/2`).
+
 **CR-AUTH-02 (v1.5):** every newly-created result starts `approval_status = 'pending'` (new
 internal column, not returned by this endpoint) — see `GET /results/{id}/comparison` and the new
 `/admin/results` endpoints below for what this gates.
@@ -329,7 +381,13 @@ internal column, not returned by this endpoint) — see `GET /results/{id}/compa
    `MALFORMED_TRIAL`, `INDEX_OUT_OF_ORDER`, `NON_MONOTONIC_TIMESTAMPS`, `CHANNEL_MISMATCH`,
    `MISSING_RESPONSE`, `MALFORMED_RESPONSE`, `REACTION_BEFORE_STIMULUS`, `RESPONSE_AFTER_TIMEOUT`,
    `WALLCLOCK_TOO_FAST`.
-   - Every response must be at or after its own trial's `stimulus_at` (never before).
+   - Every response must be at or after its own trial's `stimulus_at` (never before) — **unless**
+     the schedule's `allow_early_response` is `true` (CR-TEST-23/24, v1.6), in which case a
+     response before `stimulus_at` is valid data (an early anticipation, not a false start) and
+     `REACTION_BEFORE_STIMULUS` is never raised for that run. This is schedule-level generic
+     infrastructure, not special-cased to a specific test's slug. Every other check in this list
+     (timeout, malformed shape, non-monotonic timestamps, wall-clock floor) is unaffected by this
+     flag.
    - Consecutive trials' `stimulus_at` gap must be at least the schedule's smallest resolved
      `delay_ms` (minus a small timer-jitter tolerance) — catches "instant" fabricated logs.
    - Server-side wall-clock (its own `issued_at → received_at`, never trusting client timestamps
@@ -427,9 +485,41 @@ newly imported r-test needs **no new server code**:
 - `false_start_buffer` (int >= 0, optional, defaults to 6): how many extra resolved delays the
   compiled schedule over-provisions for false-start retries (see run-start above).
 
-Seeded at Sprint 1 (`server/database/seeds/`): `simple-reaction` v1 (`trial_count: 10`, delay
-1000–3000ms, one channel, no timeout — CR-TEST-03) and `two-hand-reaction` v1 (`trial_count: 10`,
-delay 1500–3500ms, two channels, 2000ms per-hand timeout — CR-TEST-04).
+**CR-TEST-23/24 (v1.6) — coincidence-anticipation tests (Circle Collision):** three more optional
+fields, generic infrastructure (not special-cased to one test's slug) so any future
+coincidence-timing import can use them too:
+- `allow_early_response` (bool, optional): `true` means this schedule's submissions skip
+  `REACTION_BEFORE_STIMULUS` entirely (see run-token submission validation above).
+- `circle_radius_px` (int > 0, optional): baseline circle radius. Present alone (with
+  `motion_duration_ms`, not `motion_speed_profile`) it's a constant, schedule-level resolved value
+  (Circle Collision Simple). Present **together with** `motion_speed_profile` it becomes per-trial,
+  per-circle: each of the compiled schedule's `trials[]` independently resolves two radii
+  (`{ "a", "b" }`), each within ±20% of this baseline (Circle Collision Complex).
+- Exactly one of these two mutually-exclusive motion-timing shapes (or neither, for a classic
+  discrete-stimulus test):
+  - `motion_duration_ms: { "min": int > 0, "max": int >= min }` (Circle Collision Simple) —
+    resolved per-trial into the compiled schedule's `trials[].motion_duration_ms`, same
+    over-provisioned-buffer pattern as `inter_stimulus_delay_ms`/`delay_ms`.
+  - `motion_speed_profile: { "start_speed_px_per_s": {min,max}, "mid_speed_px_per_s": {min,max}, "end_speed_px_per_s": {min,max}, "travel_distance_px": int > 0 }`
+    (Circle Collision Complex) — three independently-ranged waypoint speeds describing a two-leg
+    piecewise-linear ramp (start→mid over the first half of `travel_distance_px`, mid→end over the
+    second half); resolved per-trial into `trials[].motion_speed_profile` (three concrete speeds +
+    the implied `duration_ms`). **The server verifies the resolved total duration always lands in
+    1000-5000ms and re-rolls internally (up to 100 attempts) if a draw falls outside that range** —
+    it never returns a compiled schedule with an out-of-bound trial. If a description's configured
+    ranges make the 1-5s window structurally unreachable (a real misconfiguration, not bad luck),
+    run-start fails with `INTERNAL_ERROR` (500) rather than ever shipping a bad schedule — this
+    should be caught by testing an imported description before relying on it in production, not
+    surface to a real user.
+
+Seeded (`server/database/seeds/`): `simple-reaction` v1 (`trial_count: 10`, delay 1000–3000ms, one
+channel, no timeout — CR-TEST-03), `two-hand-reaction` v1 (`trial_count: 10`, delay 1500–3500ms,
+two channels, 2000ms per-hand timeout — CR-TEST-04), both Sprint 1, tag `visual`. `circle-
+collision-simple` v1 (`trial_count: 10`, `motion_duration_ms: {1000,5000}`, `circle_radius_px: 40`,
+`timeout_ms: 8000`, `allow_early_response: true` — CR-TEST-23) and `circle-collision-complex` v1
+(same shape but `motion_speed_profile` with 200–500 px/s waypoints over an 800px travel distance
+instead of `motion_duration_ms`, same `circle_radius_px`/`timeout_ms`/`allow_early_response` —
+CR-TEST-24), both Sprint 11, tags `visual` + `dynamic`.
 
 ---
 
@@ -458,8 +548,11 @@ contract in parallel with this implementation — see `client/requirements/SPRIN
 5. **Admin enforcement** — real and server-side now (403 `ADMIN_REQUIRED` per D7); ClientTeam's
    `localStorage` dev toggle should be replaced with a real login + this API's `is_admin` flag
    (from `GET /auth/me`) once ClientTeam's own AUTH-dependent screens are scheduled.
-6. **Category model** — implemented as a table (`r_test_categories`), admin-CRUD via
-   `/admin/categories`, not a fixed enum — matches the mock's "admin-extendable list" shape.
+6. **Category model** — implemented at Sprint 1 as a single-FK table (`r_test_categories`),
+   admin-CRUD via `/admin/categories`, not a fixed enum — matched the mock's "admin-extendable
+   list" shape. **Superseded at Sprint 11 (CR-TEST-25, v1.6):** replaced by a real many-to-many tag
+   model (`r_test_tags` + `r_test_tag_links`), admin-CRUD via `/admin/tags` — an r-test can now
+   carry any number of tags, not just one. See the Changelog's v1.6 entry.
 7. **`dominant_hand` / `preferred_locale` sync** — both are real profile fields now
    (`PATCH /profile`); `Reflx.api.syncPreferredLocale()`'s no-op stub can be wired to it once
    ClientTeam has a login flow to obtain a session token.
@@ -475,6 +568,34 @@ ProductOwner should schedule one before any of the above can be wired up for rea
 
 ## Changelog
 
+- v1.6 (2026-09-22) — Sprint 11: **CR-TEST-25** (multi-tag r-test categorization) — the single
+  `category_id` FK on r_tests is replaced by a real many-to-many tag model (`r_test_tags`, renamed
+  from `r_test_categories` with ids preserved 1:1, + new `r_test_tag_links` join table). `GET
+  /r-tests`, `GET /r-tests/{slug}`, `GET /admin/r-tests` return `tags: [{ "id", "name" }, ...]`
+  instead of `category_id`/`category_name`. `GET /r-tests?tag_id={id}` filters by tag membership
+  (`category_id` kept as a deprecated alias). `POST /admin/r-tests`, `POST
+  /admin/r-tests/{slug}/versions`, `PATCH /admin/r-tests/{slug}` accept `tag_ids?: int[]` (PATCH:
+  replaces the full set; empty array clears, omitted leaves untouched) instead of `category_id`.
+  `/admin/categories`/`/categories` renamed to `/admin/tags`/`/tags` (clean rename, no alias —
+  no external consumer yet); `CATEGORY_NOT_FOUND`/`CATEGORY_NAME_TAKEN` renamed to
+  `TAG_NOT_FOUND`/`TAG_NAME_TAKEN`. `r_tests.category_id` is kept as inert legacy data this sprint
+  (not dropped) as a migration safety margin — app code no longer reads/writes it. **CR-TEST-23**
+  (Circle Collision Simple, new r-test type) — a coincidence-anticipation test with no discrete
+  stimulus onset. New optional description/schedule fields `motion_duration_ms`/`circle_radius_px`/
+  `allow_early_response`; `RunService::validateTrialLog()` skips `REACTION_BEFORE_STIMULUS` for any
+  run whose schedule sets `allow_early_response: true` (generic infra, not slug-keyed); verified
+  `ResultSummaryService`'s existing mean/median/min/max arithmetic naturally produces signed
+  (possibly-negative) values for early anticipations, no code change needed there. New seed
+  `circle-collision-simple` v1, tags `visual`+`dynamic`. **CR-TEST-24** (Circle Collision Complex,
+  extends CR-TEST-23) — circle size varies ±20% independently per circle per trial
+  (`trials[].circle_radius_px: {"a","b"}`); closing speed varies *within* a trial via
+  `motion_speed_profile` (3 resolved waypoint speeds + `duration_ms`), with the server verifying/
+  re-rolling internally so the total resolved motion duration always lands in 1000-5000ms — never
+  ships an out-of-bound schedule. Reuses CR-TEST-23's `allow_early_response` validation change
+  unchanged. New seed `circle-collision-complex` v1, tags `visual`+`dynamic`. No other endpoint or
+  response shape changed by any of the three CRs above; every new field is additive/optional and
+  every existing test type's schedule/response shape is untouched when its description doesn't set
+  the new fields.
 - v1.5 (2026-09-18) — Sprint 9: **CR-AUTH-02** (implements D19, admin approval queue) —
   `results` gains `approval_status` (`pending`|`approved`|`rejected`, default `pending` on new
   submissions; existing pre-Sprint-9 rows backfilled `approved`). `GET /results/{id}/comparison`'s
