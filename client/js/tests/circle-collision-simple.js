@@ -79,16 +79,21 @@
          * take precedence over schedule-level ones, matching how delay_ms already
          * works per-trial elsewhere) — CONTRACT.md v1.6, CR-TEST-23/24. */
         function resolveTrialMotion(trial) {
-          var durationMs = trial.motion_duration_ms || runInfo.schedule.motion_duration_ms || 2000;
           if (variant === "simple") {
+            var durationMs = trial.motion_duration_ms || runInfo.schedule.motion_duration_ms || 2000;
             var radiusPx = trial.circle_radius_px || runInfo.schedule.circle_radius_px || BASELINE_RADIUS_PX;
             return { durationMs: durationMs, leftRadiusPx: radiusPx, rightRadiusPx: radiusPx, speedProfile: null };
           }
-          // complex: per-circle independently resolved radius, ±20% of baseline
-          var leftRadiusPx = (trial.circle_radius_px && trial.circle_radius_px.left) || BASELINE_RADIUS_PX;
-          var rightRadiusPx = (trial.circle_radius_px && trial.circle_radius_px.right) || BASELINE_RADIUS_PX;
+          // complex: per-circle independently resolved radius, ±20% of baseline.
+          // CONTRACT.md v1.6 keys this { a, b } (not left/right) — a maps to the left
+          // circle, b to the right circle (declaration order in the contract).
+          var leftRadiusPx = (trial.circle_radius_px && trial.circle_radius_px.a) || BASELINE_RADIUS_PX;
+          var rightRadiusPx = (trial.circle_radius_px && trial.circle_radius_px.b) || BASELINE_RADIUS_PX;
           var speedProfile = trial.motion_speed_profile || runInfo.schedule.motion_speed_profile || null;
-          return { durationMs: durationMs, leftRadiusPx: leftRadiusPx, rightRadiusPx: rightRadiusPx, speedProfile: speedProfile };
+          // motion_speed_profile.duration_ms is Complex's equivalent of motion_duration_ms —
+          // the single source runMotion() reads via motion.durationMs (CONTRACT.md v1.6).
+          var complexDurationMs = (speedProfile && speedProfile.duration_ms) || 2000;
+          return { durationMs: complexDurationMs, leftRadiusPx: leftRadiusPx, rightRadiusPx: rightRadiusPx, speedProfile: speedProfile };
         }
 
         function armTrial() {
@@ -136,28 +141,32 @@
          * relative-speed curve) so there's no visible jump at a waypoint boundary — the
          * eased/integrated progress function below is continuous by construction. */
         function progressFn(motion) {
-          if (!motion.speedProfile || !motion.speedProfile.length) {
+          var profile = motion.speedProfile;
+          if (!profile) {
             return function (elapsedFrac) { return elapsedFrac; }; // constant speed
           }
-          var waypoints = motion.speedProfile; // e.g. [{t:0,speed:0.6}, {t:0.5,speed:1.4}, {t:1,speed:0.8}]
-          // Precompute cumulative "distance" (integral of speed over t) at each waypoint
-          // so progress(t) is a piecewise-linear-in-speed, continuous function of t.
-          var cum = [0];
-          for (var i = 1; i < waypoints.length; i++) {
-            var dt = waypoints[i].t - waypoints[i - 1].t;
-            var avgSpeed = (waypoints[i].speed + waypoints[i - 1].speed) / 2;
-            cum.push(cum[i - 1] + dt * avgSpeed);
-          }
-          var total = cum[cum.length - 1] || 1;
+          // CONTRACT.md v1.6: motion_speed_profile is a fixed 3-waypoint object
+          // (start/mid/end named speeds), not an arbitrary array — waypoints sit at
+          // elapsedFrac 0, 0.5, 1. Precompute cumulative "distance" (integral of speed
+          // over t) at each waypoint so progress(t) is piecewise-linear-in-speed and
+          // continuous across the t=0.5 midpoint (no jump).
+          var s0 = profile.start_speed_px_per_s;
+          var sMid = profile.mid_speed_px_per_s;
+          var s1 = profile.end_speed_px_per_s;
+          var distFirstHalf = (s0 + sMid) / 2 * 0.5;
+          var distSecondHalf = (sMid + s1) / 2 * 0.5;
+          var total = (distFirstHalf + distSecondHalf) || 1;
           return function (elapsedFrac) {
-            var i = 1;
-            while (i < waypoints.length - 1 && waypoints[i].t < elapsedFrac) i++;
-            var t0 = waypoints[i - 1].t, t1 = waypoints[i].t;
-            var s0 = waypoints[i - 1].speed, s1 = waypoints[i].speed;
-            var localFrac = t1 > t0 ? (elapsedFrac - t0) / (t1 - t0) : 0;
-            var localSpeed = s0 + (s1 - s0) * localFrac;
-            var localAvg = (s0 + localSpeed) / 2;
-            var dist = cum[i - 1] + (elapsedFrac - t0) * localAvg;
+            var dist;
+            if (elapsedFrac <= 0.5) {
+              var localFrac = elapsedFrac / 0.5;
+              var localSpeed = s0 + (sMid - s0) * localFrac;
+              dist = (s0 + localSpeed) / 2 * elapsedFrac;
+            } else {
+              var localFrac2 = (elapsedFrac - 0.5) / 0.5;
+              var localSpeed2 = sMid + (s1 - sMid) * localFrac2;
+              dist = distFirstHalf + (sMid + localSpeed2) / 2 * (elapsedFrac - 0.5);
+            }
             return Math.min(1, dist / total);
           };
         }
