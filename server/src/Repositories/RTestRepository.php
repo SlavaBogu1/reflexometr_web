@@ -30,16 +30,23 @@ final class RTestRepository
         return $row === false ? null : $row;
     }
 
-    public function create(string $slug, string $name, ?string $description, ?int $categoryId): int
+    /**
+     * CR-TEST-25 (Sprint 11): no longer accepts category_id — tag assignment is a separate step
+     * via TagRepository::setTagsForTest(), driven by the caller's tag_ids (see
+     * ImportService::importNewTest()). category_id itself is now inert legacy data (never written
+     * by new code — see schema.mysql.sql's migration comment for why the column is kept, not
+     * dropped, this sprint).
+     */
+    public function create(string $slug, string $name, ?string $description): int
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO r_tests (slug, name, description, category_id) VALUES (?, ?, ?, ?)'
+            'INSERT INTO r_tests (slug, name, description) VALUES (?, ?, ?)'
         );
-        $stmt->execute([$slug, $name, $description, $categoryId]);
+        $stmt->execute([$slug, $name, $description]);
         return (int) $this->db->lastInsertId();
     }
 
-    public function updateMeta(int $id, ?string $name, ?string $description, ?int $categoryId, bool $categoryProvided): void
+    public function updateMeta(int $id, ?string $name, ?string $description): void
     {
         $fields = [];
         $args = [];
@@ -50,10 +57,6 @@ final class RTestRepository
         if ($description !== null) {
             $fields[] = 'description = ?';
             $args[] = $description;
-        }
-        if ($categoryProvided) {
-            $fields[] = 'category_id = ?';
-            $args[] = $categoryId;
         }
         if ($fields === []) {
             return;
@@ -66,12 +69,7 @@ final class RTestRepository
     /** @return array<int,array<string,mixed>> */
     public function listAll(): array
     {
-        $stmt = $this->db->query(
-            'SELECT rt.*, c.name AS category_name
-             FROM r_tests rt
-             LEFT JOIN r_test_categories c ON c.id = rt.category_id
-             ORDER BY rt.id ASC'
-        );
+        $stmt = $this->db->query('SELECT * FROM r_tests ORDER BY id ASC');
         return $stmt->fetchAll();
     }
 }

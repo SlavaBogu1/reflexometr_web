@@ -27,21 +27,33 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 CREATE INDEX IF NOT EXISTS ix_sessions_user ON sessions (user_id);
 
-CREATE TABLE IF NOT EXISTS r_test_categories (
+-- CR-TEST-25 (Sprint 11): renamed from r_test_categories — see schema.mysql.sql for the full
+-- rationale (many-to-many tag model). SQLite is local-dev/test-only and always builds this schema
+-- fresh, so no upgrade/rename path is needed here, unlike the MySQL production schema.
+CREATE TABLE IF NOT EXISTS r_test_tags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(100) NOT NULL UNIQUE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- category_id kept as inert legacy data (see schema.mysql.sql) — app code no longer reads/writes it.
 CREATE TABLE IF NOT EXISTS r_tests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     slug VARCHAR(100) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
     description TEXT NULL,
-    category_id INTEGER NULL REFERENCES r_test_categories (id) ON DELETE SET NULL,
+    category_id INTEGER NULL REFERENCES r_test_tags (id) ON DELETE SET NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS ix_rtests_category ON r_tests (category_id);
+
+-- Many-to-many tag links (CR-TEST-25) — see schema.mysql.sql for full rationale.
+CREATE TABLE IF NOT EXISTS r_test_tag_links (
+    r_test_id INTEGER NOT NULL REFERENCES r_tests (id) ON DELETE CASCADE,
+    tag_id INTEGER NOT NULL REFERENCES r_test_tags (id) ON DELETE CASCADE,
+    PRIMARY KEY (r_test_id, tag_id)
+);
+CREATE INDEX IF NOT EXISTS ix_tag_links_tag ON r_test_tag_links (tag_id);
 
 CREATE TABLE IF NOT EXISTS r_test_versions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

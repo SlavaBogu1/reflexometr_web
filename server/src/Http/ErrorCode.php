@@ -32,8 +32,11 @@ final class ErrorCode
     public const RTEST_SLUG_TAKEN = 'RTEST_SLUG_TAKEN';
     public const RTEST_VERSION_NOT_FOUND = 'RTEST_VERSION_NOT_FOUND';
     public const RTEST_VERSION_DUPLICATE = 'RTEST_VERSION_DUPLICATE';
-    public const CATEGORY_NOT_FOUND = 'CATEGORY_NOT_FOUND';
-    public const CATEGORY_NAME_TAKEN = 'CATEGORY_NAME_TAKEN';
+    // CR-TEST-25 (Sprint 11): renamed from CATEGORY_NOT_FOUND/CATEGORY_NAME_TAKEN — the
+    // r_test_categories -> r_test_tags rename applies to error codes too, ClientTeam briefed via
+    // the v1.6 contract diff (no other consumer of the old names existed yet).
+    public const TAG_NOT_FOUND = 'TAG_NOT_FOUND';
+    public const TAG_NAME_TAKEN = 'TAG_NAME_TAKEN';
     public const PACKAGE_NOT_FOUND = 'PACKAGE_NOT_FOUND';
 
     // Run token / submission (CR-TEST-02, D9, D11)

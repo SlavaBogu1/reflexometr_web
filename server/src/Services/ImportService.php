@@ -9,6 +9,7 @@ use Reflexometr\Http\ApiException;
 use Reflexometr\Http\ErrorCode;
 use Reflexometr\Repositories\RTestRepository;
 use Reflexometr\Repositories\RTestVersionRepository;
+use Reflexometr\Repositories\TagRepository;
 
 /**
  * CR-TEST-01: admin-only import/export of r-test descriptions. The admin imports a specialist-
@@ -19,20 +20,28 @@ final class ImportService
 {
     private RTestRepository $rTests;
     private RTestVersionRepository $versions;
+    private TagRepository $tags;
 
     public function __construct()
     {
         $db = Database::connection();
         $this->rTests = new RTestRepository($db);
         $this->versions = new RTestVersionRepository($db);
+        $this->tags = new TagRepository($db);
     }
 
-    /** @return array<string,mixed> The created r_test row + its v1 version row. */
+    /**
+     * @param array<int,int>|null $tagIds CR-TEST-25: replaces the old single $categoryId — a new
+     *     r-test can be created with any number of tags (including none/omitted). Unknown ids are
+     *     silently dropped (filterExistingIds), never a hard failure on import — matches the old
+     *     category_id behavior of not validating existence beyond the FK itself.
+     * @return array<string,mixed> The created r_test row + its v1 version row.
+     */
     public function importNewTest(
         string $slug,
         string $name,
         ?string $metaDescription,
-        ?int $categoryId,
+        ?array $tagIds,
         string $rawDescription,
     ): array {
         if (!preg_match('/^[a-z0-9]+(-[a-z0-9]+)*$/', $slug)) {
@@ -44,8 +53,12 @@ final class ImportService
 
         $this->assertValidDescription($rawDescription);
 
-        $rTestId = $this->rTests->create($slug, $name, $metaDescription, $categoryId);
+        $rTestId = $this->rTests->create($slug, $name, $metaDescription);
         $versionId = $this->versions->createAsActive($rTestId, 1, $rawDescription);
+
+        if ($tagIds !== null && $tagIds !== []) {
+            $this->tags->setTagsForTest($rTestId, $this->tags->filterExistingIds($tagIds));
+        }
 
         return [
             'r_test' => $this->rTests->findById($rTestId),

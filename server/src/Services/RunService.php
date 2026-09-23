@@ -201,6 +201,15 @@ final class RunService
         $expectedCount = (int) $schedule['trial_count'];
         $channels = $schedule['response_channels'];
         $timeoutMs = $schedule['timeout_ms'] ?? null;
+        // CR-TEST-23 (Sprint 11): coincidence-anticipation tests (Circle Collision) have no
+        // discrete stimulus onset to react "to" — the user watches continuous motion and clicks
+        // whenever they judge it reaches some point, including well before the schedule's
+        // resolved reference instant. When true, a response before stimulus_at is valid data (an
+        // early anticipation), not a rejected false start — generic schedule-level infrastructure,
+        // not a special case keyed to this test's slug, so any future coincidence-timing import
+        // can set it too. All other structural checks (timeout, malformed shape, wall-clock) are
+        // unchanged regardless of this flag.
+        $allowEarlyResponse = (bool) ($schedule['allow_early_response'] ?? false);
 
         if (!array_is_list($trials) || count($trials) !== $expectedCount) {
             throw new ApiException(ErrorCode::TRIAL_LOG_INVALID, 400, ['reason' => 'TRIAL_COUNT_MISMATCH']);
@@ -260,7 +269,7 @@ final class RunService
                     throw new ApiException(ErrorCode::TRIAL_LOG_INVALID, 400, ['reason' => 'MALFORMED_RESPONSE', 'index' => $i]);
                 }
                 $reactionAt = (float) $value;
-                if ($reactionAt < $stimulusAt) {
+                if ($reactionAt < $stimulusAt && !$allowEarlyResponse) {
                     throw new ApiException(ErrorCode::TRIAL_LOG_INVALID, 400, ['reason' => 'REACTION_BEFORE_STIMULUS', 'index' => $i]);
                 }
                 if ($timeoutMs !== null && ($reactionAt - $stimulusAt) > $timeoutMs + self::STIMULUS_TIMING_TOLERANCE_MS) {
