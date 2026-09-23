@@ -31,8 +31,11 @@
  *
  * Trial submission shape matches every other test type per `_API_CONTRACT/CONTRACT.md`
  * § run-token submission: `{ index, stimulus_at, responses: { primary: <ms> } }` per
- * valid trial, renumbered `0..trial_count-1`. `stimulus_at` is motion-onset time here
- * (the moment the circles start moving), not a color change.
+ * valid trial, renumbered `0..trial_count-1`. `stimulus_at` is the predicted collision
+ * instant here (`motion_start_time + motion.durationMs` — the moment the two circles'
+ * centers are computed to meet), not motion-onset time and not a color change — see
+ * D24. This lets a response submitted before the predicted collision score as a
+ * negative anticipation value, matching CR-TEST-23's measurement intent.
  */
 (function (global) {
   "use strict";
@@ -58,8 +61,15 @@
         var stopped = false;
         var armTimer = null;
         var rafHandle = null;
-        var stimulusAt = null; // null while armed (pre-motion); set once motion starts
+        var stimulusAt = null; // null while armed (pre-motion); set once motion starts. Used ONLY
+                                // for the false-start gate ("has motion started yet?") — NOT what
+                                // gets submitted as stimulus_at (see collisionAt below, D24).
         var motionStartPerf = null;
+        var collisionAt = null; // predicted collision instant (motionStartPerf + motion.durationMs);
+                                 // set once motion starts, alongside motionStartPerf. This is the
+                                 // value submitted as the trial log's stimulus_at (D24) — the false-
+                                 // start gate above and this submission value are deliberately kept
+                                 // as two separate variables even though both derive from motion start.
         var watchers = [];
 
         var stage = Reflx.util.el("div", { class: "collision-stage" }, [
@@ -106,6 +116,7 @@
           var motion = resolveTrialMotion(trial);
           stimulusAt = null;
           motionStartPerf = null;
+          collisionAt = null;
           leftEl.style.width = leftEl.style.height = (motion.leftRadiusPx * 2) + "px";
           rightEl.style.width = rightEl.style.height = (motion.rightRadiusPx * 2) + "px";
           positionCircles(0); // 0 = fully separated, at the stage's edges
@@ -123,6 +134,10 @@
             if (stopped) return;
             stimulusAt = performance.now();
             motionStartPerf = stimulusAt;
+            // Predicted collision instant (D24) — the moment the two circles' centers are
+            // computed to meet, deterministically derivable now that motion.durationMs (the
+            // server-resolved total duration for this trial) is known.
+            collisionAt = motionStartPerf + motion.durationMs;
             statusEl.textContent = t("test.collision.go");
             runMotion(motion);
           }, delay);
@@ -234,7 +249,7 @@
           stopMotion();
           var responses = {};
           responses[channel] = at;
-          validTrials.push({ index: validTrials.length, stimulus_at: stimulusAt, responses: responses });
+          validTrials.push({ index: validTrials.length, stimulus_at: collisionAt, responses: responses });
           statusEl.textContent = "";
           setTimeout(armTrial, 350);
         }
