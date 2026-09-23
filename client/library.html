@@ -66,13 +66,15 @@
               <label data-i18n="library.import.name">Name</label>
               <input type="text" id="import-name" placeholder="e.g. Peripheral Vision Reaction">
             </div>
-            <div class="field-row">
-              <label data-i18n="library.import.category">Category</label>
-              <span>
-                <select id="import-category"></select>
-                <input type="text" id="new-category-name" data-i18n-attr="placeholder:library.category.new" style="width:8em;">
-                <button class="btn secondary" id="btn-add-category" data-i18n="library.category.add">Add category</button>
-              </span>
+            <div class="field-row" style="align-items:flex-start;">
+              <label data-i18n="library.import.tags" style="padding-top:0.4rem;">Tags</label>
+              <div style="flex:1; max-width:480px;">
+                <div class="tag-pill-grid" id="import-tag-grid"></div>
+                <div class="tag-add-row">
+                  <input type="text" id="new-category-name" data-i18n-attr="placeholder:library.category.new" style="flex:1;">
+                  <button class="btn secondary" id="btn-add-category" data-i18n="library.category.add">Add tag</button>
+                </div>
+              </div>
             </div>
           </div>
           <div class="field-row">
