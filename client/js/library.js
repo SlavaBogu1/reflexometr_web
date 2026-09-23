@@ -12,6 +12,10 @@
   var api = Reflx.api;
 
   var state = { rtests: [], packages: [], categories: [] };
+  // CR-TEST-25: pill-grid tag picker selection state (import-new-r-test panel only),
+  // keyed by tag id -> true. Cleared/rebuilt whenever the import panel's tag catalog
+  // is (re)rendered (renderTagGrid()).
+  var selectedTagIds = {};
 
   function showGate() {
     var loggedIn = Reflx.session.isLoggedIn();
@@ -36,8 +40,14 @@
     });
   }
 
-  // category_id can be null (accepted deviation: uncategorized-then-categorize-later).
-  function categoryLabel(r) { return r.category_name || t("library.uncategorized"); }
+  // CR-TEST-25 (v1.6): r-tests now carry a `tags: []` array (possibly empty) instead of
+  // a single category_id/category_name. categoryLabel() keeps its old name (still used
+  // by the rtests table + version-detail + package-membership rows below) but now joins
+  // all tag names, falling back to the "uncategorized" copy when there are none.
+  function categoryLabel(r) {
+    var tags = r.tags || [];
+    return tags.length ? tags.map(function (tg) { return tg.name; }).join(", ") : t("library.uncategorized");
+  }
 
   function renderTests() {
     var tbody = document.getElementById("rtests-tbody");
@@ -101,15 +111,31 @@
       opt.value = r.slug; opt.textContent = r.name;
       sel.appendChild(opt);
     });
-    var catSel = document.getElementById("import-category");
-    catSel.innerHTML = "";
-    var noneOpt = document.createElement("option");
-    noneOpt.value = ""; noneOpt.textContent = t("library.uncategorized");
-    catSel.appendChild(noneOpt);
+    renderTagGrid();
+  }
+
+  // CR-TEST-25: replaces the single <select id="import-category"> with the approved
+  // pill-grid multi-select (client/prototype-library-multitag-picker.html, v2 — a first
+  // checkbox-list draft was rejected as non-scalable past ~10 tags). Every tag renders as
+  // its own clickable pill in a wrapping, internally-scrolling grid (.tag-pill-grid's
+  // max-height + overflow-y: auto in css/style.css); selected = bright accent fill
+  // (.tag-pill.selected, reusing .chip.category-highlight's bright treatment), unselected
+  // = muted outline. Selection state (selectedTagIds) persists across re-renders driven by
+  // a locale change but resets whenever the import panel's catalog is freshly loaded
+  // (loadAll() -> renderImportSelects()) or a tag is added, matching the old <select>'s
+  // behavior of starting unselected each time the panel's data is (re)loaded.
+  function renderTagGrid() {
+    var grid = document.getElementById("import-tag-grid");
+    grid.innerHTML = "";
     state.categories.forEach(function (c) {
-      var opt = document.createElement("option");
-      opt.value = c.id; opt.textContent = c.name;
-      catSel.appendChild(opt);
+      var pill = Reflx.util.el("span", {
+        class: "tag-pill" + (selectedTagIds[c.id] ? " selected" : ""),
+        onclick: function () {
+          if (selectedTagIds[c.id]) { delete selectedTagIds[c.id]; } else { selectedTagIds[c.id] = true; }
+          renderTagGrid();
+        }
+      }, [c.name]);
+      grid.appendChild(pill);
     });
   }
 
@@ -178,7 +204,7 @@
         return api.listCategories();
       }).then(function (res) {
         if (!res || !res.ok) return;
-        state.categories = res.data; renderImportSelects();
+        state.categories = res.data; renderTagGrid();
         document.getElementById("new-category-name").value = "";
       });
     });
@@ -195,15 +221,18 @@
             loadAll();
           });
         } else {
-          var categoryId = document.getElementById("import-category").value;
+          // CR-TEST-25 (v1.6): tag_ids?: int[] replaces category_id?: int — empty/omitted
+          // means no tags, matching the old "uncategorized" no-selection behavior.
+          var tagIds = Object.keys(selectedTagIds).map(function (id) { return parseInt(id, 10); });
           var payload = {
             slug: document.getElementById("import-slug").value.trim(),
             name: document.getElementById("import-name").value.trim(),
             content: content
           };
-          if (categoryId) payload.category_id = parseInt(categoryId, 10);
+          if (tagIds.length) payload.tag_ids = tagIds;
           api.createRTest(payload).then(function (res) {
             if (!res.ok) { reportError(res); return; }
+            selectedTagIds = {};
             document.getElementById("import-panel").style.display = "none";
             loadAll();
           });

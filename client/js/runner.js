@@ -52,7 +52,9 @@
    */
   var WHY_IT_MATTERS_PLACEHOLDER = {
     "simple-reaction": "Simple visual reaction time is one of the most-studied measures in reaction research — typical adult values fall in a fairly narrow band, making it a useful, low-effort baseline to track over time.",
-    "two-hand-reaction": "Comparing your two hands' reaction speed can surface asymmetries that a single-hand test can't — useful context alongside your dominant-hand setting when interpreting day-to-day variation."
+    "two-hand-reaction": "Comparing your two hands' reaction speed can surface asymmetries that a single-hand test can't — useful context alongside your dominant-hand setting when interpreting day-to-day variation.",
+    "circle-collision-simple": "Coincidence-anticipation timing (predicting when two moving objects will meet) draws on different perceptual-motor skill than a simple color-change reaction — relevant to sports and driving-adjacent research.",
+    "circle-collision-complex": "Adding variable speed and size makes this a tougher anticipation-timing challenge than the Simple variant — useful for tracking how well you adapt your prediction to changing conditions."
   };
   function renderWhyItMatters() {
     var el = document.getElementById("desc-why-it-matters");

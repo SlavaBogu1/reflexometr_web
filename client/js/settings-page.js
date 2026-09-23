@@ -172,7 +172,12 @@
     // clicking a nav link with focus still in the field) previously lost the
     // edit silently. The button's own enabled/disabled state is now the visible
     // "unsaved" vs. "saved" signal; no save happens without an explicit click.
-    function wireNameField(inputId, btnId, profileKey) {
+    // CR-AUTH-03 (3rd reopen): whichever button is clicked, the save request must carry
+    // BOTH name fields' current trimmed values — not just the clicked field's — otherwise
+    // an edit made to the other field (not yet saved) is silently dropped from the request
+    // and lost. On success, both fields' baselines are re-established so either/both save
+    // buttons correctly return to disabled if their current value now matches the save.
+    function wireNameField(inputId, btnId) {
       var f = nameField(inputId, btnId);
       var input = f.input, btn = f.btn;
 
@@ -182,21 +187,23 @@
 
       btn.addEventListener("click", function () {
         if (!Reflx.session.isLoggedIn()) return; // server-backed only — no-op while logged out
-        var value = input.value.trim() || null;
-        var patch = {};
-        patch[profileKey] = value;
+        var realNameField = nameField("realname-input", "realname-save");
+        var displayNameField = nameField("displayname-input", "displayname-save");
+        var patch = {
+          real_name: realNameField.input.value.trim() || null,
+          display_name: displayNameField.input.value.trim() || null
+        };
         api.patchProfile(patch).then(function (res) {
           if (!res.ok) { alert(api.messageFor(res.code)); return; } // leave button enabled — retry without re-typing
-          var update = {};
-          update[profileKey] = res.data[profileKey];
-          Reflx.session.updateUser(update);
-          setSavedBaseline(inputId, btnId, res.data[profileKey] || "");
+          Reflx.session.updateUser({ real_name: res.data.real_name, display_name: res.data.display_name });
+          setSavedBaseline("realname-input", "realname-save", res.data.real_name || "");
+          setSavedBaseline("displayname-input", "displayname-save", res.data.display_name || "");
           flashSaved();
         });
       });
     }
-    wireNameField("realname-input", "realname-save", "real_name");
-    wireNameField("displayname-input", "displayname-save", "display_name");
+    wireNameField("realname-input", "realname-save");
+    wireNameField("displayname-input", "displayname-save");
 
     document.getElementById("countdown-seconds").addEventListener("change", function (e) {
       // 0 is a valid "disable countdown" value, not an error — clamp to the

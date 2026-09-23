@@ -98,12 +98,15 @@
     patchProfile: function (patch) { return request("PATCH", "/profile", patch); },
 
     // --- CR-TEST-01 / CR-TEST-05: public browsing (no auth) ---
-    listRTests: function (categoryId) { return request("GET", "/r-tests" + (categoryId ? "?category_id=" + encodeURIComponent(categoryId) : "")); },
+    // CR-TEST-25 (v1.6): category_id -> tag_id filter param; r-tests now carry a `tags: []`
+    // array instead of a single category_id/category_name.
+    listRTests: function (tagId) { return request("GET", "/r-tests" + (tagId ? "?tag_id=" + encodeURIComponent(tagId) : "")); },
     getRTest: function (slug) { return request("GET", "/r-tests/" + encodeURIComponent(slug)); },
     listCategories: function () { return request("GET", "/categories"); },
     listPackages: function () { return request("GET", "/packages"); },
 
     // --- CR-TEST-01 / CR-TEST-05: admin (admin-only, 403 enforced server-side) ---
+    // CR-TEST-25 (v1.6): create/import payloads take tag_ids?: int[] (replaces category_id?: int).
     listAdminRTests: function () { return request("GET", "/admin/r-tests"); },
     createRTest: function (payload) { return request("POST", "/admin/r-tests", payload); },
     importVersion: function (slug, payload) { return request("POST", "/admin/r-tests/" + encodeURIComponent(slug) + "/versions", payload); },

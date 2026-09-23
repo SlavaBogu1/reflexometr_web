@@ -21,6 +21,25 @@
       deviceHint: function (s) {
         return { key: "test.twohand.header_devices", params: { left: s.leftHandKeyLabel, right: s.rightHandKeyLabel } };
       }
+    },
+    // CR-TEST-23: Circle Collision (Simple) — no color-change stimulus (see
+    // js/tests/circle-collision-simple.js's header comment), so header_stimulus
+    // describes the motion itself rather than a color transition.
+    "circle-collision-simple": {
+      prefix: "test.collision_simple",
+      headerStimulusKey: "test.collision_simple.header_stimulus",
+      deviceHint: function (s) {
+        return { key: "test.collision_simple.header_devices", params: { key: s.keyboardKeyLabel, gamepad: s.gamepadButtonLabel } };
+      }
+    },
+    // CR-TEST-24: Circle Collision (Complex) — same interaction/module as Simple,
+    // different resolved motion profile (per-trial size + within-trial speed change).
+    "circle-collision-complex": {
+      prefix: "test.collision_complex",
+      headerStimulusKey: "test.collision_complex.header_stimulus",
+      deviceHint: function (s) {
+        return { key: "test.collision_complex.header_devices", params: { key: s.keyboardKeyLabel, gamepad: s.gamepadButtonLabel } };
+      }
     }
   };
 })(window);
