@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CR-TEST-23/24 mockup — Circle Collision test stage</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .mockup-note { background: var(--color-warn); color: #2b1c05; padding: 0.5rem 1rem; font-size: 0.85rem; }
+    .mockup-section-title { margin-top: 2.5rem; margin-bottom: 0.5rem; }
+
+    /* CR-TEST-23/24: new stage shape, reusing .stimulus-stage's box treatment
+       (same border/radius/background as every other test's stage) but with
+       two independently-positioned circles instead of one centered orb. */
+    .collision-stage {
+      display: block;
+      height: 320px;
+      background: var(--color-bg-alt);
+      border-radius: var(--radius);
+      border: 1px solid var(--color-border);
+      position: relative;
+      user-select: none;
+      overflow: hidden;
+    }
+    .collision-stage #trial-progress {
+      position: absolute; top: 1rem; left: 50%; transform: translateX(-50%);
+    }
+    .collision-circle {
+      position: absolute; top: 50%; border-radius: 50%;
+      background: var(--color-accent);
+      box-shadow: 0 0 40px rgba(0,0,0,0.25);
+    }
+    /* Simple variant: both circles the same baseline size (168px, matching
+       the existing .orb size so the visual weight feels consistent with
+       other tests), mid-motion snapshot approaching from the edges. */
+    .collision-circle.simple-left { width: 168px; height: 168px; left: 15%; transform: translate(-50%, -50%); }
+    .collision-circle.simple-right { width: 168px; height: 168px; left: 85%; transform: translate(-50%, -50%); }
+
+    /* Complex variant: independently-sized circles, +20%/-20% of baseline
+       (168px -> ~202px / ~134px), still mid-motion. */
+    .collision-circle.complex-left { width: 202px; height: 202px; left: 20%; transform: translate(-50%, -50%); }
+    .collision-circle.complex-right { width: 134px; height: 134px; left: 80%; transform: translate(-50%, -50%); }
+
+    .stage-caption { text-align: center; color: var(--color-text-dim); font-size: 0.85rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="mockup-note">MOCKUP — CR-TEST-23 (Simple) + CR-TEST-24 (Complex) — static mid-motion snapshots, not animated here; not wired to live data</div>
+  <div id="site-nav" style="padding:0.75rem 1.25rem; border-bottom:1px solid var(--color-border); color:var(--color-text-dim); font-size:0.9rem;">
+    Reflexometr &nbsp;|&nbsp; Take a test &nbsp;|&nbsp; Settings
+  </div>
+
+  <main class="container">
+    <h1 class="mockup-section-title">Circle Collision (Simple)</h1>
+    <p class="field-desc">Objective: Click when you think the two circles' centers are about to collide. Same speed and size for the whole trial.</p>
+    <div class="collision-stage">
+      <span id="trial-progress" class="field-desc">Trial 4 of 10</span>
+      <div class="collision-circle simple-left"></div>
+      <div class="collision-circle simple-right"></div>
+    </div>
+    <p class="stage-caption">Mid-motion — both circles the same size (168px), closing at a constant speed for this trial.</p>
+
+    <h1 class="mockup-section-title">Circle Collision (Complex)</h1>
+    <p class="field-desc">Objective: Same interaction, but speed changes during the trial and circle sizes vary ±20% trial to trial.</p>
+    <div class="collision-stage">
+      <span id="trial-progress" class="field-desc">Trial 7 of 10</span>
+      <div class="collision-circle complex-left"></div>
+      <div class="collision-circle complex-right"></div>
+    </div>
+    <p class="stage-caption">Mid-motion — left circle +20% (202px), right circle -20% (134px) this trial; closing speed is currently accelerating.</p>
+  </main>
+
+  <div style="max-width:960px; margin:2rem auto; padding:0 1.25rem; color:var(--color-text-dim); font-size:0.85rem;">
+    <p><strong>What's new vs. every existing test:</strong></p>
+    <ul>
+      <li>New stage shape (<code>.collision-stage</code>) reusing the same box/border/radius treatment as <code>.stimulus-stage</code>/<code>.two-hand-stage</code>, but with two independently-positioned circles instead of one centered orb.</li>
+      <li>Circles animate toward each other via <code>requestAnimationFrame</code> + <code>performance.now()</code> (never <code>setTimeout</code>) — starting at the stage's left/right edges, closing over the trial's resolved duration (1-5s).</li>
+      <li>Simple variant: both circles always 168px (matching the existing <code>.orb</code> size), constant speed for the whole trial.</li>
+      <li>Complex variant: each circle's size independently resolved per trial (±20% of the 168px baseline), and closing speed changes within a single trial's motion (not just trial to trial).</li>
+      <li>No color-change stimulus like the other tests (no green→red) — the "stimulus" here is the predicted collision moment itself; circles stay the accent color throughout.</li>
+      <li>Same trial-progress counter placement (top-center) as every other test's stage.</li>
+    </ul>
+  </div>
+</body>
+</html>

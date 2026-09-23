@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CR-TEST-25 mockup — admin Library multi-tag picker (scalable pill grid)</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .mockup-note { background: var(--color-warn); color: #2b1c05; padding: 0.5rem 1rem; font-size: 0.85rem; }
+
+    /* CR-TEST-25 change: replaces the single <select id="import-category"> with a
+       wrapping grid of clickable tag pills — scales to any number of tags (wraps
+       to as many rows as needed), unlike a fixed checkbox list. Each pill is its
+       own toggle button, not a checkbox+label pair. */
+    .tag-pill-grid {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+      max-height: 9rem; overflow-y: auto;
+      padding: 0.6rem; border: 1px solid var(--color-border); border-radius: var(--radius);
+      background: var(--color-surface-alt);
+    }
+    .tag-pill {
+      display: inline-block; font-size: 0.8rem; padding: 0.3rem 0.8rem;
+      border-radius: 999px; border: 1px solid var(--color-border);
+      background: var(--color-bg-alt); color: var(--color-text-dim);
+      cursor: pointer; user-select: none; white-space: nowrap;
+    }
+    .tag-pill:hover { border-color: var(--color-accent-dim); }
+    .tag-pill.selected {
+      background: var(--color-accent); border-color: var(--color-accent);
+      color: #05201d; font-weight: 600;
+    }
+    .tag-add-row { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
+  </style>
+</head>
+<body>
+  <div class="mockup-note">MOCKUP v2 — CR-TEST-25 — scalable pill-grid tag picker (per user feedback: checkbox list doesn't scale past ~10 tags); not wired to live data</div>
+  <div id="site-nav" style="padding:0.75rem 1.25rem; border-bottom:1px solid var(--color-border); color:var(--color-text-dim); font-size:0.9rem;">
+    Reflexometr &nbsp;|&nbsp; Library &nbsp;|&nbsp; Settings &nbsp;|&nbsp; Admin
+  </div>
+
+  <main class="container">
+    <h1>Library — Import new r-test</h1>
+    <div class="card">
+      <div class="field-row">
+        <label>Slug</label>
+        <input type="text" value="circle-collision-simple">
+      </div>
+      <div class="field-row">
+        <label>Name</label>
+        <input type="text" value="Circle Collision (Simple)">
+      </div>
+      <div class="field-row" style="align-items:flex-start;">
+        <label style="padding-top:0.4rem;">Tags</label>
+        <div style="flex:1; max-width:480px;">
+          <div class="tag-pill-grid">
+            <span class="tag-pill selected">visual</span>
+            <span class="tag-pill selected">dynamic</span>
+            <span class="tag-pill">reflex</span>
+            <span class="tag-pill">inhibitory control</span>
+            <span class="tag-pill">memory</span>
+            <span class="tag-pill">attention</span>
+            <span class="tag-pill">coordination</span>
+            <span class="tag-pill">auditory</span>
+            <span class="tag-pill">spatial</span>
+            <span class="tag-pill">timing</span>
+            <span class="tag-pill">endurance</span>
+            <span class="tag-pill">precision</span>
+          </div>
+          <div class="tag-add-row">
+            <input type="text" placeholder="e.g. multitasking" style="flex:1;">
+            <button class="btn secondary">Add tag</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div style="max-width:960px; margin:2rem auto; padding:0 1.25rem; color:var(--color-text-dim); font-size:0.85rem;">
+    <p><strong>What changed vs. the first draft (rejected — didn't scale):</strong></p>
+    <ul>
+      <li>Every tag renders as its own clickable pill in a wrapping grid, not a fixed checkbox list — the container scrolls internally (<code>max-height</code> + <code>overflow-y: auto</code>) once there are enough tags to overflow, so the form itself never grows unbounded regardless of tag count.</li>
+      <li>Clicking a pill toggles it selected/unselected (bright accent fill = selected, matching <code>.chip.category-highlight</code>'s bright treatment from CR-UI-25 — muted/outlined = unselected).</li>
+      <li>"Add tag" still available below the grid for creating a brand-new tag not yet in the catalog.</li>
+      <li>This pattern has no existing precedent elsewhere in the project, but reuses the same pill/chip visual language (<code>.chip</code>-style rounded pill, accent-vs-muted color states) already established by <code>.chip.version</code>/<code>.chip.category-highlight</code> on <code>browse.html</code>.</li>
+    </ul>
+  </div>
+</body>
+</html>
