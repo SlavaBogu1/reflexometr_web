@@ -64,4 +64,56 @@ final class ResultSummaryServiceTest extends TestCase
 
         self::assertArrayNotHasKey('dominant_minus_nondominant_ms', $result['summary']);
     }
+
+    /**
+     * CR-TEST-23 (Sprint 11): coincidence-anticipation tests (Circle Collision) allow a response
+     * BEFORE stimulus_at (an early anticipation — see RunService::validateTrialLog's
+     * allow_early_response flag, which is what makes it past validation to reach this service at
+     * all). This test verifies the actual arithmetic here — `$value - $stimulusAt` — has no
+     * abs()/max(0, ...)/clamping anywhere that would silently discard the sign; a genuinely early
+     * response must produce a genuinely negative reaction time in mean/median/min/max, not assume
+     * it from reading the code once.
+     */
+    public function testEarlyAnticipationProducesNegativeReactionTime(): void
+    {
+        $schedule = ['response_channels' => ['primary']];
+        $trials = [
+            // Clicked 150ms BEFORE the resolved "stimulus" instant (early anticipation).
+            ['index' => 0, 'stimulus_at' => 2000, 'responses' => ['primary' => 1850]],
+        ];
+
+        $result = ResultSummaryService::compute($schedule, $trials, null);
+
+        self::assertSame(-150.0, $result['primaryMetricMs']);
+        self::assertSame(-150.0, $result['summary']['overall']['mean_ms']);
+        self::assertSame(-150.0, $result['summary']['overall']['median_ms']);
+        self::assertSame(-150.0, $result['summary']['channels']['primary']['mean_ms']);
+        self::assertSame(-150.0, $result['summary']['channels']['primary']['min_ms']);
+        self::assertSame(-150.0, $result['summary']['channels']['primary']['max_ms']);
+    }
+
+    /**
+     * A mix of early (negative) and late (positive) anticipations across trials must average to a
+     * genuinely signed mean that reflects both directions — not clamp negatives to 0 before
+     * averaging, which would silently bias the mean upward and hide genuine early-anticipation
+     * behavior from a user reviewing their own results.
+     */
+    public function testMixedEarlyAndLateAnticipationsProduceCorrectlySignedMean(): void
+    {
+        $schedule = ['response_channels' => ['primary']];
+        $trials = [
+            ['index' => 0, 'stimulus_at' => 1000, 'responses' => ['primary' => 800]],  // -200ms (early)
+            ['index' => 1, 'stimulus_at' => 3000, 'responses' => ['primary' => 3300]], // +300ms (late)
+        ];
+
+        $result = ResultSummaryService::compute($schedule, $trials, null);
+
+        // Mean of -200 and +300 is +50, not (200+300)/2=250 — proves the sign survived averaging.
+        self::assertSame(50.0, $result['primaryMetricMs']);
+        self::assertSame(50.0, $result['summary']['overall']['mean_ms']);
+        self::assertSame(-200.0, $result['summary']['channels']['primary']['min_ms']);
+        self::assertSame(300.0, $result['summary']['channels']['primary']['max_ms']);
+        // sd_ms/cv are still computed normally on signed values (n=2, so non-null).
+        self::assertNotNull($result['sdMs']);
+    }
 }

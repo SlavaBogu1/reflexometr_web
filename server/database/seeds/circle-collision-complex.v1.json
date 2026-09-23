@@ -1,0 +1,14 @@
+{
+  "trial_count": 10,
+  "inter_stimulus_delay_ms": { "min": 1000, "max": 2000 },
+  "response_channels": ["primary"],
+  "timeout_ms": 8000,
+  "motion_speed_profile": {
+    "start_speed_px_per_s": { "min": 200, "max": 500 },
+    "mid_speed_px_per_s": { "min": 200, "max": 500 },
+    "end_speed_px_per_s": { "min": 200, "max": 500 },
+    "travel_distance_px": 800
+  },
+  "circle_radius_px": 40,
+  "allow_early_response": true
+}

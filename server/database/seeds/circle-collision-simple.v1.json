@@ -1,0 +1,9 @@
+{
+  "trial_count": 10,
+  "inter_stimulus_delay_ms": { "min": 1000, "max": 2000 },
+  "response_channels": ["primary"],
+  "timeout_ms": 8000,
+  "motion_duration_ms": { "min": 1000, "max": 5000 },
+  "circle_radius_px": 40,
+  "allow_early_response": true
+}
