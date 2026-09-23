@@ -51,6 +51,7 @@
         var settings = runInfo.settings;
         var scheduleTrials = runInfo.schedule.trials;
         var trialCount = runInfo.schedule.trial_count;
+        var timeoutMs = runInfo.schedule.timeout_ms; // null = no per-response timeout (server never rejects on lateness)
         var channel = (runInfo.schedule.response_channels && runInfo.schedule.response_channels[0]) || "primary";
         var scheduleIdx = 0;
         var validTrials = [];
@@ -200,7 +201,35 @@
             return;
           }
           // Any time after motion starts is a valid response, submitted as-is — no
-          // client-side early/late rejection (CR-TEST-23's allow_early_response point).
+          // client-side EARLY rejection (CR-TEST-23's allow_early_response point).
+          //
+          // A too-LATE response is a different story: the server's own submit-time
+          // validation (RunService::validateTrialLog) unconditionally rejects any trial
+          // whose reaction time exceeds the schedule's timeout_ms, with no Circle-Collision
+          // exemption. Every other test type's reaction times are near-instant (hundreds of
+          // ms) so that floor is never in practice reachable there, but Circle Collision's
+          // whole premise invites watching a multi-second animation before responding
+          // (motion_duration_ms can run up to several seconds on its own), so a real,
+          // unhurried user can organically exceed timeout_ms — especially on whichever
+          // trial happens to draw a long motion_duration_ms. Discovered as the confirmed
+          // root cause of a reported "trial 10 hang": the run actually completed and
+          // submitted fine, but the server's rejection (TRIAL_LOG_INVALID /
+          // RESPONSE_AFTER_TIMEOUT) drove finishRun()'s alert(), whose blocking native
+          // dialog looks exactly like a JS deadlock to automated tooling (and is easy to
+          // miss for a real user too). Voiding a too-late response client-side — mirroring
+          // the false-start guard just above, same void-and-retry shape — makes it
+          // impossible to ever submit a trial the server is guaranteed to reject, instead
+          // of discovering the rejection only after all 10 trials are already spent.
+          // STIMULUS_TIMING_TOLERANCE_MS on the server is 150ms; matched here so the two
+          // sides agree on the exact boundary instead of the client being either stricter
+          // or (worse) more lenient than what the server will actually accept.
+          if (timeoutMs !== null && timeoutMs !== undefined && (at - stimulusAt) > timeoutMs + 150) {
+            stopWatchers();
+            stopMotion();
+            statusEl.textContent = "";
+            setTimeout(armTrial, 350);
+            return;
+          }
           stopWatchers();
           stopMotion();
           var responses = {};
