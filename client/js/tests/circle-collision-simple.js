@@ -140,6 +140,14 @@
          * smoothly between motion.speedProfile's resolved waypoints (a 0..1-progress ->
          * relative-speed curve) so there's no visible jump at a waypoint boundary — the
          * eased/integrated progress function below is continuous by construction. */
+        /** Trapezoid-integral distance covered by a linear speed ramp from `v0` to `v1`
+         * across a `[t0, t1]` window, evaluated up to `tNow` (clamped to the window). */
+        function rampDistance(v0, v1, t0, t1, tNow) {
+          var localFrac = (Math.min(tNow, t1) - t0) / (t1 - t0);
+          var localSpeed = v0 + (v1 - v0) * localFrac;
+          return (v0 + localSpeed) / 2 * (Math.min(tNow, t1) - t0);
+        }
+
         function progressFn(motion) {
           var profile = motion.speedProfile;
           if (!profile) {
@@ -153,20 +161,12 @@
           var s0 = profile.start_speed_px_per_s;
           var sMid = profile.mid_speed_px_per_s;
           var s1 = profile.end_speed_px_per_s;
-          var distFirstHalf = (s0 + sMid) / 2 * 0.5;
-          var distSecondHalf = (sMid + s1) / 2 * 0.5;
-          var total = (distFirstHalf + distSecondHalf) || 1;
+          var distFirstHalf = rampDistance(s0, sMid, 0, 0.5, 0.5);
+          var total = (distFirstHalf + rampDistance(sMid, s1, 0.5, 1, 1)) || 1;
           return function (elapsedFrac) {
-            var dist;
-            if (elapsedFrac <= 0.5) {
-              var localFrac = elapsedFrac / 0.5;
-              var localSpeed = s0 + (sMid - s0) * localFrac;
-              dist = (s0 + localSpeed) / 2 * elapsedFrac;
-            } else {
-              var localFrac2 = (elapsedFrac - 0.5) / 0.5;
-              var localSpeed2 = sMid + (s1 - sMid) * localFrac2;
-              dist = distFirstHalf + (sMid + localSpeed2) / 2 * (elapsedFrac - 0.5);
-            }
+            var dist = elapsedFrac <= 0.5
+              ? rampDistance(s0, sMid, 0, 0.5, elapsedFrac)
+              : distFirstHalf + rampDistance(sMid, s1, 0.5, 1, elapsedFrac);
             return Math.min(1, dist / total);
           };
         }

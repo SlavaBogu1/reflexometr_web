@@ -102,7 +102,7 @@
     // array instead of a single category_id/category_name.
     listRTests: function (tagId) { return request("GET", "/r-tests" + (tagId ? "?tag_id=" + encodeURIComponent(tagId) : "")); },
     getRTest: function (slug) { return request("GET", "/r-tests/" + encodeURIComponent(slug)); },
-    listCategories: function () { return request("GET", "/categories"); },
+    listTags: function () { return request("GET", "/tags"); },
     listPackages: function () { return request("GET", "/packages"); },
 
     // --- CR-TEST-01 / CR-TEST-05: admin (admin-only, 403 enforced server-side) ---
@@ -112,9 +112,9 @@
     importVersion: function (slug, payload) { return request("POST", "/admin/r-tests/" + encodeURIComponent(slug) + "/versions", payload); },
     exportVersion: function (slug, version) { return request("GET", "/admin/r-tests/" + encodeURIComponent(slug) + "/versions/" + version + "/export"); },
     patchRTestMeta: function (slug, patch) { return request("PATCH", "/admin/r-tests/" + encodeURIComponent(slug), patch); },
-    createCategory: function (name) { return request("POST", "/admin/categories", { name: name }); },
-    patchCategory: function (id, name) { return request("PATCH", "/admin/categories/" + id, { name: name }); },
-    deleteCategory: function (id) { return request("DELETE", "/admin/categories/" + id); },
+    createTag: function (name) { return request("POST", "/admin/tags", { name: name }); },
+    patchTag: function (id, name) { return request("PATCH", "/admin/tags/" + id, { name: name }); },
+    deleteTag: function (id) { return request("DELETE", "/admin/tags/" + id); },
     createPackage: function (name, description) { return request("POST", "/admin/packages", { name: name, description: description }); },
     patchPackage: function (id, patch) { return request("PATCH", "/admin/packages/" + id, patch); },
     deletePackage: function (id) { return request("DELETE", "/admin/packages/" + id); },

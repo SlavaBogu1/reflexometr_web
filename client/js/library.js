@@ -29,7 +29,7 @@
   function reportError(res) { alert(api.messageFor(res.code)); }
 
   function loadAll() {
-    return Promise.all([api.listAdminRTests(), api.listPackages(), api.listCategories()]).then(function (r) {
+    return Promise.all([api.listAdminRTests(), api.listPackages(), api.listTags()]).then(function (r) {
       if (!r[0].ok) { reportError(r[0]); return; }
       state.rtests = r[0].data || [];
       state.packages = (r[1].ok && r[1].data) || [];
@@ -199,9 +199,9 @@
     document.getElementById("btn-add-category").addEventListener("click", function () {
       var name = document.getElementById("new-category-name").value.trim();
       if (!name) return;
-      api.createCategory(name).then(function (res) {
+      api.createTag(name).then(function (res) {
         if (!res.ok) { reportError(res); return; }
-        return api.listCategories();
+        return api.listTags();
       }).then(function (res) {
         if (!res || !res.ok) return;
         state.categories = res.data; renderTagGrid();

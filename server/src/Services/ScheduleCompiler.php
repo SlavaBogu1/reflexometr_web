@@ -113,13 +113,7 @@ final class ScheduleCompiler
             $errors[] = 'motion_duration_ms';
             $errors[] = 'motion_speed_profile';
         } elseif (array_key_exists('motion_duration_ms', $description)) {
-            $motion = $description['motion_duration_ms'];
-            if (
-                !is_array($motion)
-                || !isset($motion['min'], $motion['max'])
-                || !is_int($motion['min']) || !is_int($motion['max'])
-                || $motion['min'] < 1 || $motion['max'] < $motion['min']
-            ) {
+            if (!self::isValidIntRange($description['motion_duration_ms'])) {
                 $errors[] = 'motion_duration_ms';
             }
         } elseif (array_key_exists('motion_speed_profile', $description)) {
@@ -160,17 +154,21 @@ final class ScheduleCompiler
             return false;
         }
         foreach (['start_speed_px_per_s', 'mid_speed_px_per_s', 'end_speed_px_per_s'] as $key) {
-            $range = $profile[$key] ?? null;
-            if (
-                !is_array($range)
-                || !isset($range['min'], $range['max'])
-                || !is_int($range['min']) || !is_int($range['max'])
-                || $range['min'] < 1 || $range['max'] < $range['min']
-            ) {
+            if (!self::isValidIntRange($profile[$key] ?? null)) {
                 return false;
             }
         }
         return true;
+    }
+
+    /** `{ "min": int >= $minFloor, "max": int >= min }` — the shared range shape used by both
+     * `motion_duration_ms` and each of `motion_speed_profile`'s three waypoint-speed ranges. */
+    private static function isValidIntRange(mixed $range, int $minFloor = 1): bool
+    {
+        return is_array($range)
+            && isset($range['min'], $range['max'])
+            && is_int($range['min']) && is_int($range['max'])
+            && $range['min'] >= $minFloor && $range['max'] >= $range['min'];
     }
 
     /** CR-TEST-24: reject-and-reroll cap — never loop forever if a misconfigured (but individually
