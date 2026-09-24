@@ -22,9 +22,10 @@
     return admin;
   }
 
-  function reportError(res) { alert(api.messageFor(res.code)); }
+  function reportError(res) { Reflx.util.showBanner("admin-results-error", api.messageFor(res.code)); }
 
   function loadPending() {
+    Reflx.util.hideBanner("admin-results-error");
     return api.listPendingResults("pending").then(function (res) {
       if (!res.ok) { reportError(res); return; }
       state.entries = res.data.entries || [];
@@ -60,6 +61,7 @@
   }
 
   function setStatus(id, approvalStatus) {
+    Reflx.util.hideBanner("admin-results-error");
     api.patchResultStatus(id, approvalStatus).then(function (res) {
       if (!res.ok) { reportError(res); return; }
       loadPending();

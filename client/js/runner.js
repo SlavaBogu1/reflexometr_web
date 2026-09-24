@@ -368,7 +368,9 @@
       var tallyEl = document.getElementById("series-tally");
       tallyEl.innerHTML = "";
       runState.completedRuns.forEach(function (r, i) {
-        var valueLabel = typeof r.primaryMetricMs === "number" ? fmtMs(r.primaryMetricMs) : "—";
+        // CR-TEST-28 (v1.8): Circle Collision's primaryMetricMs is an abs-value px
+        // distance, not ms — see fmtPrimaryMetric() above.
+        var valueLabel = typeof r.primaryMetricMs === "number" ? fmtPrimaryMetric(slug, r.primaryMetricMs) : "—";
         var li = document.createElement("li");
         li.innerHTML = "<span>" + t("runner.series.run_label", { n: i + 1 }) + "</span><span>" + valueLabel + "</span>";
         tallyEl.appendChild(li);
@@ -390,6 +392,29 @@
    */
   function fmtVariability(sdMs) { return typeof sdMs === "number" ? fmtMs(sdMs) : "—"; }
 
+  // CR-TEST-28 (v1.8): Circle Collision's `primary_metric_ms`/`summary.overall.mean_ms`
+  // (and each `summary.channels.{channel}.mean_ms`) are still `_ms`-suffixed field
+  // names (ServerTeam kept the generic name project-wide, CONTRACT.md v1.8) but their
+  // VALUE is now an absolute-value px-distance accuracy figure for this test family —
+  // never literally milliseconds. `summary.overall.min`/`.max` (unsuffixed — the one
+  // exception, per CONTRACT.md) are the genuinely signed extremes (most-early/
+  // most-late click, in px). Detected purely off `slug`, same pattern as
+  // `currentModeParam()`/the dominant-hand gate above — no schedule-level flag is
+  // read client-side (the contract's `abs_value_aggregation` key is informational/
+  // server-only per CONTRACT.md v1.8, not meant to be consumed here).
+  function isCollision(testSlug) { return testSlug === "circle-collision-simple" || testSlug === "circle-collision-complex"; }
+
+  /** Shared "—"-fallback + locale-aware number formatter (`/simplify` pass, Sprint 13
+   * — fmtMs/fmtPx previously duplicated this guard independently). */
+  function fmtNumber(v, unit) { return v === null || v === undefined || isNaN(v) ? "—" : Reflx.i18n.formatNumber(v, { maximumFractionDigits: 0 }) + " " + unit; }
+  function fmtPx(v) { return fmtNumber(v, "px"); }
+
+  /** Formats `v` (a `primary_metric_ms`-shaped value) in whichever unit `slug` actually
+   * means — px-distance for Circle Collision, ms for every other test type. Single
+   * call site for the `isCollision(slug) ? fmtPx : fmtMs` dispatch that was previously
+   * repeated at each of this page's three render sites (`/simplify` pass, Sprint 13). */
+  function fmtPrimaryMetric(testSlug, v) { return isCollision(testSlug) ? fmtPx(v) : fmtMs(v); }
+
   function renderSummary(last) {
     var box = document.getElementById("result-summary");
     box.innerHTML = "";
@@ -409,6 +434,13 @@
       var delta = typeof summary.dominant_minus_nondominant_ms === "number" ? summary.dominant_minus_nondominant_ms : null;
       row(t("test.twohand.result.delta_mean"), delta !== null ? fmtMs(delta) : "—");
       row(t("test.twohand.result.dominant"), Reflx.settings.get().dominantHand || t("settings.dominant.unset"));
+    } else if (isCollision(slug)) {
+      var overall = summary.overall || {};
+      var avgDistance = typeof last.primaryMetricMs === "number" ? last.primaryMetricMs : overall.mean_ms;
+      row(t("runner.result.collision_avg_distance"), fmtPx(avgDistance));
+      row(t("runner.result.collision_earliest"), fmtPx(typeof overall.min === "number" ? overall.min : null));
+      row(t("runner.result.collision_latest"), fmtPx(typeof overall.max === "number" ? overall.max : null));
+      row(t("runner.result.variability"), fmtVariability(overall.sd_ms));
     } else {
       row(t("runner.result.mean"), fmtMs(typeof last.primaryMetricMs === "number" ? last.primaryMetricMs : local.mean));
       row(t("runner.result.best"), fmtMs(local.best));
@@ -418,7 +450,7 @@
     row(t("runner.result.trials_recorded"), String(last.trials.length));
     row(t("runner.result.false_starts"), String(last.falseStarts));
   }
-  function fmtMs(v) { return v === null || v === undefined || isNaN(v) ? "—" : Reflx.i18n.formatNumber(v, { maximumFractionDigits: 0 }) + " ms"; }
+  function fmtMs(v) { return fmtNumber(v, "ms"); }
 
   function renderCompareAndTrend(last) {
     var compareBox = document.getElementById("compare-content");
@@ -469,8 +501,10 @@
       var axis = Reflx.util.el("div", { class: "vhist-axis" });
       sorted.slice(-8).forEach(function (e, i) {
         var pct = Math.min(100, Math.round((Math.abs(e.primary_metric_ms) / max) * 100));
+        // CR-TEST-28 (v1.8): same abs-value px-distance vs. ms distinction as the
+        // series tally above — primary_metric_ms is a px distance for Circle Collision.
         plot.appendChild(Reflx.util.el("div", { class: "vhist-bar-col", "data-idx": String(i), style: "--h:" + pct + "%;" }, [
-          Reflx.util.el("span", { class: "vhist-count" }, [fmtMs(e.primary_metric_ms)]),
+          Reflx.util.el("span", { class: "vhist-count" }, [fmtPrimaryMetric(slug, e.primary_metric_ms)]),
           Reflx.util.el("div", { class: "vhist-bar" })
         ]));
         axis.appendChild(Reflx.util.el("span", {}, [Reflx.i18n.formatDateTime(new Date(e.created_at), { dateStyle: "short" })]));

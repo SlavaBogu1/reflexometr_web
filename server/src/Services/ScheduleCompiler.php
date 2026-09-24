@@ -30,7 +30,8 @@ use Reflexometr\Support\Rand;
  * {
  *   "motion_duration_ms": {"min": int > 0, "max": int >= min}, // resolved per-trial -> duration_ms
  *   "circle_radius_px": int > 0,       // constant for this simple variant; resolved schedule-level
- *   "allow_early_response": bool       // true = skip REACTION_BEFORE_STIMULUS for every trial here
+ *   "allow_early_response": bool,      // true = skip REACTION_BEFORE_STIMULUS for every trial here
+ *   "travel_distance_px": int > 0      // CR-TEST-28, optional; defaults to DEFAULT_TRAVEL_DISTANCE_PX
  * }
  * A coincidence-anticipation test (no discrete stimulus onset — the user watches continuous motion
  * and clicks when they judge it reaches some point) sets allow_early_response: true so a response
@@ -39,6 +40,15 @@ use Reflexometr\Support\Rand;
  * omitted entirely for a classic discrete-stimulus test (simple-reaction, two-hand-reaction) — the
  * compiled schedule simply doesn't carry those keys when absent from the description.
  *
+ * CR-TEST-28 (Sprint 13): both Circle Collision variants' compiled trials[] gain a resolved
+ * `closing_speed_px_per_ms` (float > 0) — the constant-for-Simple / average-effective-for-Complex
+ * closing rate, i.e. `travel_distance_px / (motion_duration_ms | motion_speed_profile.duration_ms)`
+ * — so the client (or the server itself) can derive a resolved, server-computed
+ * distance-at-click-in-px from a trial's `stimulus_at`/response timestamps:
+ * `distance_px = closing_speed_px_per_ms * (response_at - stimulus_at)`, signed the same way the
+ * existing ms delta already is (D11: never a value the client anticipates independently of what
+ * the compiled schedule provides). See `_API_CONTRACT/CONTRACT.md` v1.8.
+ *
  * Compiled schedule shape (sent to client + stored server-side for submission validation):
  * {
  *   "trial_count": int,               // the number of VALID trials the client must submit
@@ -46,11 +56,12 @@ use Reflexometr\Support\Rand;
  *   "timeout_ms": int|null,
  *   "allow_early_response": bool,     // CR-TEST-23, only present when the description set it
  *   "circle_radius_px": int,          // CR-TEST-23, only present when the description set it
- *   "trials": [ { "index": int, "delay_ms": int, "motion_duration_ms"?: int }, ... ]
+ *   "trials": [ { "index": int, "delay_ms": int, "motion_duration_ms"?: int, "closing_speed_px_per_ms"?: float }, ... ]
  *     // trial_count + buffer_trials entries; motion_duration_ms per-trial when CR-TEST-23 fields
  *     // are present (same per-trial-resolved pattern as delay_ms — a fresh random draw per trial,
  *     // not one fixed value reused for the whole schedule, so a client can't learn the value from
- *     // trial 1 and anticipate the rest).
+ *     // trial 1 and anticipate the rest). closing_speed_px_per_ms (CR-TEST-28) is present per-trial
+ *     // whenever either Circle Collision variant's motion fields are present.
  * }
  * `trials` deliberately contains more entries than `trial_count` (a "false-start buffer"): a
  * false start (input before the stimulus, CR-TEST-03 acceptance 3) doesn't count as a valid
@@ -67,6 +78,15 @@ final class ScheduleCompiler
 {
     public const DEFAULT_FALSE_START_BUFFER = 6;
 
+    /** CR-TEST-28: default logical full-stage travel distance (px) for Circle Collision Simple
+     * when the description omits `travel_distance_px` — matches Complex's existing seed convention
+     * (`circle-collision-complex.v1.json`'s `travel_distance_px: 800`) so both variants resolve a
+     * comparable closing speed out of the box. A logical distance, not a literal on-screen pixel
+     * count (the client's actual rendered stage width varies per viewport, per
+     * `circle-collision-simple.js`'s `stage.offsetWidth` — see closing_speed_px_per_ms doc below);
+     * used only as the resolved basis for the closing-speed figure. */
+    public const DEFAULT_TRAVEL_DISTANCE_PX = 800;
+
     /** CR-TEST-27: sane upper bound on an imported description's trial_count — comfortably above
      * any real r-test's actual value (the largest seeded test uses 10) while ruling out a
      * pathological import (e.g. trial_count: 1000000) that would otherwise reach the
@@ -74,6 +94,15 @@ final class ScheduleCompiler
      * time here; MAX_TRIAL_GENERATION_ITERATIONS below is the defense-in-depth backstop inside the
      * loop itself, in case this check is ever bypassed by a future code path. */
     public const MAX_TRIAL_COUNT = 500;
+
+    /** CR-TEST-29: sane upper bound on an imported description's false_start_buffer — comfortably
+     * above any real r-test's actual value (no seed today sets this explicitly; all real r-tests
+     * rely on DEFAULT_FALSE_START_BUFFER = 6) while ruling out a pathological import (e.g.
+     * false_start_buffer: 1000000) that would otherwise reach the trial-generation loop in
+     * compile() and exhaust memory/time, same reasoning as MAX_TRIAL_COUNT above. Kept comfortably
+     * below MAX_TRIAL_GENERATION_ITERATIONS - MAX_TRIAL_COUNT (currently 1500) so this import-time
+     * check always fires before the defense-in-depth ceiling would. */
+    public const MAX_FALSE_START_BUFFER = 100;
 
     /** CR-TEST-27: hard ceiling on trial-generation loop iterations (trial_count + buffer_trials),
      * independent of MAX_TRIAL_COUNT's import-time check — never let an unvalidated/bypassed
@@ -115,7 +144,7 @@ final class ScheduleCompiler
 
         if (array_key_exists('false_start_buffer', $description)) {
             $buffer = $description['false_start_buffer'];
-            if (!is_int($buffer) || $buffer < 0) {
+            if (!is_int($buffer) || $buffer < 0 || $buffer > self::MAX_FALSE_START_BUFFER) {
                 $errors[] = 'false_start_buffer';
             }
         }
@@ -140,6 +169,17 @@ final class ScheduleCompiler
             $radius = $description['circle_radius_px'];
             if (!is_int($radius) || $radius < 1) {
                 $errors[] = 'circle_radius_px';
+            }
+        }
+
+        // CR-TEST-28 (Circle Collision Simple only): optional resolved basis for
+        // closing_speed_px_per_ms — see DEFAULT_TRAVEL_DISTANCE_PX doc. Complex already carries its
+        // own travel_distance_px inside motion_speed_profile (CR-TEST-24), so this top-level key is
+        // only meaningful (and only validated) alongside motion_duration_ms.
+        if (array_key_exists('travel_distance_px', $description) && array_key_exists('motion_duration_ms', $description)) {
+            $distance = $description['travel_distance_px'];
+            if (!is_int($distance) || $distance < 1) {
+                $errors[] = 'travel_distance_px';
             }
         }
 
@@ -214,6 +254,13 @@ final class ScheduleCompiler
         $hasRadius = array_key_exists('circle_radius_px', $description);
         $perCircleRadius = $hasRadius && $hasSpeedProfile; // CR-TEST-24 only: per-circle, per-trial.
         $baseRadius = $hasRadius ? (int) $description['circle_radius_px'] : null;
+        // CR-TEST-28: Simple's resolved travel_distance_px basis for closing_speed_px_per_ms (see
+        // that field's doc below) — description-supplied or DEFAULT_TRAVEL_DISTANCE_PX. Complex
+        // carries its own travel_distance_px inside motion_speed_profile already (CR-TEST-24), read
+        // directly from the resolved profile per-trial below instead.
+        $simpleTravelDistancePx = $hasMotionDuration
+            ? (int) ($description['travel_distance_px'] ?? self::DEFAULT_TRAVEL_DISTANCE_PX)
+            : null;
 
         $total = $trialCount + $bufferTrials;
         if ($total > self::MAX_TRIAL_GENERATION_ITERATIONS) {
@@ -231,14 +278,30 @@ final class ScheduleCompiler
 
             if ($hasMotionDuration) {
                 // CR-TEST-23: single resolved duration per trial, same pattern as delay_ms.
-                $trial['motion_duration_ms'] = Rand::intBetween(
+                $motionDurationMs = Rand::intBetween(
                     (int) $description['motion_duration_ms']['min'],
                     (int) $description['motion_duration_ms']['max'],
                 );
+                $trial['motion_duration_ms'] = $motionDurationMs;
+                // CR-TEST-28: resolved closing speed for this trial — constant for the whole trial
+                // (Simple has no mid-trial speed change), server-resolved per D11 from the two
+                // values just resolved above, never something the client is trusted to anticipate.
+                $trial['closing_speed_px_per_ms'] = $simpleTravelDistancePx / $motionDurationMs;
             } elseif ($hasSpeedProfile) {
                 // CR-TEST-24: resolve waypoint speeds, verify total duration lands in [1000,5000]ms
                 // — reject-and-reroll rather than ever shipping an out-of-bound schedule.
-                $trial['motion_speed_profile'] = self::resolveSpeedProfile($description['motion_speed_profile']);
+                $resolvedProfile = self::resolveSpeedProfile($description['motion_speed_profile']);
+                $trial['motion_speed_profile'] = $resolvedProfile;
+                // CR-TEST-28: Complex's closing speed varies within a trial (three waypoints), so
+                // this is the trial's *average effective* rate (travel_distance_px / total resolved
+                // duration) — sufficient for the client to compute distance-at-click without
+                // re-deriving the full piecewise ramp math server-side; "your call on how to express
+                // an effective closing rate" per the CR. Server-resolved from values already
+                // resolved above (travel_distance_px is part of the description's speed-profile
+                // range input, duration_ms was just verified by resolveSpeedProfile) — never
+                // client-anticipated.
+                $trial['closing_speed_px_per_ms'] = ((int) $description['motion_speed_profile']['travel_distance_px'])
+                    / $resolvedProfile['duration_ms'];
             }
 
             if ($perCircleRadius) {
@@ -263,6 +326,16 @@ final class ScheduleCompiler
 
         if (array_key_exists('allow_early_response', $description)) {
             $schedule['allow_early_response'] = (bool) $description['allow_early_response'];
+        }
+        // CR-TEST-28 (SI-13.4): generic schedule-level flag — same pattern as allow_early_response
+        // just above (not a special case keyed to this test's slug, per the established convention
+        // at RunService::validateTrialLog's allow_early_response doc) — tells ResultSummaryService
+        // to aggregate this schedule's mean/sd using each trial's absolute value rather than the
+        // signed value every other test type uses. True exactly when either Circle Collision
+        // variant's motion fields are present (i.e. whenever closing_speed_px_per_ms is resolved
+        // per-trial above), so any future coincidence-distance r-test type can opt in the same way.
+        if ($hasMotionDuration || $hasSpeedProfile) {
+            $schedule['abs_value_aggregation'] = true;
         }
         // circle_radius_px stays schedule-level (constant) for CR-TEST-23's simple variant, where
         // it never varies per-trial/per-circle; CR-TEST-24 instead carries it per-trial/per-circle

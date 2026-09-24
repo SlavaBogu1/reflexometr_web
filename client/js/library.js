@@ -26,9 +26,10 @@
     return admin;
   }
 
-  function reportError(res) { alert(api.messageFor(res.code)); }
+  function reportError(res) { Reflx.util.showBanner("library-error", api.messageFor(res.code)); }
 
   function loadAll() {
+    Reflx.util.hideBanner("library-error");
     return Promise.all([api.listAdminRTests(), api.listPackages(), api.listTags()]).then(function (r) {
       if (!r[0].ok) { reportError(r[0]); return; }
       state.rtests = r[0].data || [];
@@ -92,6 +93,7 @@
   }
 
   function doExport(slug, version) {
+    Reflx.util.hideBanner("library-error");
     api.exportVersion(slug, version).then(function (res) {
       if (!res.ok) { reportError(res); return; }
       var blob = new Blob([res.data.description], { type: "application/json" });
@@ -162,6 +164,7 @@
         var cb = Reflx.util.el("input", { type: "checkbox" });
         cb.checked = checked;
         cb.addEventListener("change", function () {
+          Reflx.util.hideBanner("library-error");
           var call = cb.checked ? api.addRTestToPackage(pkg.id, r.id) : api.removeRTestFromPackage(pkg.id, r.id);
           call.then(function (res) { if (!res.ok) { reportError(res); cb.checked = !cb.checked; return; } loadAll(); });
         });
@@ -199,6 +202,7 @@
     document.getElementById("btn-add-category").addEventListener("click", function () {
       var name = document.getElementById("new-category-name").value.trim();
       if (!name) return;
+      Reflx.util.hideBanner("library-error");
       api.createTag(name).then(function (res) {
         if (!res.ok) { reportError(res); return; }
         return api.listTags();
@@ -213,6 +217,7 @@
       var fileInput = document.getElementById("import-file");
 
       function finish(content) {
+        Reflx.util.hideBanner("library-error");
         if (mode === "version") {
           var slug = document.getElementById("import-existing-select").value;
           api.importVersion(slug, { content: content }).then(function (res) {
@@ -240,11 +245,12 @@
       }
 
       if (fileInput.files[0]) {
+        Reflx.util.hideBanner("library-error");
         var reader = new FileReader();
         reader.onload = function () { finish(reader.result); };
         reader.readAsText(fileInput.files[0]);
       } else {
-        alert(t("library.import.file"));
+        Reflx.util.showBanner("library-error", t("library.import.file"));
       }
     });
   }
@@ -254,6 +260,7 @@
       var name = document.getElementById("package-name").value.trim();
       var description = document.getElementById("package-description").value.trim();
       if (!name) return;
+      Reflx.util.hideBanner("library-error");
       api.createPackage(name, description).then(function (res) {
         if (!res.ok) { reportError(res); return; }
         document.getElementById("package-name").value = "";

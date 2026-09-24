@@ -1,5 +1,6 @@
 /**
- * Reflexometr — Circle Collision, Simple + Complex variants (CR-TEST-23, CR-TEST-24).
+ * Reflexometr — Circle Collision, Simple + Complex variants (CR-TEST-23, CR-TEST-24,
+ * CR-TEST-28).
  *
  * Two circles start at the stage's left/right edges (centers on the same horizontal
  * line, per the approved mockup `client/prototype-circle-collision-stage.html`) and
@@ -21,21 +22,35 @@
  *
  * Per CR-TEST-23's whole point (measuring anticipation, including early guesses): a
  * click before motion starts is a false start (matches every other test type's
- * existing false-start UX — see simple-reaction.js). A click any time after motion
- * starts is a valid response and is submitted as-is, even arbitrarily early — no
- * client-side rejection of an "early" click; the server's `allow_early_response`
- * schedule flag is what accepts it without the usual REACTION_BEFORE_STIMULUS check.
+ * existing false-start UX — see simple-reaction.js). A click ANY time after motion
+ * starts is a valid response and is submitted as-is, even arbitrarily early or late
+ * — no client-side rejection either direction; the server's `allow_early_response`
+ * schedule flag is what accepts an early click without the usual
+ * REACTION_BEFORE_STIMULUS check, and CR-TEST-28 (v1.8)'s full-stage-travel window
+ * (see runMotion() below) is what makes a late click always reachable too, replacing
+ * the old client-side too-late void-and-retry.
+ *
+ * CR-TEST-28 (v1.8): motion now always runs the FULL stage — from one edge, through
+ * the center (the predicted collision instant), all the way to the OPPOSITE edge —
+ * before stopping, rather than CR-TEST-26's radius-based early stop shortly after
+ * collision. If motion reaches the far edge with no click received, the trial ends
+ * as a genuine timeout: submitted with `responses[channel]: null` (see
+ * onFarEdgeTimeout() below), not silently voided and retried.
  *
  * Animation always uses requestAnimationFrame + performance.now() — never setTimeout
  * — per the standing reflex-timing requirement (client/CLAUDE.md).
  *
  * Trial submission shape matches every other test type per `_API_CONTRACT/CONTRACT.md`
- * § run-token submission: `{ index, stimulus_at, responses: { primary: <ms> } }` per
- * valid trial, renumbered `0..trial_count-1`. `stimulus_at` is the predicted collision
- * instant here (`motion_start_time + motion.durationMs` — the moment the two circles'
- * centers are computed to meet), not motion-onset time and not a color change — see
- * D24. This lets a response submitted before the predicted collision score as a
- * negative anticipation value, matching CR-TEST-23's measurement intent.
+ * § run-token submission: `{ index, stimulus_at, responses: { primary: <ms|null> } }`
+ * per valid trial, renumbered `0..trial_count-1`. `stimulus_at` is the predicted
+ * collision instant here (`motion_start_time + motion.durationMs` — the moment the
+ * two circles' centers are computed to meet), not motion-onset time and not a color
+ * change — see D24. This lets a response submitted before the predicted collision
+ * score as a negative anticipation value, matching CR-TEST-23's measurement intent.
+ * CONTRACT.md v1.8 (CR-TEST-28) additionally resolves `closing_speed_px_per_ms` per
+ * trial, letting the Result page (`runner.js`) compute signed distance-at-click in px
+ * from `stimulus_at`/`response_at` — not computed here, this module only produces the
+ * raw ms-based trial log.
  */
 (function (global) {
   "use strict";
@@ -54,7 +69,11 @@
         var settings = runInfo.settings;
         var scheduleTrials = runInfo.schedule.trials;
         var trialCount = runInfo.schedule.trial_count;
-        var timeoutMs = runInfo.schedule.timeout_ms; // null = no per-response timeout (server never rejects on lateness)
+        // CR-TEST-28 (v1.8): timeout_ms is no longer read/guarded client-side — motion
+        // always runs the full stage travel (runMotion()'s progress >= 2 stop) and
+        // onFarEdgeTimeout() is what submits a timeout, not a client-computed deadline
+        // check. Kept off this object entirely to avoid a second, now-unused source of
+        // truth for something the server's own submit-time validation still governs.
         var channel = (runInfo.schedule.response_channels && runInfo.schedule.response_channels[0]) || "primary";
         var scheduleIdx = 0;
         var validTrials = [];
@@ -200,48 +219,48 @@
           };
         }
 
-        /** Distance between the two circles' centers, in px, at the given progress
-         * value — derived the same way positionCircles() derives `left%` from
-         * progress, so the two never drift out of sync. Used only for the CR-TEST-26
-         * post-collision stop condition (never affects stimulus_at/timing/validation). */
-        function centerDistancePx(progress, stageWidthPx) {
-          var half = progress * 50; // matches positionCircles()'s own formula
-          var leftPct = half;
-          var rightPct = 100 - half;
-          return Math.abs(rightPct - leftPct) / 100 * stageWidthPx;
-        }
-
+        /** CR-TEST-28 (v1.8): genuine full-stage travel replaces CR-TEST-26's
+         * radius-based early stop — circles continue at the same resolved
+         * speed/profile from one edge, through the center (collisionAt, D24),
+         * all the way to the OPPOSITE edge (progress === 2, symmetric to the
+         * 0..1 leg that reaches the center at progress === 1; positionCircles()'s
+         * own left%/right% formula already extrapolates correctly past 1 with no
+         * separate distance math needed). Motion stops there; if no response was
+         * received by then, onFarEdgeTimeout() submits a timeout trial instead of
+         * the old silent void-and-retry (see onInput() below). Purely a motion/
+         * stop-condition change — does not touch stimulus_at/collisionAt or any
+         * response validation; a click at any point during the full travel still
+         * stops motion immediately and submits as before. */
         function runMotion(motion) {
           var startPerf = motionStartPerf;
           var duration = motion.durationMs;
           var progOf = progressFn(motion);
-          var stageWidthPx = stage.offsetWidth;
-          var maxRadiusPx = Math.max(motion.leftRadiusPx, motion.rightRadiusPx);
           function frame(now) {
             if (stopped) return;
             var elapsedFrac = (performance.now() - startPerf) / duration;
             var progress = progOf(elapsedFrac);
             positionCircles(progress);
-            if (elapsedFrac < 1) {
+            if (progress < 2) {
               rafHandle = requestAnimationFrame(frame);
               return;
             }
-            // CR-TEST-26: past the predicted collision instant (elapsedFrac >= 1), keep
-            // advancing at the same resolved speed/profile — circles pass through and
-            // separate — until they're back apart by more than the larger circle's
-            // radius, then stop (mirrors stopMotion()'s cancelAnimationFrame cleanup,
-            // just gated on distance instead of elapsedFrac >= 1). Purely visual — does
-            // not touch stimulus_at/collisionAt or any validation logic; a click at any
-            // point during this extended phase still submits exactly as before onInput().
-            if (centerDistancePx(progress, stageWidthPx) > maxRadiusPx) {
-              rafHandle = null;
-            } else {
-              rafHandle = requestAnimationFrame(frame);
-            }
+            rafHandle = null;
+            onFarEdgeTimeout();
           }
           rafHandle = requestAnimationFrame(frame);
         }
 
+        // CR-TEST-28 (v1.8): replaces CR-TEST-26's client-side void-and-retry for a
+        // too-late response (the "trial 10 hang" workaround) with a genuine
+        // timeout-driven trial end. The server's timeout_ms deadline is no longer
+        // guarded against here at all — Circle Collision now always runs motion to
+        // the far stage edge (runMotion()'s progress >= 2 stop, above) and lets a
+        // click at ANY point during that full travel submit as a valid response,
+        // arbitrarily late included. Only once motion reaches the far edge with
+        // still no click does onFarEdgeTimeout() (below) submit the trial with a
+        // null response — the contract's pre-existing, already-legal "timeout"
+        // shape (CONTRACT.md v1.8 "timeout-as-null-response"; both Circle Collision
+        // seeds set timeout_ms: 8000, non-null, so a null response is allowed).
         function onInput(at) {
           if (stopped) return;
           if (stimulusAt === null) {
@@ -253,40 +272,31 @@
             setTimeout(armTrial, 500);
             return;
           }
-          // Any time after motion starts is a valid response, submitted as-is — no
-          // client-side EARLY rejection (CR-TEST-23's allow_early_response point).
-          //
-          // A too-LATE response is a different story: the server's own submit-time
-          // validation (RunService::validateTrialLog) unconditionally rejects any trial
-          // whose reaction time exceeds the schedule's timeout_ms, with no Circle-Collision
-          // exemption. Every other test type's reaction times are near-instant (hundreds of
-          // ms) so that floor is never in practice reachable there, but Circle Collision's
-          // whole premise invites watching a multi-second animation before responding
-          // (motion_duration_ms can run up to several seconds on its own), so a real,
-          // unhurried user can organically exceed timeout_ms — especially on whichever
-          // trial happens to draw a long motion_duration_ms. Discovered as the confirmed
-          // root cause of a reported "trial 10 hang": the run actually completed and
-          // submitted fine, but the server's rejection (TRIAL_LOG_INVALID /
-          // RESPONSE_AFTER_TIMEOUT) drove finishRun()'s alert(), whose blocking native
-          // dialog looks exactly like a JS deadlock to automated tooling (and is easy to
-          // miss for a real user too). Voiding a too-late response client-side — mirroring
-          // the false-start guard just above, same void-and-retry shape — makes it
-          // impossible to ever submit a trial the server is guaranteed to reject, instead
-          // of discovering the rejection only after all 10 trials are already spent.
-          // STIMULUS_TIMING_TOLERANCE_MS on the server is 150ms; matched here so the two
-          // sides agree on the exact boundary instead of the client being either stricter
-          // or (worse) more lenient than what the server will actually accept.
-          if (timeoutMs !== null && timeoutMs !== undefined && (at - stimulusAt) > timeoutMs + 150) {
-            stopWatchers();
-            stopMotion();
-            statusEl.textContent = "";
-            setTimeout(armTrial, 350);
-            return;
-          }
+          // Any time after motion starts (including all the way through the extended
+          // post-collision travel to the far edge) is a valid response, submitted
+          // as-is — no client-side EARLY or LATE rejection (CR-TEST-23's
+          // allow_early_response point, now extended by CR-TEST-28's full-stage-travel
+          // window covering "late" too).
           stopWatchers();
           stopMotion();
           var responses = {};
           responses[channel] = at;
+          validTrials.push({ index: validTrials.length, stimulus_at: collisionAt, responses: responses });
+          statusEl.textContent = "";
+          setTimeout(armTrial, 350);
+        }
+
+        /** CR-TEST-28 (v1.8): motion reached the far stage edge with no click —
+         * a legitimate timeout/miss, not an error. Submits the trial with
+         * `responses[channel]: null` per CONTRACT.md's pre-existing "value is
+         * either a number or null, only allowed if the schedule's timeout_ms is
+         * non-null" clause, then continues to the next trial exactly like a
+         * normal valid response does. */
+        function onFarEdgeTimeout() {
+          if (stopped) return;
+          stopWatchers();
+          var responses = {};
+          responses[channel] = null;
           validTrials.push({ index: validTrials.length, stimulus_at: collisionAt, responses: responses });
           statusEl.textContent = "";
           setTimeout(armTrial, 350);

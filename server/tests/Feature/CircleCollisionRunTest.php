@@ -66,7 +66,17 @@ final class CircleCollisionRunTest extends TestCase
         self::assertArrayNotHasKey('motion_duration_ms', $schedule);
     }
 
-    public function testEarlyResponseIsAcceptedAndProducesNegativeSignedSummary(): void
+    /**
+     * CR-TEST-28/SI-13.4 note: prior to Sprint 13, this test asserted the summary mean stayed
+     * negative (signed) for an all-early run. That's now deliberately superseded for Circle
+     * Collision specifically — abs_value_aggregation means the mean / primary_metric reflect
+     * magnitude, not sign — while min/max (unsuffixed, see ResultSummaryService) still expose the
+     * true signed value so a user can see they were early. This test still verifies the core
+     * behavior its name promises (early response accepted, not rejected as a false start); the
+     * abs-value-specific assertions live in testAbsValueAggregationAppliesToCircleCollisionMean
+     * below.
+     */
+    public function testEarlyResponseIsAcceptedAndProducesNegativeSignedMinMax(): void
     {
         ['token' => $adminToken] = $this->registerAdmin();
         ['token' => $userToken] = $this->registerUser();
@@ -98,8 +108,64 @@ final class CircleCollisionRunTest extends TestCase
         ]));
 
         self::assertSame(201, $status, (string) json_encode($body));
-        self::assertEqualsWithDelta(-100.0, $body['data']['primary_metric_ms'], 0.01);
-        self::assertLessThan(0, $body['data']['summary']['overall']['mean_ms']);
+        // Abs-value aggregation: primary_metric/mean reflect magnitude (positive), not sign.
+        self::assertEqualsWithDelta(100.0, $body['data']['primary_metric_ms'], 0.01);
+        self::assertGreaterThan(0, $body['data']['summary']['overall']['mean_ms']);
+        // But min/max (unsuffixed for this abs-value-aggregated family) still expose the true
+        // signed value, so a user can see they were consistently early.
+        self::assertEqualsWithDelta(-100.0, $body['data']['summary']['overall']['min'], 0.01);
+        self::assertEqualsWithDelta(-100.0, $body['data']['summary']['overall']['max'], 0.01);
+        self::assertArrayNotHasKey('min_ms', $body['data']['summary']['overall']);
+        self::assertArrayNotHasKey('max_ms', $body['data']['summary']['overall']);
+    }
+
+    /**
+     * CR-TEST-28/SI-13.4 acceptance criterion 5: a mixed set of early and late trials must not
+     * net-cancel toward zero the way the old signed average did — the abs-value mean reflects
+     * accuracy magnitude. Also confirms min/max still show the genuinely signed extremes
+     * (early/late split) alongside the abs-value mean.
+     */
+    public function testAbsValueAggregationAppliesToCircleCollisionMean(): void
+    {
+        ['token' => $adminToken] = $this->registerAdmin();
+        ['token' => $userToken] = $this->registerUser();
+
+        $this->dispatch($this->requestAs($adminToken, 'POST', '/admin/r-tests', [
+            'slug' => 'circle-collision-simple', 'name' => 'Circle Collision Simple', 'content' => self::SIMPLE_CONTENT,
+        ]));
+        [, $run] = $this->dispatch($this->requestAs($userToken, 'POST', '/r-tests/circle-collision-simple/runs', []));
+        $schedule = $run['data']['schedule'];
+
+        Clock::advance(60_000);
+
+        // Trial 0: 200ms early (-200). Trial 1: 300ms late (+300). Trial 2: 100ms early (-100).
+        // Old signed mean would be (-200+300-100)/3 = 0.0 (net-cancels near zero). Abs-value mean
+        // is (200+300+100)/3 = 200.0 — must not net-cancel.
+        $offsets = [-200, 300, -100];
+        $trials = [];
+        $cursor = 0.0;
+        $used = array_slice($schedule['trials'], 0, $schedule['trial_count']);
+        foreach ($used as $i => $t) {
+            $cursor += $t['delay_ms'];
+            $trials[] = [
+                'index' => $i,
+                'stimulus_at' => $cursor,
+                'responses' => ['primary' => $cursor + $offsets[$i]],
+            ];
+        }
+
+        [$status, $body] = $this->dispatch($this->requestAs($userToken, 'POST', "/r-tests/runs/{$run['data']['token']}/submit", [
+            'trials' => $trials,
+        ]));
+
+        self::assertSame(201, $status, (string) json_encode($body));
+        self::assertEqualsWithDelta(200.0, $body['data']['summary']['overall']['mean_ms'], 0.01);
+        self::assertEqualsWithDelta(200.0, $body['data']['primary_metric_ms'], 0.01);
+        // Not net-cancelled near zero, which the old signed average would have produced.
+        self::assertNotEqualsWithDelta(0.0, $body['data']['summary']['overall']['mean_ms'], 50.0);
+        // Signed extremes still visible: most-early -200, most-late +300.
+        self::assertEqualsWithDelta(-200.0, $body['data']['summary']['overall']['min'], 0.01);
+        self::assertEqualsWithDelta(300.0, $body['data']['summary']['overall']['max'], 0.01);
     }
 
     public function testLateResponseWellAfterCollisionStillSubmitsSuccessfully(): void
@@ -164,6 +230,57 @@ final class CircleCollisionRunTest extends TestCase
                 self::assertLessThanOrEqual(48, $trial['circle_radius_px'][$circle]);    // 40 + 20%
             }
         }
+    }
+
+    /**
+     * CR-TEST-28/SI-13.3: full-stage-travel timeout — when the user never clicks before the
+     * circles reach the far edge, the client now intentionally submits `responses.primary: null`
+     * for that trial (legal per the existing "null allowed when timeout_ms is set" contract
+     * clause). Verifies this is accepted (not rejected as MISSING_RESPONSE) and that the timed-out
+     * trial is excluded from valid_count/mean the same way a missing response already is for every
+     * other test type — explicit test, not an absence-of-change assumption (SPRINT_TASKS.md
+     * explicitly calls out this path may not already be exercised by Circle Collision data).
+     */
+    public function testTimedOutTrialSubmitsNullResponseAndIsExcludedFromMean(): void
+    {
+        ['token' => $adminToken] = $this->registerAdmin();
+        ['token' => $userToken] = $this->registerUser();
+
+        $this->dispatch($this->requestAs($adminToken, 'POST', '/admin/r-tests', [
+            'slug' => 'circle-collision-simple', 'name' => 'Circle Collision Simple', 'content' => self::SIMPLE_CONTENT,
+        ]));
+        [, $run] = $this->dispatch($this->requestAs($userToken, 'POST', '/r-tests/circle-collision-simple/runs', []));
+        $schedule = $run['data']['schedule'];
+
+        Clock::advance(60_000);
+
+        // Trial 0: real (non-timeout) response, 100ms early. Trials 1-2: timed out (no click
+        // before the far-edge timeout) -> null response, per the client's new intentional path.
+        $trials = [];
+        $cursor = 0.0;
+        $used = array_slice($schedule['trials'], 0, $schedule['trial_count']);
+        foreach ($used as $i => $t) {
+            $cursor += $t['delay_ms'];
+            $trials[] = [
+                'index' => $i,
+                'stimulus_at' => $cursor,
+                'responses' => ['primary' => $i === 0 ? $cursor - 100 : null],
+            ];
+        }
+
+        [$status, $body] = $this->dispatch($this->requestAs($userToken, 'POST', "/r-tests/runs/{$run['data']['token']}/submit", [
+            'trials' => $trials,
+        ]));
+
+        self::assertSame(201, $status, (string) json_encode($body));
+        // Only the one real response counts toward valid_count/mean; the two nulls are excluded,
+        // not coerced to 0 or otherwise pulled into the aggregate.
+        self::assertSame(1, $body['data']['summary']['overall']['valid_count']);
+        self::assertSame(2, $body['data']['summary']['channels']['primary']['timeouts']);
+        // Abs-value aggregation (SI-13.4): mean reflects magnitude (100.0), not the raw sign.
+        self::assertEqualsWithDelta(100.0, $body['data']['summary']['overall']['mean_ms'], 0.01);
+        // Signed extreme still shows the true -100 (early), unaffected by abs-value aggregation.
+        self::assertEqualsWithDelta(-100.0, $body['data']['summary']['overall']['min'], 0.01);
     }
 
     public function testSimpleReactionStillRejectsEarlyResponseWhenFlagNotSet(): void

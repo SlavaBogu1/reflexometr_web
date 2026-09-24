@@ -4,7 +4,8 @@
 Any change lands here first (version bump + changelog entry below), then the ProductOwner briefs
 ClientTeam on the diff (PRODUCT_OWNER_PROCESS.md § Contract Change Workflow).
 
-**Version:** v1.7 (Sprint 12) — CR-STATS-07 (exclude-from-own-stats toggle) — see Changelog.
+**Version:** v1.8 (Sprint 13) — CR-TEST-28 (Circle Collision: resolved closing-speed field,
+timeout-as-null-response, abs-value summary aggregation scoped to this test family) — see Changelog.
 
 **Note for ClientTeam:** `client/js/mock-api.js` / `SPRINT1_REPORT.md` (ClientTeam's) list several
 assumed field names and behaviors made against the still-empty v0.1 contract. This document is now
@@ -362,7 +363,44 @@ time" can be **negative** (the response happened before `stimulus_at` — a genu
 anticipation, not an error) — `primary_metric_ms`, `summary.overall.mean_ms`/`median_ms`/`min_ms`/
 `max_ms`, and each `summary.channels.{channel}` entry are all genuinely signed in this case, never
 clamped to a floor of `0`. A mixed set of early (negative) and late (positive) responses averages
-normally (e.g. a -200ms and a +300ms trial mean to +50ms, not `(200+300)/2`).
+normally (e.g. a -200ms and a +300ms trial mean to +50ms, not `(200+300)/2`). **This "averages
+normally" statement is reversed for Circle Collision specifically by CR-TEST-28 (v1.8) below — every
+other test type is unaffected and keeps this exact behavior.**
+
+**CR-TEST-28 (v1.8) — Circle Collision abs-value summary aggregation, scoped to this test family
+only:** when the compiled schedule sets `abs_value_aggregation: true` (Circle Collision Simple/
+Complex only — see the Description JSON format section below; no other test type's schedule ever
+sets this key), `primary_metric_ms`, `summary.overall.mean_ms`/`median_ms`/`sd_ms`/`cv`, and each
+`summary.channels.{channel}.mean_ms`/`median_ms`/`sd_ms`/`cv` are computed from the **absolute
+value** of each trial's signed reaction-time-equivalent (which for Circle Collision represents a
+signed px distance — see below), so a mixed set of early/late trials reflects accuracy *magnitude*
+and does not net-cancel toward zero the way every other test type's signed average still does. The
+`min`/`max` fields are the one exception: for an `abs_value_aggregation` schedule they are renamed
+(unsuffixed — **no** `_ms`, since the value is a px distance, not a time, for this family) to `min`/
+`max` and always reflect the **genuinely signed** extremes (most-early/most-late) regardless of this
+flag, so a user can still see their early/late split alongside the abs-value accuracy figure. Every
+other test type keeps `min_ms`/`max_ms` (unchanged key names, genuinely signed, exactly as v1.6
+documented). `dominant_minus_nondominant_ms` (two-hand tests) is unaffected in practice — Circle
+Collision is currently single-channel — but would use each channel's abs-value mean if this flag
+were ever combined with a multi-channel schedule in the future.
+
+**CR-TEST-28 (v1.8) — resolved closing-speed field:** the compiled schedule's `trials[]` entries for
+either Circle Collision variant gain `closing_speed_px_per_ms` (float > 0, server-resolved per D11)
+— see the Description JSON format section below for exactly how it's derived. This lets the client
+(or the server itself) compute a **signed distance-at-click in px**:
+`distance_px = closing_speed_px_per_ms * (response_at - stimulus_at)` — **positive** when the click
+happens before the circles' centers meet (still apart, closing), **negative** when it happens after
+they've already passed (apart again, past the meeting point), mirroring the existing signed-`ms`
+convention (D24: `stimulus_at` is the predicted collision instant) in px terms instead of ms terms.
+This is what feeds `abs_value_aggregation` above.
+
+**CR-TEST-28 (v1.8) — timeout-as-null-response:** Circle Collision's full-stage-travel timeout (the
+circles reach the far stage edge with no click) submits `responses.primary: null` for that trial —
+**no new contract shape**, this was already legal per the existing "value is either a number or
+`null`, only allowed if the schedule's `timeout_ms` is non-null" clause (both Circle Collision seeds
+already set `timeout_ms: 8000`). The only change is that the client now reaches this path
+intentionally as a normal outcome, not a rare edge case; a `null` response is excluded from
+`valid_count`/the mean the same way a missing response already is for every other test type.
 
 **CR-AUTH-02 (v1.5):** every newly-created result starts `approval_status = 'pending'` (new
 internal column, not returned by this endpoint) — see `GET /results/{id}/comparison` and the new
@@ -528,15 +566,42 @@ coincidence-timing import can use them too:
     run-start fails with `INTERNAL_ERROR` (500) rather than ever shipping a bad schedule — this
     should be caught by testing an imported description before relying on it in production, not
     surface to a real user.
+- `travel_distance_px` (int > 0, optional, **Circle Collision Simple only** — CR-TEST-28, v1.8):
+  only meaningful (and only validated) alongside `motion_duration_ms`; defaults to `800` (matching
+  Complex's own `motion_speed_profile.travel_distance_px` convention) when omitted. A **logical**
+  resolved distance basis for `closing_speed_px_per_ms` below — not a literal on-screen pixel count
+  (the client's actual rendered stage width is measured at render time and varies per viewport).
+  Complex needs no separate top-level key — it already carries its own `travel_distance_px` inside
+  `motion_speed_profile` (CR-TEST-24).
+
+**CR-TEST-28 (v1.8) — resolved `closing_speed_px_per_ms` (both Circle Collision variants):** every
+compiled `trials[]` entry that carries `motion_duration_ms` or `motion_speed_profile` also gains
+`closing_speed_px_per_ms` (float > 0), server-resolved, never client-anticipated (D11):
+- Simple: `travel_distance_px / motion_duration_ms` — constant for the whole trial (no mid-trial
+  speed change).
+- Complex: `motion_speed_profile.travel_distance_px / motion_speed_profile.duration_ms` — the
+  trial's **average effective** closing rate (Complex's actual speed varies within a trial across
+  the three waypoints; this is a single representative rate sufficient to derive distance-at-click,
+  not a re-expression of the full piecewise ramp).
+
+**CR-TEST-28 (v1.8) — resolved `abs_value_aggregation` (both Circle Collision variants):** the
+compiled schedule gains a schedule-level `abs_value_aggregation: true` whenever either variant's
+motion fields are present (i.e. whenever `trials[].closing_speed_px_per_ms` is resolved) — generic
+infrastructure keyed off the schedule, same pattern as `allow_early_response`, not special-cased to
+a specific test's slug, so any future coincidence-distance r-test type can opt in the same way. See
+the submission-response section above for exactly how this changes summary aggregation.
 
 Seeded (`server/database/seeds/`): `simple-reaction` v1 (`trial_count: 10`, delay 1000–3000ms, one
 channel, no timeout — CR-TEST-03), `two-hand-reaction` v1 (`trial_count: 10`, delay 1500–3500ms,
 two channels, 2000ms per-hand timeout — CR-TEST-04), both Sprint 1, tag `visual`. `circle-
 collision-simple` v1 (`trial_count: 10`, `motion_duration_ms: {1000,5000}`, `circle_radius_px: 40`,
-`timeout_ms: 8000`, `allow_early_response: true` — CR-TEST-23) and `circle-collision-complex` v1
-(same shape but `motion_speed_profile` with 200–500 px/s waypoints over an 800px travel distance
-instead of `motion_duration_ms`, same `circle_radius_px`/`timeout_ms`/`allow_early_response` —
-CR-TEST-24), both Sprint 11, tags `visual` + `dynamic`.
+`timeout_ms: 8000`, `allow_early_response: true` — CR-TEST-23; CR-TEST-28/v1.8 in-place update,
+Sprint 13: description shape unaffected — the compiled schedule resolves `closing_speed_px_per_ms`
+from the existing fields plus the `travel_distance_px` default, no new required description field)
+and `circle-collision-complex` v1 (same shape but `motion_speed_profile` with 200–500 px/s waypoints
+over an 800px travel distance instead of `motion_duration_ms`, same `circle_radius_px`/`timeout_ms`/
+`allow_early_response` — CR-TEST-24; also CR-TEST-28/v1.8 in-place update, Sprint 13), both
+originally Sprint 11, tags `visual` + `dynamic`.
 
 ---
 
@@ -585,6 +650,38 @@ ProductOwner should schedule one before any of the above can be wired up for rea
 
 ## Changelog
 
+- v1.8 (2026-09-23) — Sprint 13: **CR-TEST-28** (Circle Collision: full-stage travel, timeout-based
+  stop, real distance-based KPI — ServerTeam half; supersedes CR-TEST-26's shipped
+  motion-continuation behavior, see `REQUIREMENTS/BACKLOG.md` for the conflict verdict). Three
+  changes, all scoped to Circle Collision (Simple + Complex) only — every other test type's
+  schedule/response shape is completely unchanged:
+  1. **Resolved `closing_speed_px_per_ms`** — every compiled `trials[]` entry with
+     `motion_duration_ms` or `motion_speed_profile` gains this server-resolved field (D11: never
+     client-anticipated). Simple derives it from a new optional `travel_distance_px` description
+     field (defaults to 800, matching Complex's existing convention) divided by the resolved
+     `motion_duration_ms`; Complex derives it from its existing `motion_speed_profile.
+     travel_distance_px` divided by the resolved `duration_ms` (an average effective rate, since
+     Complex's actual speed varies within a trial). Lets the client (or the server) compute a
+     signed distance-at-click: `closing_speed_px_per_ms * (response_at - stimulus_at)`.
+  2. **Timeout-as-null-response** — no new contract shape (the existing "null response legal when
+     `timeout_ms` is set" clause already covers it; both Circle Collision seeds already set
+     `timeout_ms: 8000`) — the client now reaches this path intentionally (full-stage-travel
+     timeout, no click) rather than as a rare edge case. Confirmed by explicit unit test that a
+     `null` response here is excluded from the distance-based mean, same as every other test type.
+  3. **Abs-value summary aggregation, Circle-Collision-scoped only** — new schedule-level
+     `abs_value_aggregation: true` (generic infra, same pattern as `allow_early_response`, not
+     slug-keyed) makes `primary_metric_ms`/`summary.overall.mean_ms`/`median_ms`/`sd_ms`/`cv` and
+     each channel's equivalents aggregate the **absolute value** of each trial's signed value
+     instead of the signed value itself, so early/late trials don't net-cancel toward zero.
+     `min`/`max` (renamed from `min_ms`/`max_ms` for this family only — "ms" is misleading for what's
+     now a signed px distance) remain the genuinely signed extremes regardless. **This explicitly
+     reverses v1.6's "a mixed set of early (negative) and late (positive) responses averages
+     normally" statement for Circle Collision alone** — every other test type (including any future
+     non-Circle-Collision use of `allow_early_response`) keeps the original signed-average behavior
+     unchanged, verified by an explicit regression test (not an absence-of-change assumption).
+  Both seeds (`circle-collision-simple.v1.json`/`circle-collision-complex.v1.json`) updated in place
+  — purely additive change to the description shape (Simple's new `travel_distance_px` is optional
+  with a default), no `.v2.json` bump needed.
 - v1.7 (2026-09-23) — Sprint 12: **CR-STATS-07** (exclude-from-own-stats toggle) — `results` gains
   `excluded_from_own_stats` (bool, default `false`). New `PATCH /results/{id}/exclude` endpoint
   (auth required, IDOR-guarded identically to `GET /results/{id}/comparison` — `NOT_FOUND` for

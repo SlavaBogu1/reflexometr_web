@@ -187,6 +187,7 @@
 
       btn.addEventListener("click", function () {
         if (!Reflx.session.isLoggedIn()) return; // server-backed only — no-op while logged out
+        Reflx.util.hideBanner("settings-error");
         var realNameField = nameField("realname-input", "realname-save");
         var displayNameField = nameField("displayname-input", "displayname-save");
         var patch = {
@@ -194,7 +195,7 @@
           display_name: displayNameField.input.value.trim() || null
         };
         api.patchProfile(patch).then(function (res) {
-          if (!res.ok) { alert(api.messageFor(res.code)); return; } // leave button enabled — retry without re-typing
+          if (!res.ok) { Reflx.util.showBanner("settings-error", api.messageFor(res.code)); return; } // leave button enabled — retry without re-typing
           Reflx.session.updateUser({ real_name: res.data.real_name, display_name: res.data.display_name });
           setSavedBaseline("realname-input", "realname-save", res.data.real_name || "");
           setSavedBaseline("displayname-input", "displayname-save", res.data.display_name || "");

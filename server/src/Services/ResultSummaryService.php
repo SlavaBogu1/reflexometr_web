@@ -14,6 +14,18 @@ namespace Reflexometr\Services;
  * CR-STATS-08: also computes sd_ms (sample standard deviation) and cv (coefficient of variation,
  * sd_ms / mean_ms) — overall, and per-channel for multi-channel (two-hand) tests, matching the
  * existing summary.channels breakdown.
+ *
+ * CR-TEST-28 (SI-13.4): when the compiled schedule sets `abs_value_aggregation` (Circle Collision
+ * only — see ScheduleCompiler::compile()'s doc on that flag), mean/median/sd/cv/primary metric
+ * aggregate the **absolute value** of each trial's signed value instead of the signed value
+ * itself — a mixed set of early (negative) and late (positive) trials reflects accuracy
+ * *magnitude*, not a net-cancelling signed average. `min`/`max` (unsuffixed — "ms" would be
+ * misleading for what's actually a px distance for this family, per the CR's naming note) are
+ * the one exception: they always reflect the genuinely signed extremes (earliest/latest
+ * anticipation) regardless of this flag, so a user can still see their early/late split. Every
+ * other test type's signed-average convention (CR-TEST-23/24's v1.6 contract note) is completely
+ * unchanged — this flag defaults to false/absent and only Circle Collision's compiled schedule
+ * ever sets it (test-type-aware via the schedule, not a global behavior change).
  */
 final class ResultSummaryService
 {
@@ -25,9 +37,10 @@ final class ResultSummaryService
     public static function compute(array $schedule, array $trials, ?string $dominantHand): array
     {
         $channels = $schedule['response_channels'];
-        /** @var array<string,array<int,float>> $perChannelTimes */
-        $perChannelTimes = array_fill_keys($channels, []);
-        $allTimes = [];
+        $absValueAggregation = (bool) ($schedule['abs_value_aggregation'] ?? false);
+        /** @var array<string,array<int,float>> $perChannelSignedTimes */
+        $perChannelSignedTimes = array_fill_keys($channels, []);
+        $allSignedTimes = [];
         $timeoutCounts = array_fill_keys($channels, 0);
 
         foreach ($trials as $trial) {
@@ -40,38 +53,38 @@ final class ResultSummaryService
                     continue;
                 }
                 $rt = (float) $value - $stimulusAt;
-                $perChannelTimes[$channel][] = $rt;
-                $allTimes[] = $rt;
+                $perChannelSignedTimes[$channel][] = $rt;
+                $allSignedTimes[] = $rt;
             }
         }
 
         $channelStats = [];
         foreach ($channels as $channel) {
-            $times = $perChannelTimes[$channel];
-            $channelMeanMs = self::mean($times);
-            $channelSdMs = self::stddev($times);
+            $signedTimes = $perChannelSignedTimes[$channel];
+            $aggregationTimes = $absValueAggregation ? array_map('abs', $signedTimes) : $signedTimes;
+            $channelMeanMs = self::mean($aggregationTimes);
+            $channelSdMs = self::stddev($aggregationTimes);
             $channelStats[$channel] = [
                 'mean_ms' => $channelMeanMs,
-                'median_ms' => self::median($times),
-                'min_ms' => $times === [] ? null : min($times),
-                'max_ms' => $times === [] ? null : max($times),
+                'median_ms' => self::median($aggregationTimes),
                 'sd_ms' => $channelSdMs,
                 'cv' => self::coefficientOfVariation($channelSdMs, $channelMeanMs),
                 'timeouts' => $timeoutCounts[$channel],
-                'valid_count' => count($times),
-            ];
+                'valid_count' => count($signedTimes),
+            ] + self::signedExtremes($signedTimes, $absValueAggregation);
         }
 
-        $overallMeanMs = self::mean($allTimes);
-        $overallSdMs = self::stddev($allTimes);
+        $allAggregationTimes = $absValueAggregation ? array_map('abs', $allSignedTimes) : $allSignedTimes;
+        $overallMeanMs = self::mean($allAggregationTimes);
+        $overallSdMs = self::stddev($allAggregationTimes);
         $summary = [
             'overall' => [
                 'mean_ms' => $overallMeanMs,
-                'median_ms' => self::median($allTimes),
+                'median_ms' => self::median($allAggregationTimes),
                 'sd_ms' => $overallSdMs,
                 'cv' => self::coefficientOfVariation($overallSdMs, $overallMeanMs),
-                'valid_count' => count($allTimes),
-            ],
+                'valid_count' => count($allAggregationTimes),
+            ] + self::signedExtremes($allSignedTimes, $absValueAggregation),
             'channels' => $channelStats,
         ];
 
@@ -95,6 +108,25 @@ final class ResultSummaryService
             'sdMs' => $overallSdMs,
             'cv' => self::coefficientOfVariation($overallSdMs, $overallMeanMs),
         ];
+    }
+
+    /**
+     * CR-TEST-28: the min/max fields always reflect the genuinely signed extremes of the raw
+     * per-trial values, regardless of $absValueAggregation — so a user can still see their
+     * earliest/latest anticipation alongside the (possibly abs-value) mean/sd. Key name is
+     * `min`/`max` (unsuffixed) when abs-value aggregation is active — "ms" would be misleading for
+     * what's actually a signed px distance for Circle Collision — and `min_ms`/`max_ms` (the
+     * original, unit-suffixed names) for every other test type, completely unchanged.
+     * @param array<int,float> $signedValues
+     * @return array<string,?float>
+     */
+    private static function signedExtremes(array $signedValues, bool $absValueAggregation): array
+    {
+        $min = $signedValues === [] ? null : min($signedValues);
+        $max = $signedValues === [] ? null : max($signedValues);
+        return $absValueAggregation
+            ? ['min' => $min, 'max' => $max]
+            : ['min_ms' => $min, 'max_ms' => $max];
     }
 
     /** @param array<int,float> $values */
