@@ -40,6 +40,20 @@
     document.getElementById(id).classList.add("active");
   }
 
+  /**
+   * CR-UI-26: non-blocking in-page error presentation, replacing the old
+   * `alert(api.messageFor(res.code))` calls in beginRun()/finishRun(). Uses the
+   * shared `Reflx.util.showBanner`/`hideBanner` helper (reuses the existing
+   * `.notice.danger` convention — auth.html #auth-error, admin-results.html/
+   * library.html's login/not-admin notices, browse.html's inline fetch-error <p>,
+   * this page's own #not-found — rather than a page-local one-off) against
+   * `#run-error`, which sits outside the `.page` sections in runner.html so it's
+   * visible regardless of which page (1/2/3) is currently active. Does not block
+   * the render loop or input handling in any way.
+   */
+  function showRunError(message) { Reflx.util.showBanner("run-error", message); }
+  function hideRunError() { Reflx.util.hideBanner("run-error"); }
+
   // ------------------------------------------------------------ Page 1: Description
 
   /**
@@ -243,8 +257,9 @@
     var opts = { mode: currentModeParam() };
     if (runState.seriesId) opts.series_id = runState.seriesId;
 
+    hideRunError();
     api.startRun(slug, opts).then(function (res) {
-      if (!res.ok) { alert(api.messageFor(res.code)); return; }
+      if (!res.ok) { showRunError(api.messageFor(res.code)); return; }
       var run = res.data;
       runState.falseStartsThisRun = 0;
       runState.currentToken = run.token;
@@ -302,8 +317,9 @@
     if (kind === "two-hand" && Reflx.settings.get().dominantHand) {
       payload.dominant_hand = Reflx.settings.get().dominantHand;
     }
+    hideRunError();
     api.submitRun(runState.currentToken, payload).then(function (res) {
-      if (!res.ok) { alert(api.messageFor(res.code)); return; }
+      if (!res.ok) { showRunError(api.messageFor(res.code)); return; }
       var d = res.data;
       runState.completedRuns.push({
         resultId: d.result_id, rTestId: d.r_test_id, versionId: d.r_test_version_id,

@@ -343,6 +343,13 @@
     "stats.download_csv": "下载 CSV",
     "stats.csv.generating": "生成中…",
 
+    "stats.manage_results.toggle": "管理结果",
+    "stats.exclude_result": "将此结果从“我的统计”中排除",
+    "stats.exclude_result_title": "从“我的统计”中排除",
+    "stats.include_result": "将此结果重新纳入“我的统计”",
+    "stats.include_result_title": "已排除——点击可重新纳入",
+    "stats.manage_results.note": "被排除的结果（删除线、变暗显示）仍保留在此列表中，方便你随时重新纳入——它们只会从上方的趋势图、分布直方图、次数标签和 CSV 导出中消失。",
+
     "compare.title": "你的表现对比",
     "compare.percentile": "在此确切测试版本中，比 {pct}% 的用户更快。",
     "compare.sample_note": "仅显示匿名汇总数据——绝不会显示其他用户的身份或原始结果。",
@@ -366,15 +373,15 @@
     "test.color.red": "红色",
 
     "test.collision.armed": "请仔细观察……",
-    "test.collision.go": "当你认为它们即将相撞时点击！",
+    "test.collision.go": "当你认为它们的圆心即将重合时点击！",
 
     "test.collision_simple.name": "圆形碰撞（简单）",
     "test.collision_simple.description": "两个圆分别从两侧边缘出发，以恒定速度相向而行。当你认为它们的中心即将重合时点击。",
     "test.collision_simple.expected1": "观察两个圆开始相向移动。",
     "test.collision_simple.expected2": "在你预测两圆中心即将重合的那一刻点击（或按下你设置的键/按钮）。",
     "test.collision_simple.expected3": "在圆开始移动前点击将使该次试验作废——它会自动重新进行。圆开始移动后的任何点击都算数，即使是非常早的猜测。",
-    "test.collision_simple.guidance": "这项测试衡量的是预判时机，而非单纯的反应速度——请尝试预测碰撞时刻，而不是对运动的开始做出反应。",
-    "test.collision_simple.header_objective": "衡量你预测两个移动圆形何时相撞的准确度。",
+    "test.collision_simple.guidance": "这项测试衡量的是预判时机，而非单纯的反应速度——请尝试预测圆心重合的时刻，而不是对运动的开始做出反应。",
+    "test.collision_simple.header_objective": "衡量你预测两个移动圆形的圆心何时重合的准确度。",
     "test.collision_simple.header_stimulus": "两个圆以恒定速度相向移动——没有颜色变化。",
     "test.collision_simple.header_devices": "键盘按键：{key} · 鼠标 · 手柄按钮：{gamepad}",
 
@@ -384,7 +391,7 @@
     "test.collision_complex.expected2": "在你预测两圆中心即将重合的那一刻点击（或按下你设置的键/按钮）。",
     "test.collision_complex.expected3": "在圆开始移动前点击将使该次试验作废。圆开始移动后的任何点击都算数，即使是非常早的猜测。",
     "test.collision_complex.guidance": "不断变化的速度和大小使这项挑战比简单版本更难预判——在你已有简单版本的基准后，这是一个很好的补充。",
-    "test.collision_complex.header_objective": "在圆形大小可变、接近速度不断变化的情况下衡量预判时机。",
+    "test.collision_complex.header_objective": "在圆形大小可变、接近速度不断变化的情况下，衡量你预测两个移动圆形的圆心何时重合的准确度。",
     "test.collision_complex.header_stimulus": "两个大小不同的圆以在试验过程中变化的速度相向移动——没有颜色变化。",
     "test.collision_complex.header_devices": "键盘按键：{key} · 鼠标 · 手柄按钮：{gamepad}",
 

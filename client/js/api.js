@@ -129,6 +129,11 @@
     getHistory: function (slug, version) { return request("GET", "/r-tests/" + encodeURIComponent(slug) + "/versions/" + version + "/history"); },
     getComparison: function (resultId) { return request("GET", "/results/" + resultId + "/comparison"); },
 
+    // --- CR-STATS-07 (v1.7, auth required): per-result exclude/include toggle,
+    // IDOR-guarded server-side (NOT_FOUND for another user's result or an unknown
+    // id, same code both ways — D3). ---
+    patchResultExclude: function (resultId, excluded) { return request("PATCH", "/results/" + resultId + "/exclude", { excluded: excluded }); },
+
     // --- CR-AUTH-02: admin results approval queue (admin-only, 403 enforced server-side) ---
     listPendingResults: function (status) { return request("GET", "/admin/results?status=" + encodeURIComponent(status || "pending")); },
     patchResultStatus: function (id, approvalStatus) { return request("PATCH", "/admin/results/" + id, { approval_status: approvalStatus }); }

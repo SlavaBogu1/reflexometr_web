@@ -164,10 +164,17 @@
           return (v0 + localSpeed) / 2 * (Math.min(tNow, t1) - t0);
         }
 
+        // CR-TEST-26: progressFn is evaluated for elapsedFrac > 1 too (post-collision
+        // separation phase, see runMotion() below) — un-clamped past waypoint 1, so it
+        // must extrapolate rather than plateau. Simple's constant-speed case already
+        // does that for free (elapsedFrac === progress, no clamping). Complex's
+        // profiled case continues at the resolved end speed (the last known
+        // instantaneous speed at elapsedFrac=1) for elapsedFrac > 1 — "the same
+        // resolved speed/profile they were already using", per CR-TEST-26.
         function progressFn(motion) {
           var profile = motion.speedProfile;
           if (!profile) {
-            return function (elapsedFrac) { return elapsedFrac; }; // constant speed
+            return function (elapsedFrac) { return elapsedFrac; }; // constant speed, naturally unclamped
           }
           // CONTRACT.md v1.6: motion_speed_profile is a fixed 3-waypoint object
           // (start/mid/end named speeds), not an arbitrary array — waypoints sit at
@@ -180,25 +187,56 @@
           var distFirstHalf = rampDistance(s0, sMid, 0, 0.5, 0.5);
           var total = (distFirstHalf + rampDistance(sMid, s1, 0.5, 1, 1)) || 1;
           return function (elapsedFrac) {
-            var dist = elapsedFrac <= 0.5
-              ? rampDistance(s0, sMid, 0, 0.5, elapsedFrac)
-              : distFirstHalf + rampDistance(sMid, s1, 0.5, 1, elapsedFrac);
-            return Math.min(1, dist / total);
+            if (elapsedFrac <= 1) {
+              var dist = elapsedFrac <= 0.5
+                ? rampDistance(s0, sMid, 0, 0.5, elapsedFrac)
+                : distFirstHalf + rampDistance(sMid, s1, 0.5, 1, elapsedFrac);
+              return dist / total;
+            }
+            // Past collision: keep moving at the final resolved end speed (no further
+            // waypoints defined) — continues the "progress" curve linearly beyond 1.
+            var distAt1 = distFirstHalf + rampDistance(sMid, s1, 0.5, 1, 1);
+            return (distAt1 + s1 * (elapsedFrac - 1)) / total;
           };
+        }
+
+        /** Distance between the two circles' centers, in px, at the given progress
+         * value — derived the same way positionCircles() derives `left%` from
+         * progress, so the two never drift out of sync. Used only for the CR-TEST-26
+         * post-collision stop condition (never affects stimulus_at/timing/validation). */
+        function centerDistancePx(progress, stageWidthPx) {
+          var half = progress * 50; // matches positionCircles()'s own formula
+          var leftPct = half;
+          var rightPct = 100 - half;
+          return Math.abs(rightPct - leftPct) / 100 * stageWidthPx;
         }
 
         function runMotion(motion) {
           var startPerf = motionStartPerf;
           var duration = motion.durationMs;
           var progOf = progressFn(motion);
+          var stageWidthPx = stage.offsetWidth;
+          var maxRadiusPx = Math.max(motion.leftRadiusPx, motion.rightRadiusPx);
           function frame(now) {
             if (stopped) return;
-            var elapsedFrac = Math.min(1, (performance.now() - startPerf) / duration);
-            positionCircles(progOf(elapsedFrac));
+            var elapsedFrac = (performance.now() - startPerf) / duration;
+            var progress = progOf(elapsedFrac);
+            positionCircles(progress);
             if (elapsedFrac < 1) {
               rafHandle = requestAnimationFrame(frame);
+              return;
+            }
+            // CR-TEST-26: past the predicted collision instant (elapsedFrac >= 1), keep
+            // advancing at the same resolved speed/profile — circles pass through and
+            // separate — until they're back apart by more than the larger circle's
+            // radius, then stop (mirrors stopMotion()'s cancelAnimationFrame cleanup,
+            // just gated on distance instead of elapsedFrac >= 1). Purely visual — does
+            // not touch stimulus_at/collisionAt or any validation logic; a click at any
+            // point during this extended phase still submits exactly as before onInput().
+            if (centerDistancePx(progress, stageWidthPx) > maxRadiusPx) {
+              rafHandle = null;
             } else {
-              rafHandle = null; // reached predicted collision — keep circles at final position, still awaiting a response
+              rafHandle = requestAnimationFrame(frame);
             }
           }
           rafHandle = requestAnimationFrame(frame);

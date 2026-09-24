@@ -62,6 +62,16 @@ final class Validation
         return $value;
     }
 
+    /** @param array<string,mixed> $body */
+    public static function requireBool(array $body, string $key): bool
+    {
+        $value = $body[$key] ?? null;
+        if (!is_bool($value)) {
+            self::fail([$key]);
+        }
+        return $value;
+    }
+
     /** Optional positive-int query param; null if absent. VALIDATION_ERROR if malformed. */
     public static function optionalPositiveIntQuery(Request $request, string $key): ?int
     {

@@ -4,8 +4,7 @@
 Any change lands here first (version bump + changelog entry below), then the ProductOwner briefs
 ClientTeam on the diff (PRODUCT_OWNER_PROCESS.md § Contract Change Workflow).
 
-**Version:** v1.6 (Sprint 11) — CR-TEST-25 (multi-tag r-test categorization), CR-TEST-23 (Circle
-Collision Simple), CR-TEST-24 (Circle Collision Complex) — see Changelog.
+**Version:** v1.7 (Sprint 12) — CR-STATS-07 (exclude-from-own-stats toggle) — see Changelog.
 
 **Note for ClientTeam:** `client/js/mock-api.js` / `SPRINT1_REPORT.md` (ClientTeam's) list several
 assumed field names and behaviors made against the still-empty v0.1 contract. This document is now
@@ -416,13 +415,18 @@ cross-user query. Pass `limit` (optionally with `offset`) only if the caller wan
 results instead of receiving them all at once (e.g. `?limit=50&offset=50` for the second page of
 50, ordered newest-first — same order as the unpaged response).
 
-200: `{ "r_test_id", "r_test_version_id", "total": int, "entries": [ { "result_id", "created_at", "primary_metric_ms", "summary" }, ... ] }`
+200: `{ "r_test_id", "r_test_version_id", "total": int, "entries": [ { "result_id", "created_at", "primary_metric_ms", "summary", "excluded": bool }, ... ] }`
 `total` is the full count of matching results for this scope, regardless of `limit`/`offset` —
 use it to know when paging is complete (`offset + count(entries) >= total`).
 An empty `entries` array (not an error) if the user has no prior results for this exact version.
 Errors: `RTEST_NOT_FOUND` (404), `RTEST_VERSION_NOT_FOUND` (404), `VALIDATION_ERROR` (400 — `limit`
 present but not a positive integer, or `offset` present but not a non-negative integer;
 `details.field` names which one)
+
+**CR-STATS-07 (v1.7):** each entry gains `excluded` (bool) — whether the user has toggled this
+result out of their own stats view (`PATCH /results/{id}/exclude` below). **Never filtered
+server-side** — an excluded entry stays present in `entries` (with `excluded: true`) so the client
+can render it struck-through with an un-exclude option, not have it silently vanish.
 
 **Prior to v1.2:** this endpoint silently capped `entries` at 50 with no way to request more and
 no indication in the response that truncation had occurred. That cap is gone — do not assume 50
@@ -455,6 +459,19 @@ across the same approved peer pool described above (self excluded), a real serve
 aggregate. `null` if no approved peer has a non-null `sd_ms` yet. Field name chosen over a
 percentile-style figure for simplicity; may be extended later if a percentile-of-variability view
 is wanted.
+
+### `PATCH /results/{id}/exclude` (CR-STATS-07, v1.7)
+Auth: required. Toggles whether one of the caller's own results is excluded from their own
+history/stats view — a purely per-owner display concern (e.g. hiding a known-bad run), completely
+independent of `approval_status`/D19's admin-driven peer-comparison pool: `GET
+/results/{id}/comparison` is **unaffected** by this flag, and toggling it never changes any other
+user's percentile/rank/aggregate figures.
+
+Body: `{ "excluded": true|false }`
+200: `{ "result_id": int, "excluded": bool }`
+Errors: `VALIDATION_ERROR` (400, missing/non-boolean `excluded`), `NOT_FOUND` (404 — unknown result
+id, **or** a result belonging to another user; same code for both, identical IDOR guard pattern to
+`GET /results/{id}/comparison` above, per D3)
 
 ---
 
@@ -568,6 +585,16 @@ ProductOwner should schedule one before any of the above can be wired up for rea
 
 ## Changelog
 
+- v1.7 (2026-09-23) — Sprint 12: **CR-STATS-07** (exclude-from-own-stats toggle) — `results` gains
+  `excluded_from_own_stats` (bool, default `false`). New `PATCH /results/{id}/exclude` endpoint
+  (auth required, IDOR-guarded identically to `GET /results/{id}/comparison` — `NOT_FOUND` for
+  another user's result_id, same code whether it doesn't exist or isn't theirs, D3) toggles it.
+  `GET /r-tests/{slug}/versions/{version}/history`'s each `entries[]` item gains `excluded: bool` —
+  **not** filtered server-side, so an excluded entry stays visible (struck-through client-side)
+  rather than silently vanishing. `GET /results/{id}/comparison` is completely unaffected by this
+  flag (D19 still applies in full — this is a per-owner display toggle, not an approval-status
+  change; the separate admin-driven peer-comparison pool is untouched). No other endpoint or
+  response shape changed.
 - v1.6 (2026-09-22) — Sprint 11: **CR-TEST-25** (multi-tag r-test categorization) — the single
   `category_id` FK on r_tests is replaced by a real many-to-many tag model (`r_test_tags`, renamed
   from `r_test_categories` with ids preserved 1:1, + new `r_test_tag_links` join table). `GET

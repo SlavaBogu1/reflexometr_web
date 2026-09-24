@@ -39,6 +39,10 @@ final class StatsService
                 'created_at' => $row['created_at'],
                 'primary_metric_ms' => (float) $row['primary_metric_ms'],
                 'summary' => json_decode((string) $row['summary_json'], true),
+                // CR-STATS-07: the entry stays present (never filtered server-side) so the client
+                // can render it struck-through with an un-exclude option, not have it silently
+                // vanish from the trend view.
+                'excluded' => (bool) $row['excluded_from_own_stats'],
             ];
         }, $rows);
 
@@ -132,6 +136,31 @@ final class StatsService
             'rank' => $rank,
             'total_participants' => $total,
             'peer_sd_ms_median' => $peerSdMsMedian,
+        ];
+    }
+
+    /**
+     * CR-STATS-07: toggles a user's own result's excluded_from_own_stats flag. IDOR-guarded
+     * identically to comparisonForResult above — NOT_FOUND for another user's result, same code
+     * whether the result doesn't exist at all or simply isn't theirs (D3). Purely a per-owner
+     * display concern: never touches approval_status or the separate, admin-driven peer-comparison
+     * pool (D19) — GET /results/{id}/comparison is completely unaffected by this flag.
+     * @param array<string,mixed> $result
+     * @return array<string,mixed>
+     */
+    public function setExcludedFromOwnStats(int $userId, array $result, bool $excluded): array
+    {
+        if ((int) $result['user_id'] !== $userId) {
+            // IDOR guard: a user may only exclude/include their own result (D3 privacy rule) —
+            // same NOT_FOUND-for-both-cases pattern as comparisonForResult.
+            throw new ApiException(ErrorCode::NOT_FOUND, 404);
+        }
+
+        $this->results->updateExcludedFromOwnStats((int) $result['id'], $excluded);
+
+        return [
+            'result_id' => (int) $result['id'],
+            'excluded' => $excluded,
         ];
     }
 

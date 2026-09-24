@@ -67,13 +67,27 @@ final class ScheduleCompiler
 {
     public const DEFAULT_FALSE_START_BUFFER = 6;
 
+    /** CR-TEST-27: sane upper bound on an imported description's trial_count — comfortably above
+     * any real r-test's actual value (the largest seeded test uses 10) while ruling out a
+     * pathological import (e.g. trial_count: 1000000) that would otherwise reach the
+     * trial-generation loop in compile() and exhaust memory/time. Enforced at import-validation
+     * time here; MAX_TRIAL_GENERATION_ITERATIONS below is the defense-in-depth backstop inside the
+     * loop itself, in case this check is ever bypassed by a future code path. */
+    public const MAX_TRIAL_COUNT = 500;
+
+    /** CR-TEST-27: hard ceiling on trial-generation loop iterations (trial_count + buffer_trials),
+     * independent of MAX_TRIAL_COUNT's import-time check — never let an unvalidated/bypassed
+     * trial_count reach an uncaught PHP Fatal (e.g. exhausting memory) here. Comfortably above
+     * MAX_TRIAL_COUNT + any sane false_start_buffer. */
+    private const MAX_TRIAL_GENERATION_ITERATIONS = 2000;
+
     /** @param array<string,mixed> $description @throws ApiException */
     public static function validateDescription(array $description): void
     {
         $errors = [];
 
         $trialCount = $description['trial_count'] ?? null;
-        if (!is_int($trialCount) || $trialCount < 1) {
+        if (!is_int($trialCount) || $trialCount < 1 || $trialCount > self::MAX_TRIAL_COUNT) {
             $errors[] = 'trial_count';
         }
 
@@ -202,6 +216,15 @@ final class ScheduleCompiler
         $baseRadius = $hasRadius ? (int) $description['circle_radius_px'] : null;
 
         $total = $trialCount + $bufferTrials;
+        if ($total > self::MAX_TRIAL_GENERATION_ITERATIONS) {
+            // CR-TEST-27 defense-in-depth: validateDescription() above already rejects an
+            // oversized trial_count at import time, but this loop must never trust that as its
+            // only line of defense — any future bypass (or another code path reaching compile()
+            // with an unvalidated description) must still fail safely with a caught ApiException/
+            // JSON-enveloped 500, never an uncaught PHP Fatal leaking a raw stack trace and
+            // internal file path to the HTTP response.
+            throw new ApiException(ErrorCode::INTERNAL_ERROR, 500, ['reason' => 'TRIAL_COUNT_ITERATION_CEILING_EXCEEDED']);
+        }
         $trials = [];
         for ($i = 0; $i < $total; $i++) {
             $trial = ['index' => $i, 'delay_ms' => Rand::intBetween($min, $max)];

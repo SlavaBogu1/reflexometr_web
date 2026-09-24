@@ -11,6 +11,12 @@
 
   <main class="container">
     <div id="not-found" class="notice danger" data-i18n="runner.not_found" style="display:none;"></div>
+    <!-- CR-UI-26: non-blocking in-page error presentation, replacing runner.js's old
+         blocking alert() calls on startRun/submitRun API failure. Reuses the existing
+         .notice.danger convention (see auth.html #auth-error, admin-results.html,
+         library.html, browse.html, runner.html's own #not-found above) — sits outside
+         the .page sections so it stays visible regardless of which page is active. -->
+    <div id="run-error" class="notice danger" role="alert" style="display:none;"></div>
 
     <!-- Page 1: Description (CR-TEST-02) — shown only when entering from the library this session.
          Card order per CR-UI-24's approved mockup (client/prototype-test-description-refresh.html):

@@ -343,6 +343,13 @@
     "stats.download_csv": "Télécharger le CSV",
     "stats.csv.generating": "Génération…",
 
+    "stats.manage_results.toggle": "Gérer les résultats",
+    "stats.exclude_result": "Exclure ce résultat de Mes statistiques",
+    "stats.exclude_result_title": "Exclure de Mes statistiques",
+    "stats.include_result": "Inclure ce résultat dans Mes statistiques",
+    "stats.include_result_title": "Exclu — cliquez pour l'inclure à nouveau",
+    "stats.manage_results.note": "Les résultats exclus (barrés, atténués) restent dans cette liste pour que vous puissiez les réinclure — ils disparaissent uniquement de la courbe de tendance, de l'histogramme, du compteur d'essais et de l'export CSV ci-dessus.",
+
     "compare.title": "Comment vous vous situez",
     "compare.percentile": "Plus rapide que {pct} % des utilisateurs sur cette version exacte du test.",
     "compare.sample_note": "Agrégat anonymisé uniquement — l'identité ou la valeur brute d'un autre utilisateur n'est jamais affichée.",
@@ -366,15 +373,15 @@
     "test.color.red": "rouge",
 
     "test.collision.armed": "Observez attentivement…",
-    "test.collision.go": "Cliquez quand vous pensez qu'ils vont entrer en collision !",
+    "test.collision.go": "Cliquez quand vous pensez que leurs centres vont se rencontrer !",
 
     "test.collision_simple.name": "Collision de cercles (Simple)",
     "test.collision_simple.description": "Deux cercles partent des bords opposés et se rapprochent à vitesse constante. Cliquez quand vous pensez que leurs centres sont sur le point de se rencontrer.",
     "test.collision_simple.expected1": "Observez les deux cercles commencer à se rapprocher.",
     "test.collision_simple.expected2": "Cliquez (ou appuyez sur votre touche/bouton configuré) au moment où vous prédisez que leurs centres se rencontreront.",
     "test.collision_simple.expected3": "Cliquer avant que les cercles ne commencent à bouger annule cet essai — il sera simplement rejoué. Tout clic après le début du mouvement compte, même une estimation très précoce.",
-    "test.collision_simple.guidance": "Ceci mesure la précision d'anticipation, pas la vitesse de réaction brute — essayez de prédire la collision plutôt que de réagir au début du mouvement.",
-    "test.collision_simple.header_objective": "Mesure la précision avec laquelle vous prédisez la collision de deux cercles en mouvement.",
+    "test.collision_simple.guidance": "Ceci mesure la précision d'anticipation, pas la vitesse de réaction brute — essayez de prédire le moment où les centres se rencontrent plutôt que de réagir au début du mouvement.",
+    "test.collision_simple.header_objective": "Mesure la précision avec laquelle vous prédisez le moment où les centres de deux cercles en mouvement se rencontrent.",
     "test.collision_simple.header_stimulus": "Deux cercles se rapprochent à vitesse constante — aucun changement de couleur.",
     "test.collision_simple.header_devices": "Touche clavier : {key} · Souris · Bouton manette : {gamepad}",
 
@@ -384,7 +391,7 @@
     "test.collision_complex.expected2": "Cliquez (ou appuyez sur votre touche/bouton configuré) au moment où vous prédisez que leurs centres se rencontreront.",
     "test.collision_complex.expected3": "Cliquer avant que les cercles ne commencent à bouger annule cet essai. Tout clic après le début du mouvement compte, même une estimation très précoce.",
     "test.collision_complex.guidance": "La vitesse et la taille changeantes rendent ce défi d'anticipation plus difficile que la variante Simple — un bon complément une fois une base établie.",
-    "test.collision_complex.header_objective": "Mesure la précision d'anticipation avec une taille de cercle variable et une vitesse de rapprochement changeante.",
+    "test.collision_complex.header_objective": "Mesure la précision avec laquelle vous prédisez le moment où les centres de deux cercles en mouvement se rencontrent, avec une taille de cercle variable et une vitesse de rapprochement changeante.",
     "test.collision_complex.header_stimulus": "Deux cercles de taille variable se rapprochent à une vitesse qui change pendant l'essai — aucun changement de couleur.",
     "test.collision_complex.header_devices": "Touche clavier : {key} · Souris · Bouton manette : {gamepad}",
 

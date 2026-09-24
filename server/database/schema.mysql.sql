@@ -144,6 +144,10 @@ CREATE TABLE IF NOT EXISTS run_tokens (
 -- (sd_ms / primary_metric_ms) of the per-trial reaction times, computed at submission time
 -- alongside primary_metric_ms. Nullable because they're derived from >=2 valid trial readings;
 -- a degenerate single-valid-trial submission leaves them NULL rather than a fabricated 0.
+-- excluded_from_own_stats (CR-STATS-07, Sprint 12): a user's own toggle (PATCH
+-- /results/{id}/exclude) to exclude one of their own results from their own history/stats view
+-- (e.g. a known-bad run) — purely a per-owner display concern, never affecting the separate,
+-- admin-driven peer-comparison pool (D19; approval_status already gates that independently).
 CREATE TABLE IF NOT EXISTS results (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     user_id INT UNSIGNED NOT NULL,
@@ -158,6 +162,7 @@ CREATE TABLE IF NOT EXISTS results (
     sd_ms DOUBLE NULL DEFAULT NULL,
     cv DOUBLE NULL DEFAULT NULL,
     approval_status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    excluded_from_own_stats TINYINT(1) NOT NULL DEFAULT 0,
     client_started_at_ms BIGINT UNSIGNED NOT NULL,
     server_received_at_ms BIGINT UNSIGNED NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -288,3 +293,16 @@ INSERT IGNORE INTO r_test_tag_links (r_test_id, tag_id)
 -- column as of this sprint; it is inert legacy data, safe to drop in a clearly-labeled follow-up
 -- CR once a production cycle has passed with the link table proven correct (see
 -- server/requirements/SPRINT11_REPORT.md).
+
+-- Sprint 12 upgrade path for an ALREADY-DEPLOYED database (the CREATE TABLE above only fires on a
+-- brand-new install, per IF NOT EXISTS): add excluded_from_own_stats if missing, same
+-- information_schema-guarded PREPARE/EXECUTE pattern as every other column added post-initial-
+-- deploy above (CR-STATS-07).
+SET @col_exists = (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'results' AND COLUMN_NAME = 'excluded_from_own_stats'
+);
+SET @ddl = IF(@col_exists = 0, 'ALTER TABLE results ADD COLUMN excluded_from_own_stats TINYINT(1) NOT NULL DEFAULT 0', 'SELECT 1');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

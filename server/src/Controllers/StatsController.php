@@ -65,4 +65,23 @@ final class StatsController
         return Response::json($comparison);
     }
 
+    /**
+     * CR-STATS-07: a user toggles their own result's exclusion from their own history/stats view.
+     * IDOR-guarded identically to comparison() above — NOT_FOUND for another user's result_id,
+     * same code whether it doesn't exist or isn't theirs (D3).
+     */
+    public static function exclude(Request $request): array
+    {
+        $user = (new AuthService())->requireUser($request);
+        $resultId = (int) $request->param('id');
+        $excluded = Validation::requireBool($request->all(), 'excluded');
+
+        $result = (new ResultRepository(Database::connection()))->findById($resultId);
+        if ($result === null) {
+            throw new ApiException(ErrorCode::NOT_FOUND, 404);
+        }
+
+        $updated = (new StatsService())->setExcludedFromOwnStats((int) $user['id'], $result, $excluded);
+        return Response::json($updated);
+    }
 }

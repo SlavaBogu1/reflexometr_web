@@ -343,6 +343,13 @@
     "stats.download_csv": "CSV herunterladen",
     "stats.csv.generating": "Wird erstellt…",
 
+    "stats.manage_results.toggle": "Ergebnisse verwalten",
+    "stats.exclude_result": "Dieses Ergebnis aus Meine Statistik ausschließen",
+    "stats.exclude_result_title": "Aus Meine Statistik ausschließen",
+    "stats.include_result": "Dieses Ergebnis in Meine Statistik einschließen",
+    "stats.include_result_title": "Ausgeschlossen — klicken, um es wieder einzuschließen",
+    "stats.manage_results.note": "Ausgeschlossene Ergebnisse (durchgestrichen, abgeblendet) bleiben in dieser Liste, damit Sie sie wieder einschließen können — sie verschwinden nur aus dem Trenddiagramm, dem Histogramm, der Lauf-Anzahl und dem CSV-Export oben.",
+
     "compare.title": "Wie du abschneidest",
     "compare.percentile": "Schneller als {pct}% der Nutzer bei dieser exakten Testversion.",
     "compare.sample_note": "Nur anonymisierte Aggregatdaten — die Identität oder der Rohwert anderer Nutzer wird nie angezeigt.",
@@ -366,15 +373,15 @@
     "test.color.red": "Rot",
 
     "test.collision.armed": "Genau hinsehen…",
-    "test.collision.go": "Klicken, wenn Sie glauben, dass sie kollidieren!",
+    "test.collision.go": "Klicken, wenn Sie glauben, dass sich ihre Mittelpunkte treffen!",
 
     "test.collision_simple.name": "Kreiskollision (Einfach)",
     "test.collision_simple.description": "Zwei Kreise starten an gegenüberliegenden Rändern und bewegen sich mit konstanter Geschwindigkeit aufeinander zu. Klicken Sie, wenn Sie glauben, dass sich ihre Mittelpunkte gleich treffen.",
     "test.collision_simple.expected1": "Beobachten Sie, wie sich die beiden Kreise aufeinander zubewegen.",
     "test.collision_simple.expected2": "Klicken Sie (oder drücken Sie Ihre konfigurierte Taste), sobald Sie vorhersagen, dass sich die Mittelpunkte treffen.",
     "test.collision_simple.expected3": "Ein Klick, bevor sich die Kreise bewegen, macht den Versuch ungültig — er wird einfach wiederholt. Jeder Klick danach zählt, auch eine sehr frühe Vermutung.",
-    "test.collision_simple.guidance": "Dies misst Antizipationstiming, nicht reine Reaktionsgeschwindigkeit — versuchen Sie, die Kollision vorherzusagen, statt auf den Bewegungsbeginn zu reagieren.",
-    "test.collision_simple.header_objective": "Misst, wie genau Sie vorhersagen, wann zwei sich bewegende Kreise kollidieren.",
+    "test.collision_simple.guidance": "Dies misst Antizipationstiming, nicht reine Reaktionsgeschwindigkeit — versuchen Sie vorherzusagen, wann sich die Mittelpunkte treffen, statt auf den Bewegungsbeginn zu reagieren.",
+    "test.collision_simple.header_objective": "Misst, wie genau Sie vorhersagen, wann sich die Mittelpunkte zweier sich bewegender Kreise treffen.",
     "test.collision_simple.header_stimulus": "Zwei Kreise bewegen sich mit konstanter Geschwindigkeit aufeinander zu — kein Farbwechsel.",
     "test.collision_simple.header_devices": "Tastaturtaste: {key} · Maus · Gamepad-Taste: {gamepad}",
 
@@ -384,7 +391,7 @@
     "test.collision_complex.expected2": "Klicken Sie (oder drücken Sie Ihre konfigurierte Taste), sobald Sie vorhersagen, dass sich die Mittelpunkte treffen.",
     "test.collision_complex.expected3": "Ein Klick, bevor sich die Kreise bewegen, macht den Versuch ungültig. Jeder Klick danach zählt, auch eine sehr frühe Vermutung.",
     "test.collision_complex.guidance": "Die wechselnde Geschwindigkeit und Größe machen dies zu einer schwierigeren Antizipationsaufgabe als die einfache Variante — eine sinnvolle Ergänzung, sobald Sie eine Basislinie haben.",
-    "test.collision_complex.header_objective": "Misst Antizipationstiming bei variabler Kreisgröße und wechselnder Annäherungsgeschwindigkeit.",
+    "test.collision_complex.header_objective": "Misst, wie genau Sie vorhersagen, wann sich die Mittelpunkte zweier sich bewegender Kreise treffen, bei variabler Kreisgröße und wechselnder Annäherungsgeschwindigkeit.",
     "test.collision_complex.header_stimulus": "Zwei unterschiedlich große Kreise bewegen sich mit sich ändernder Geschwindigkeit aufeinander zu — kein Farbwechsel.",
     "test.collision_complex.header_devices": "Tastaturtaste: {key} · Maus · Gamepad-Taste: {gamepad}",
 

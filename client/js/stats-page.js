@@ -353,6 +353,89 @@
     return wrap;
   }
 
+  // ------------------------------------------------------------ CR-STATS-07: "Manage results" exclude/include toggle
+
+  /** Small inline SVG icons matching the approved mockup (client/prototype-stats-exclude-toggle.html) — an
+   * "archive box" glyph for excluding, a "circular undo" glyph for restoring. Trusted static markup, no
+   * user input involved. */
+  var EXCLUDE_ICON_PATH = "M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z";
+  var INCLUDE_ICON_PATHS = ["M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0z", "M9 9l6 6M15 9l-6 6"];
+
+  function svgIcon(paths) {
+    var svg = svgEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2" });
+    paths.forEach(function (d) { svg.appendChild(svgEl("path", { d: d })); });
+    return svg;
+  }
+
+  /**
+   * Builds the per-result "Manage results" row list — one row per entry (both
+   * included and excluded; excluded rows stay visible, dimmed/struck-through, so
+   * they can be un-excluded per the approved mockup). `onToggled(resultId, excluded)`
+   * is called after a successful PATCH, with the server's own confirmed new state
+   * (CONTRACT.md v1.7's `{ result_id, excluded }` response) — the source of truth is
+   * still 100% server-side (CI-12.5: no client-only/localStorage exclusion state,
+   * persists identically across devices/browsers), just applied to the
+   * already-in-memory entries instead of triggering a redundant `GET history` fetch.
+   */
+  function renderManageResultsBlock(allEntries, onToggled) {
+    var toggleBtn = Reflx.util.el("button", {
+      class: "manage-results-toggle", type: "button", "aria-expanded": "false"
+    }, ["▾ " + t("stats.manage_results.toggle")]);
+
+    var list = Reflx.util.el("div", { class: "manage-results-list" });
+    list.style.display = "none";
+
+    function renderRows() {
+      list.innerHTML = "";
+      // Newest-first is this page's existing convention elsewhere (CONTRACT.md's
+      // documented history order) — but `allEntries` here is already the
+      // chronologically-sorted (ascending) list renderVersionCard() built for the
+      // other blocks; show newest-first for this management list (most likely to
+      // want to act on a just-taken result), independent of that other ordering.
+      var newestFirst = allEntries.slice().reverse();
+      newestFirst.forEach(function (e) {
+        var isExcluded = !!e.excluded;
+        var btn = Reflx.util.el("button", {
+          class: "manage-results-toggle-btn" + (isExcluded ? " is-excluded" : ""),
+          type: "button",
+          "aria-label": t(isExcluded ? "stats.include_result" : "stats.exclude_result"),
+          title: t(isExcluded ? "stats.include_result_title" : "stats.exclude_result_title"),
+          onclick: function () {
+            btn.disabled = true;
+            Reflx.util.hideBanner("stats-error");
+            api.patchResultExclude(e.result_id, !isExcluded).then(function (res) {
+              btn.disabled = false;
+              if (!res.ok) { Reflx.util.showBanner("stats-error", api.messageFor(res.code)); return; }
+              onToggled(e.result_id, res.data.excluded);
+            });
+          }
+        }, [svgIcon(isExcluded ? INCLUDE_ICON_PATHS : [EXCLUDE_ICON_PATH])]);
+
+        list.appendChild(Reflx.util.el("div", { class: "result-row manage-results-row" + (isExcluded ? " excluded" : "") }, [
+          Reflx.util.el("div", { class: "manage-results-meta" }, [
+            Reflx.util.el("span", { class: "val manage-results-value" }, [fmtMs(e.primary_metric_ms)]),
+            Reflx.util.el("span", { class: "manage-results-date" }, [Reflx.i18n.formatDateTime(new Date(e.created_at), { dateStyle: "short" })])
+          ]),
+          btn
+        ]));
+      });
+      list.appendChild(Reflx.util.el("p", { class: "manage-results-note" }, [t("stats.manage_results.note")]));
+    }
+    renderRows();
+
+    toggleBtn.addEventListener("click", function () {
+      var expanded = toggleBtn.getAttribute("aria-expanded") === "true";
+      toggleBtn.setAttribute("aria-expanded", String(!expanded));
+      list.style.display = expanded ? "none" : "block";
+      toggleBtn.textContent = (expanded ? "▾ " : "▴ ") + t("stats.manage_results.toggle");
+    });
+
+    var wrap = document.createDocumentFragment();
+    wrap.appendChild(toggleBtn);
+    wrap.appendChild(list);
+    return wrap;
+  }
+
   // ------------------------------------------------------------ CSV export (CR-STATS-03)
 
   function csvEscape(v) {
@@ -433,10 +516,39 @@
     return loggedIn;
   }
 
-  function renderVersionCard(box, r, name, version, entries) {
+  /**
+   * CR-STATS-07: re-renders the card currently at `box`'s given index from the
+   * already-held `entries` array, mutated in place with the one result the caller
+   * just toggled — the `PATCH /results/{id}/exclude` response already returns the
+   * new `excluded` state directly (CONTRACT.md v1.7), so no `GET history` re-fetch
+   * is needed just to reflect a single boolean flip. Every view (trend/distribution/
+   * run-count/CSV/manage-list) still reflects the new state in one pass, no
+   * partial/stale sub-view left behind — same as a full rebuild, just without the
+   * redundant network round-trip.
+   */
+  function patchAndRerenderCard(box, r, name, version, entries, oldCard, resultId, excluded) {
+    var patched = entries.map(function (e) {
+      return e.result_id === resultId ? Object.assign({}, e, { excluded: excluded }) : e;
+    });
+    // Remove this group's stale entry from allGroups (CSV export source) before
+    // rebuilding — renderVersionCard() below re-pushes the fresh one.
+    allGroups = allGroups.filter(function (g) { return !(g.r === r && g.version === version); });
+    var freshCard = renderVersionCard(box, r, name, version, patched, true);
+    if (oldCard.parentNode === box) box.replaceChild(freshCard, oldCard);
+    else box.appendChild(freshCard);
+  }
+
+  /** @param detached true = build and return the card without appending it to `box` yet (caller attaches it, e.g. to replace an existing card in place). */
+  function renderVersionCard(box, r, name, version, entries, detached) {
     // Defensive chronological sort — existing code elsewhere (runner.js's trend
     // list) trusts the API's given order; this guards the same assumption here.
-    var sorted = entries.slice().sort(function (a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+    var sortedAll = entries.slice().sort(function (a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+    // CR-STATS-07: every stats VIEW (trend/distribution/run-count chip/CSV) excludes
+    // `excluded: true` entries by default — the history API deliberately does NOT
+    // filter them server-side (CONTRACT.md v1.7) so the "Manage results" list below
+    // can still show and un-exclude them. `sortedAll` (unfiltered) is used only for
+    // that management list.
+    var sorted = sortedAll.filter(function (e) { return !e.excluded; });
 
     var head = Reflx.util.el("div", { class: "stats-card-head" }, [
       Reflx.util.el("div", {}, [
@@ -456,14 +568,22 @@
       Reflx.util.el("p", { class: "field-desc" }, [t("common.loading")])
     ]);
     card.appendChild(distPlaceholder);
-    box.appendChild(card);
+
+    card.appendChild(renderManageResultsBlock(sortedAll, function (resultId, excluded) {
+      patchAndRerenderCard(box, r, name, version, entries, card, resultId, excluded);
+    }));
+
+    if (!detached) box.appendChild(card);
 
     var values = sorted.map(function (e) { return e.primary_metric_ms; }).filter(isNum);
     computePeerReference(sorted).then(function (ref) {
       var distBlock = renderDistributionBlock(values, ref.peerAvgMs, ref.betterThanPct);
       if (distPlaceholder.parentNode === card) card.replaceChild(distBlock, distPlaceholder);
       // Only meaningful once distBlock is attached to the document (see alignRefLines
-      // doc comment) — replaceChild above just did that.
+      // doc comment) — replaceChild above just did that. If this card was built
+      // `detached`, it's attached by the caller right after this function returns,
+      // so alignRefLines() here can still run before layout in that case; the
+      // resize listener also re-aligns on any later layout change regardless.
       alignRefLines();
 
       var variabilityBlock = renderVariabilityBlock(ref.yourSdMs, ref.peerSdMsMedian);
@@ -471,6 +591,7 @@
     });
 
     allGroups.push({ r: r, version: version, name: name, entries: sorted });
+    return card;
   }
 
   function render() {

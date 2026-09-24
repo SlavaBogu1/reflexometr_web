@@ -343,6 +343,13 @@
     "stats.download_csv": "Descargar CSV",
     "stats.csv.generating": "Generando…",
 
+    "stats.manage_results.toggle": "Gestionar resultados",
+    "stats.exclude_result": "Excluir este resultado de Mis estadísticas",
+    "stats.exclude_result_title": "Excluir de Mis estadísticas",
+    "stats.include_result": "Incluir este resultado en Mis estadísticas",
+    "stats.include_result_title": "Excluido — haz clic para incluirlo de nuevo",
+    "stats.manage_results.note": "Los resultados excluidos (tachados y atenuados) permanecen en esta lista para que puedas volver a incluirlos — solo desaparecen de la tendencia, el histograma, el contador de intentos y la exportación CSV de arriba.",
+
     "compare.title": "Cómo te comparas",
     "compare.percentile": "Más rápido que el {pct}% de los usuarios en esta versión exacta de la prueba.",
     "compare.sample_note": "Solo agregado anonimizado: nunca se muestra la identidad ni el valor bruto de otro usuario.",
@@ -366,15 +373,15 @@
     "test.color.red": "rojo",
 
     "test.collision.armed": "Observa con atención…",
-    "test.collision.go": "¡Haz clic cuando creas que van a colisionar!",
+    "test.collision.go": "¡Haz clic cuando creas que sus centros van a coincidir!",
 
     "test.collision_simple.name": "Colisión de Círculos (Simple)",
     "test.collision_simple.description": "Dos círculos comienzan en bordes opuestos y se mueven el uno hacia el otro a velocidad constante. Haz clic cuando creas que sus centros están a punto de coincidir.",
     "test.collision_simple.expected1": "Observa cómo los dos círculos comienzan a moverse el uno hacia el otro.",
     "test.collision_simple.expected2": "Haz clic (o pulsa tu tecla/botón configurado) en el momento en que predigas que sus centros coincidirán.",
     "test.collision_simple.expected3": "Hacer clic antes de que los círculos empiecen a moverse anula ese intento — simplemente se repetirá. Cualquier clic después de que empiecen a moverse cuenta, incluso una suposición muy temprana.",
-    "test.collision_simple.guidance": "Esto mide la anticipación, no la velocidad de reacción pura — intenta predecir la colisión en lugar de reaccionar al inicio del movimiento.",
-    "test.collision_simple.header_objective": "Mide con qué precisión predices cuándo colisionarán dos círculos en movimiento.",
+    "test.collision_simple.guidance": "Esto mide la anticipación, no la velocidad de reacción pura — intenta predecir el momento en que los centros coinciden, en lugar de reaccionar al inicio del movimiento.",
+    "test.collision_simple.header_objective": "Mide con qué precisión predices cuándo coincidirán los centros de dos círculos en movimiento.",
     "test.collision_simple.header_stimulus": "Dos círculos se mueven el uno hacia el otro a velocidad constante — sin cambio de color.",
     "test.collision_simple.header_devices": "Tecla de teclado: {key} · Ratón · Botón de mando: {gamepad}",
 
@@ -384,7 +391,7 @@
     "test.collision_complex.expected2": "Haz clic (o pulsa tu tecla/botón configurado) en el momento en que predigas que sus centros coincidirán.",
     "test.collision_complex.expected3": "Hacer clic antes de que los círculos empiecen a moverse anula ese intento. Cualquier clic después de que empiecen a moverse cuenta, incluso una suposición muy temprana.",
     "test.collision_complex.guidance": "La velocidad y el tamaño cambiantes hacen que este sea un reto de anticipación más difícil que la variante Simple — un buen complemento una vez que tengas una línea base.",
-    "test.collision_complex.header_objective": "Mide la anticipación con tamaño de círculo variable y velocidad de aproximación cambiante.",
+    "test.collision_complex.header_objective": "Mide con qué precisión predices cuándo coincidirán los centros de dos círculos en movimiento, con tamaño de círculo variable y velocidad de aproximación cambiante.",
     "test.collision_complex.header_stimulus": "Dos círculos de tamaño variable se mueven el uno hacia el otro a una velocidad que cambia durante el intento — sin cambio de color.",
     "test.collision_complex.header_devices": "Tecla de teclado: {key} · Ratón · Botón de mando: {gamepad}",
 

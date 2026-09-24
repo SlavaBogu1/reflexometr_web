@@ -55,5 +55,29 @@
   /** Clamp helper used by trial timing logic. */
   function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
 
-  Reflx.util = { uid: uid, qs: qs, qsa: qsa, el: el, readJSON: readJSON, writeJSON: writeJSON, clamp: clamp };
+  /**
+   * Shows a non-blocking error message in an existing `.notice.danger` element
+   * (CR-UI-26) — never a blocking `alert()`. `elId` must point at a `<div
+   * class="notice danger" role="alert" style="display:none;">` already present in
+   * the page's markup (see runner.html#run-error for the reference pattern). Pages
+   * needing this add their own such element and call showBanner/hideBanner with its
+   * id; nothing here assumes a single fixed element.
+   */
+  function showBanner(elId, message) {
+    var node = document.getElementById(elId);
+    if (!node) return;
+    node.textContent = message;
+    node.style.display = "block";
+  }
+  function hideBanner(elId) {
+    var node = document.getElementById(elId);
+    if (!node) return;
+    node.style.display = "none";
+    node.textContent = "";
+  }
+
+  Reflx.util = {
+    uid: uid, qs: qs, qsa: qsa, el: el, readJSON: readJSON, writeJSON: writeJSON, clamp: clamp,
+    showBanner: showBanner, hideBanner: hideBanner
+  };
 })(window);

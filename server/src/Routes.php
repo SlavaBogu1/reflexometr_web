@@ -68,8 +68,9 @@ final class Routes
         $router->add('POST', '/r-tests/{slug}/runs', [RunController::class, 'start']);
         $router->add('POST', '/r-tests/runs/{token}/submit', [RunController::class, 'submit']);
 
-        // Stats (CR-STATS-01, CR-STATS-02)
+        // Stats (CR-STATS-01, CR-STATS-02, CR-STATS-07)
         $router->add('GET', '/r-tests/{slug}/versions/{version}/history', [StatsController::class, 'history']);
         $router->add('GET', '/results/{id}/comparison', [StatsController::class, 'comparison']);
+        $router->add('PATCH', '/results/{id}/exclude', [StatsController::class, 'exclude']);
     }
 }

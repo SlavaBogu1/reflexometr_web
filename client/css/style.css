@@ -464,6 +464,41 @@ footer.site-footer {
   .vhist-refline-tag .line1, .vhist-refline-tag .line2 { font-size: 0.62rem; }
 }
 
+.result-row { display: flex; justify-content: space-between; align-items: center; padding: 0.7rem 0; border-bottom: 1px solid var(--color-border); }
+.result-row:last-child { border-bottom: none; }
+.result-row .val { font-variant-numeric: tabular-nums; margin-right: 1rem; }
+
+/* --- CR-STATS-07: "Manage results" exclude/include toggle list. Layout approved:
+   client/prototype-stats-exclude-toggle.html. Row layout reuses `.result-row`'s
+   existing flex/space-between shape above (`.result-row` itself is prototype-only,
+   not used by any live page, so extending it here carries no live-page risk);
+   `.manage-results-row` only adds/overrides what's genuinely different (gap-based
+   spacing instead of a border-bottom divider, smaller vertical padding, the
+   excluded/struck-through state) rather than re-declaring the shared flex/
+   space-between/align-items shape from scratch. Declared after `.result-row` so its
+   overriding `padding`/`border-bottom` win the cascade at equal specificity. Same
+   for `.manage-results-value`, which reuses `.result-row .val`'s `tabular-nums`. */
+.manage-results-toggle {
+  font-size: 0.85rem; color: var(--color-accent); background: none; border: none;
+  cursor: pointer; padding: 0; margin-top: 0.4rem; text-decoration: underline;
+}
+.manage-results-list { margin-top: 0.75rem; border-top: 1px solid var(--color-border); padding-top: 0.6rem; }
+.manage-results-row { padding: 0.4rem 0; gap: 0.75rem; border-bottom: none; font-size: 0.9rem; }
+.manage-results-row.excluded { opacity: 0.5; }
+.manage-results-row.excluded .manage-results-value { text-decoration: line-through; }
+.manage-results-meta { display: flex; gap: 0.75rem; align-items: baseline; }
+.manage-results-value { font-weight: 600; min-width: 4.5rem; }
+.manage-results-date { color: var(--color-text-dim); font-size: 0.82rem; }
+.manage-results-toggle-btn {
+  width: 1.8rem; height: 1.8rem; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 4px; border: 1px solid var(--color-accent-dim); background: none; cursor: pointer;
+  color: var(--color-text-dim); flex: 0 0 auto;
+}
+.manage-results-toggle-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.manage-results-toggle-btn.is-excluded { border-color: var(--color-danger); color: var(--color-danger); }
+.manage-results-toggle-btn svg { width: 1rem; height: 1rem; }
+.manage-results-note { font-size: 0.78rem; color: var(--color-text-dim); font-style: italic; margin-top: 0.5rem; }
+
 /* --- CR-UI-08 prototype (method-info research blurb + Measurement Paths) --- */
 .research-blurb {
   background: var(--color-surface-alt); border-left: 3px solid var(--color-accent);
@@ -502,9 +537,6 @@ footer.site-footer {
   padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--color-border);
 }
 .summary-total .value { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
-.result-row { display: flex; justify-content: space-between; align-items: center; padding: 0.7rem 0; border-bottom: 1px solid var(--color-border); }
-.result-row:last-child { border-bottom: none; }
-.result-row .val { font-variant-numeric: tabular-nums; margin-right: 1rem; }
 
 /* --- CR-UI-09 (Sprint 5): Home / The Research / All Paths page split --- */
 .hero .btn-row { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.25rem; flex-wrap: wrap; }

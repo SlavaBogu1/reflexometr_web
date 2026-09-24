@@ -343,6 +343,13 @@
     "stats.download_csv": "Download CSV",
     "stats.csv.generating": "Generating…",
 
+    "stats.manage_results.toggle": "Manage results",
+    "stats.exclude_result": "Exclude this result from My Stats",
+    "stats.exclude_result_title": "Exclude from My Stats",
+    "stats.include_result": "Include this result in My Stats",
+    "stats.include_result_title": "Excluded — click to include again",
+    "stats.manage_results.note": "Excluded results (struck through, dimmed) stay in this list so you can un-exclude them — they only disappear from the trend chart, histogram, run-count chip, and CSV export above.",
+
     "compare.title": "How you compare",
     "compare.percentile": "Faster than {pct}% of users on this exact test version.",
     "compare.sample_note": "Anonymized aggregate only — no other user's identity or raw result is ever shown.",
@@ -366,15 +373,15 @@
     "test.color.red": "red",
 
     "test.collision.armed": "Watch closely…",
-    "test.collision.go": "Click when you think they'll collide!",
+    "test.collision.go": "Click when you think their centers will meet!",
 
     "test.collision_simple.name": "Circle Collision (Simple)",
-    "test.collision_simple.description": "Two circles start at opposite edges and move toward each other at a constant speed. Click when you think their centers are about to collide.",
+    "test.collision_simple.description": "Two circles start at opposite edges and move toward each other at a constant speed. Click when you think their centers are about to meet.",
     "test.collision_simple.expected1": "Watch the two circles start moving toward each other.",
     "test.collision_simple.expected2": "Click (or press your configured key/button) the moment you predict their centers will meet.",
     "test.collision_simple.expected3": "Clicking before the circles start moving voids that trial — it will simply run again. Any click after they start moving counts, even a very early guess.",
-    "test.collision_simple.guidance": "This measures anticipation timing, not raw reaction speed — a well-timed guess and a rushed early click are scored differently, so try to actually predict the collision rather than reacting to motion onset.",
-    "test.collision_simple.header_objective": "Measuring how accurately you predict when two moving circles will collide.",
+    "test.collision_simple.guidance": "This measures anticipation timing, not raw reaction speed — a well-timed guess and a rushed early click are scored differently, so try to actually predict when the centers meet rather than reacting to motion onset.",
+    "test.collision_simple.header_objective": "Measuring how accurately you predict when two moving circles' centers will meet.",
     "test.collision_simple.header_stimulus": "Two circles move toward each other at a constant speed — no color change.",
     "test.collision_simple.header_devices": "Keyboard key: {key} · Mouse · Gamepad button: {gamepad}",
 
@@ -384,7 +391,7 @@
     "test.collision_complex.expected2": "Click (or press your configured key/button) the moment you predict their centers will meet.",
     "test.collision_complex.expected3": "Clicking before the circles start moving voids that trial. Any click after they start moving counts, even a very early guess.",
     "test.collision_complex.guidance": "The changing speed and size make this a harder anticipation-timing challenge than the Simple variant — a useful complement once you have a Simple baseline.",
-    "test.collision_complex.header_objective": "Measuring anticipation timing under variable circle size and changing closing speed.",
+    "test.collision_complex.header_objective": "Measuring how accurately you predict when two moving circles' centers will meet, under variable circle size and changing closing speed.",
     "test.collision_complex.header_stimulus": "Two circles of varying size move toward each other at a speed that changes during the trial — no color change.",
     "test.collision_complex.header_devices": "Keyboard key: {key} · Mouse · Gamepad button: {gamepad}",
 

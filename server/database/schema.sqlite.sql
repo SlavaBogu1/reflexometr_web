@@ -95,10 +95,11 @@ CREATE TABLE IF NOT EXISTS run_tokens (
 );
 CREATE INDEX IF NOT EXISTS ix_runtokens_user ON run_tokens (user_id);
 
--- approval_status (CR-AUTH-02) / sd_ms, cv (CR-STATS-08) — see schema.mysql.sql for full rationale
--- and the production backfill-on-upgrade path (not needed here: SQLite is local-dev-only and
--- tests always build this schema fresh against a new :memory: database, so a plain default
--- column on CREATE TABLE is sufficient — there is never a pre-existing populated file to upgrade).
+-- approval_status (CR-AUTH-02) / sd_ms, cv (CR-STATS-08) / excluded_from_own_stats (CR-STATS-07,
+-- Sprint 12) — see schema.mysql.sql for full rationale and the production backfill-on-upgrade path
+-- (not needed here: SQLite is local-dev-only and tests always build this schema fresh against a
+-- new :memory: database, so a plain default column on CREATE TABLE is sufficient — there is never
+-- a pre-existing populated file to upgrade).
 CREATE TABLE IF NOT EXISTS results (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -113,6 +114,7 @@ CREATE TABLE IF NOT EXISTS results (
     sd_ms REAL NULL DEFAULT NULL,
     cv REAL NULL DEFAULT NULL,
     approval_status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    excluded_from_own_stats INTEGER NOT NULL DEFAULT 0,
     client_started_at_ms INTEGER NOT NULL,
     server_received_at_ms INTEGER NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP

@@ -162,4 +162,17 @@ final class ResultRepository
         $stmt = $this->db->prepare('UPDATE results SET approval_status = ? WHERE id = ?');
         $stmt->execute([$status, $id]);
     }
+
+    /**
+     * CR-STATS-07: a user's own toggle to exclude/include one of their own results from their own
+     * history/stats view. Caller (StatsService/StatsController) already IDOR-guards ownership
+     * before calling this — this method trusts $id has already been verified to belong to the
+     * requesting user, same division of responsibility as updateApprovalStatus above (admin-gated
+     * by its own caller).
+     */
+    public function updateExcludedFromOwnStats(int $id, bool $excluded): void
+    {
+        $stmt = $this->db->prepare('UPDATE results SET excluded_from_own_stats = ? WHERE id = ?');
+        $stmt->execute([$excluded ? 1 : 0, $id]);
+    }
 }
