@@ -40,6 +40,42 @@
       deviceHint: function (s) {
         return { key: "test.collision_complex.header_devices", params: { key: s.keyboardKeyLabel, gamepad: s.gamepadButtonLabel } };
       }
+    },
+    // CR-TEST-30: Random Target Appearance and Pointing (K3) — mouse-only test,
+    // no keyboard or gamepad; header_devices reflects that.
+    "random-target-pointing": {
+      prefix: "test.random_target",
+      headerStimulusKey: "test.random_target.header_stimulus",
+      deviceHint: function () {
+        return { key: "test.random_target.header_devices", params: {} };
+      }
+    },
+    // CR-TEST-32: Choice Reaction: Geometry (K5) — keyboard-only (arrow keys);
+    // no gamepad or mouse response mode.
+    "choice-reaction-geometry": {
+      prefix: "test.choice_geometry",
+      headerStimulusKey: "test.choice_geometry.header_stimulus",
+      deviceHint: function () {
+        return { key: "test.choice_geometry.header_devices", params: {} };
+      }
+    },
+    // CR-TEST-34: Peripheral Visual Reaction (K7) — key or click depending on
+    // the schedule's response_type; header_devices uses keyboard hint.
+    "peripheral-reaction": {
+      prefix: "test.peripheral",
+      headerStimulusKey: "test.peripheral.header_stimulus",
+      deviceHint: function (s) {
+        return { key: "test.peripheral.header_devices", params: { key: s.keyboardKeyLabel } };
+      }
+    },
+    // CR-TEST-35: Temporal Prediction (K8) — mouse-click only (predict when
+    // moving circle reaches target line).
+    "temporal-prediction": {
+      prefix: "test.temporal",
+      headerStimulusKey: "test.temporal.header_stimulus",
+      deviceHint: function () {
+        return { key: "test.temporal.header_devices", params: {} };
+      }
     }
   };
 })(window);

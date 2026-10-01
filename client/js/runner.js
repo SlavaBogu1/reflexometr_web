@@ -68,7 +68,11 @@
     "simple-reaction": "Simple visual reaction time is one of the most-studied measures in reaction research — typical adult values fall in a fairly narrow band, making it a useful, low-effort baseline to track over time.",
     "two-hand-reaction": "Comparing your two hands' reaction speed can surface asymmetries that a single-hand test can't — useful context alongside your dominant-hand setting when interpreting day-to-day variation.",
     "circle-collision-simple": "Coincidence-anticipation timing (predicting when two moving objects will meet) draws on different perceptual-motor skill than a simple color-change reaction — relevant to sports and driving-adjacent research.",
-    "circle-collision-complex": "Adding variable speed and size makes this a tougher anticipation-timing challenge than the Simple variant — useful for tracking how well you adapt your prediction to changing conditions."
+    "circle-collision-complex": "Adding variable speed and size makes this a tougher anticipation-timing challenge than the Simple variant — useful for tracking how well you adapt your prediction to changing conditions.",
+    "random-target-pointing": "Separating visual reaction from physical pointing movement reveals whether slowdowns come from perceiving the stimulus or from executing the movement — a useful distinction for tracking fine motor coordination alongside raw detection speed.",
+    "choice-reaction-geometry": "Adding a discrimination and selection stage to the reaction task more closely models real-world decision-making speed than pure detection — the gap between your correct-response RT and simple RT reflects the cognitive cost of the choice.",
+    "peripheral-reaction": "The ability to respond quickly to stimuli outside the focus of attention is a distinct skill from central-focus reaction — relevant wherever broad-field awareness matters, from driving to sports.",
+    "temporal-prediction": "Predicting when a moving object will arrive at a known point requires internal time-estimation rather than simple reaction — a skill that varies independently from detection-based RT and can be tracked and improved over time."
   };
   function renderWhyItMatters() {
     var el = document.getElementById("desc-why-it-matters");
@@ -311,8 +315,18 @@
     });
   }
 
+  /** Sprint 14: map the four new test slugs to their own kind names for result rendering. */
+  function kindForSlug(s) {
+    if (s === "two-hand-reaction") return "two-hand";
+    if (s === "random-target-pointing") return "random-target";
+    if (s === "choice-reaction-geometry") return "choice-geometry";
+    if (s === "peripheral-reaction") return "peripheral";
+    if (s === "temporal-prediction") return "temporal";
+    return "simple";
+  }
+
   function finishRun(trials) {
-    var kind = slug === "two-hand-reaction" ? "two-hand" : "simple";
+    var kind = kindForSlug(slug);
     var payload = { trials: trials };
     if (kind === "two-hand" && Reflx.settings.get().dominantHand) {
       payload.dominant_hand = Reflx.settings.get().dominantHand;
@@ -415,6 +429,62 @@
    * repeated at each of this page's three render sites (`/simplify` pass, Sprint 13). */
   function fmtPrimaryMetric(testSlug, v) { return isCollision(testSlug) ? fmtPx(v) : fmtMs(v); }
 
+  // ---- Sprint 14: local KPI helpers for the four new test types ----
+
+  /** Extract a numeric field from trial_data across all trials, filtering nulls. */
+  function trialDataValues(trials, field) {
+    var out = [];
+    trials.forEach(function (tr) {
+      if (tr.trial_data && isNum(tr.trial_data[field])) out.push(tr.trial_data[field]);
+    });
+    return out;
+  }
+
+  /** Count trials where trial_data.result matches a given value. */
+  function countResult(trials, resultLabel) {
+    var n = 0;
+    trials.forEach(function (tr) {
+      if (tr.trial_data && tr.trial_data.result === resultLabel) n++;
+    });
+    return n;
+  }
+
+  /** Per-shape RT breakdown for choice-reaction-geometry.
+   *  Returns { shapeName: [rt, ...], ... } for correct trials only. */
+  function perShapeRTs(trials) {
+    var map = {};
+    trials.forEach(function (tr) {
+      if (!tr.trial_data) return;
+      if (tr.trial_data.result !== "TRUE_RESPONSE") return;
+      if (!isNum(tr.trial_data.reaction_time_ms)) return;
+      var s = tr.trial_data.stimulus_shape || "unknown";
+      if (!map[s]) map[s] = [];
+      map[s].push(tr.trial_data.reaction_time_ms);
+    });
+    return map;
+  }
+
+  /** Per-position RT breakdown for peripheral-reaction.
+   *  Returns [{ label, mean, count }, ...] for positions with ≥ 3 valid trials. */
+  function perPositionRTs(trials) {
+    var map = {};
+    trials.forEach(function (tr) {
+      if (!tr.trial_data) return;
+      if (tr.trial_data.result !== "TRUE_RESPONSE") return;
+      if (!isNum(tr.trial_data.reaction_time_ms)) return;
+      var lbl = tr.trial_data.stimulus_position_label || "?";
+      if (!map[lbl]) map[lbl] = [];
+      map[lbl].push(tr.trial_data.reaction_time_ms);
+    });
+    var out = [];
+    Object.keys(map).forEach(function (lbl) {
+      if (map[lbl].length >= 3) {
+        out.push({ label: lbl, mean: avg(map[lbl]), count: map[lbl].length });
+      }
+    });
+    return out;
+  }
+
   function renderSummary(last) {
     var box = document.getElementById("result-summary");
     box.innerHTML = "";
@@ -425,6 +495,7 @@
     }
     var local = localTrialStats(last.kind, last.trials);
     var summary = last.summary || {};
+
     if (last.kind === "two-hand") {
       var channels = summary.channels || {};
       row(t("test.twohand.result.left_mean"), fmtMs(local.leftMean));
@@ -434,6 +505,7 @@
       var delta = typeof summary.dominant_minus_nondominant_ms === "number" ? summary.dominant_minus_nondominant_ms : null;
       row(t("test.twohand.result.delta_mean"), delta !== null ? fmtMs(delta) : "—");
       row(t("test.twohand.result.dominant"), Reflx.settings.get().dominantHand || t("settings.dominant.unset"));
+
     } else if (isCollision(slug)) {
       var overall = summary.overall || {};
       var avgDistance = typeof last.primaryMetricMs === "number" ? last.primaryMetricMs : overall.mean_ms;
@@ -441,6 +513,110 @@
       row(t("runner.result.collision_earliest"), fmtPx(typeof overall.min === "number" ? overall.min : null));
       row(t("runner.result.collision_latest"), fmtPx(typeof overall.max === "number" ? overall.max : null));
       row(t("runner.result.variability"), fmtVariability(overall.sd_ms));
+
+    } else if (last.kind === "random-target") {
+      // CR-TEST-30 result display (CI-14.2)
+      var rtVals = trialDataValues(last.trials, "reaction_time_ms");
+      var mvVals = trialDataValues(last.trials, "movement_time_ms");
+      var errVals = trialDataValues(last.trials, "click_error_px");
+      row(t("test.random_target.result.reaction_time_mean"), fmtMs(avg(rtVals)));
+      row(t("test.random_target.result.movement_time_mean"), fmtMs(avg(mvVals)));
+      row(t("test.random_target.result.click_error_mean"), fmtPx(avg(errVals)));
+      if (errVals.length) {
+        row(t("test.random_target.result.click_error_best"), fmtPx(Math.min.apply(null, errVals)));
+        row(t("test.random_target.result.click_error_worst"), fmtPx(Math.max.apply(null, errVals)));
+      }
+      // Trajectory path metrics (shown only when at least one trial has them)
+      var pathVals = trialDataValues(last.trials, "path_length_px");
+      if (pathVals.length) {
+        row(t("test.random_target.result.path_length_mean"), fmtPx(avg(pathVals)));
+        var effVals = trialDataValues(last.trials, "path_efficiency");
+        if (effVals.length) {
+          var effPct = Math.round(avg(effVals) * 100);
+          row(t("test.random_target.result.path_efficiency"), effPct + "%");
+        }
+      }
+
+    } else if (last.kind === "choice-geometry") {
+      // CR-TEST-32 result display (CI-14.5)
+      var correctRTs = trialDataValues(last.trials, "reaction_time_ms");
+      // Only correct trials have a non-null reaction_time_ms in trial_data
+      row(t("test.choice_geometry.result.reaction_time_mean"), fmtMs(avg(correctRTs)));
+      var totalTrials = last.trials.length;
+      var wrongCount = countResult(last.trials, "FALSE_RESPONSE");
+      var missedCount = countResult(last.trials, "MISSED_STIMULUS");
+      var wrongRate = totalTrials > 0 ? Math.round((wrongCount / totalTrials) * 100) : 0;
+      row(t("test.choice_geometry.result.wrong_response_rate"), wrongCount + " / " + totalTrials + " (" + wrongRate + "%)");
+      row(t("test.choice_geometry.result.missed_count"), String(missedCount));
+      // Per-shape breakdown when ≥ 5 trials per shape
+      var shapeRTs = perShapeRTs(last.trials);
+      var shapeNames = Object.keys(shapeRTs).filter(function (s) { return shapeRTs[s].length >= 5; });
+      if (shapeNames.length >= 2) {
+        shapeNames.forEach(function (shapeName) {
+          row(t("test.choice_geometry.result.shape_rt", { shape: shapeName }), fmtMs(avg(shapeRTs[shapeName])));
+        });
+      }
+
+    } else if (last.kind === "peripheral") {
+      // CR-TEST-34 result display (CI-14.8)
+      var allRTs = trialDataValues(last.trials, "reaction_time_ms");
+      row(t("test.peripheral.result.reaction_time_mean"), fmtMs(avg(allRTs)));
+      if (allRTs.length) {
+        row(t("test.peripheral.result.best"), fmtMs(Math.min.apply(null, allRTs)));
+        row(t("test.peripheral.result.worst"), fmtMs(Math.max.apply(null, allRTs)));
+      }
+      row(t("test.peripheral.result.missed_count"), String(countResult(last.trials, "MISSED_STIMULUS")));
+      // Per-position breakdown when ≥ 3 trials per position
+      var posBreakdown = perPositionRTs(last.trials);
+      if (posBreakdown.length) {
+        box.appendChild(Reflx.util.el("div", { class: "field-row result-section-header" }, [
+          Reflx.util.el("label", {}, [t("test.peripheral.result.per_position")])
+        ]));
+        posBreakdown.forEach(function (p) {
+          row(p.label + " (n=" + p.count + ")", fmtMs(p.mean));
+        });
+      }
+
+    } else if (last.kind === "temporal") {
+      // CR-TEST-35 result display (CI-14.11)
+      var signedErrors = trialDataValues(last.trials, "timing_error_ms");
+      var absErrors = trialDataValues(last.trials, "absolute_timing_error_ms");
+      row(t("test.temporal.result.timing_error_mean"), fmtMs(avg(signedErrors)));
+      row(t("test.temporal.result.abs_error_mean"), fmtMs(avg(absErrors)));
+      // Early / late split
+      var earlyCount = 0, lateCount = 0, onTimeCount = 0;
+      last.trials.forEach(function (tr) {
+        if (!tr.trial_data || !isNum(tr.trial_data.timing_error_ms)) return;
+        if (tr.trial_data.result !== "TRUE_RESPONSE") return;
+        if (tr.trial_data.timing_error_ms < 0) earlyCount++;
+        else if (tr.trial_data.timing_error_ms > 0) lateCount++;
+        else onTimeCount++;
+      });
+      var validCount = earlyCount + lateCount + onTimeCount;
+      if (validCount > 0) {
+        row(t("test.temporal.result.early_pct"), Math.round((earlyCount / validCount) * 100) + "%");
+        row(t("test.temporal.result.late_pct"), Math.round((lateCount / validCount) * 100) + "%");
+      }
+      // Disappear-before-target split: show if both visible and invisible trials exist
+      var hasVisible = false, hasInvisible = false;
+      last.trials.forEach(function (tr) {
+        if (!tr.trial_data) return;
+        if (tr.trial_data.result !== "TRUE_RESPONSE") return;
+        if (tr.trial_data.circle_visible_at_click === true) hasVisible = true;
+        if (tr.trial_data.circle_visible_at_click === false) hasInvisible = true;
+      });
+      if (hasVisible && hasInvisible) {
+        var visibleRTs = [], invisibleRTs = [];
+        last.trials.forEach(function (tr) {
+          if (!tr.trial_data || tr.trial_data.result !== "TRUE_RESPONSE") return;
+          if (!isNum(tr.trial_data.absolute_timing_error_ms)) return;
+          if (tr.trial_data.circle_visible_at_click) visibleRTs.push(tr.trial_data.absolute_timing_error_ms);
+          else invisibleRTs.push(tr.trial_data.absolute_timing_error_ms);
+        });
+        row(t("test.temporal.result.abs_error_visible"), fmtMs(avg(visibleRTs)));
+        row(t("test.temporal.result.abs_error_invisible"), fmtMs(avg(invisibleRTs)));
+      }
+
     } else {
       row(t("runner.result.mean"), fmtMs(typeof last.primaryMetricMs === "number" ? last.primaryMetricMs : local.mean));
       row(t("runner.result.best"), fmtMs(local.best));
