@@ -47,7 +47,9 @@ final class Routes
         $router->add('GET', '/admin/r-tests', [AdminRTestController::class, 'list']);
         $router->add('POST', '/admin/r-tests', [AdminRTestController::class, 'create']);
         $router->add('PATCH', '/admin/r-tests/{slug}', [AdminRTestController::class, 'updateMeta']);
+        $router->add('DELETE', '/admin/r-tests/{slug}', [AdminRTestController::class, 'deleteRTest']);
         $router->add('POST', '/admin/r-tests/{slug}/versions', [AdminRTestController::class, 'importVersion']);
+        $router->add('PATCH', '/admin/r-tests/{slug}/versions/{version}', [AdminRTestController::class, 'patchVersion']);
         $router->add('GET', '/admin/r-tests/{slug}/versions/{version}/export', [AdminRTestController::class, 'exportVersion']);
 
         // Admin tags & packages (CR-TEST-05, CR-TEST-25)

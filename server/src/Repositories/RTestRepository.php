@@ -72,4 +72,16 @@ final class RTestRepository
         $stmt = $this->db->query('SELECT * FROM r_tests ORDER BY id ASC');
         return $stmt->fetchAll();
     }
+
+    /**
+     * CR-UI-18 (Sprint 15): permanently deletes an r-test row and, via ON DELETE CASCADE, all its
+     * r_test_versions rows and run_token rows (FK cascade). Caller MUST first verify there are no
+     * results referencing this r-test (countForRTest() = 0) — this method never checks that itself,
+     * trusting the controller to enforce the business rule.
+     */
+    public function delete(int $id): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM r_tests WHERE id = ?');
+        $stmt->execute([$id]);
+    }
 }

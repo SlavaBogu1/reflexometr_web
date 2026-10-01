@@ -146,6 +146,10 @@ final class ScheduleCompiler
             self::validateTemporalPrediction($description);
             return;
         }
+        if (array_key_exists('condition_ratio', $description)) {
+            self::validateVisualConflict($description);
+            return;
+        }
         // NOTE: isCustomKpiDescription() below must stay in sync with this detection order.
 
         // --- Classic stimulus/response family ---
@@ -234,13 +238,14 @@ final class ScheduleCompiler
     // Sprint 14 (K3/K5/K7/K8) — custom-KPI test family validators
     // -------------------------------------------------------------------------
 
-    /** Returns true when $description belongs to the Sprint 14 custom-KPI family. */
+    /** Returns true when $description belongs to the Sprint 14/15 custom-KPI family. */
     private static function isCustomKpiDescription(array $description): bool
     {
         return array_key_exists('target_diameter_px', $description)
             || array_key_exists('shapes', $description)
             || array_key_exists('positions', $description)
-            || array_key_exists('circle_speed_px_per_ms', $description);
+            || array_key_exists('circle_speed_px_per_ms', $description)
+            || array_key_exists('condition_ratio', $description);
     }
 
     /** Shared: validates trial_count (required, 1..MAX_TRIAL_COUNT) and appends to $errors. */
@@ -515,6 +520,80 @@ final class ScheduleCompiler
             $diam = $description['circle_diameter_px'];
             if (!is_int($diam) || $diam < 1) {
                 $errors[] = 'circle_diameter_px';
+            }
+        }
+
+        self::throwIfErrors($errors);
+    }
+
+    /**
+     * CR-TEST-33 (Sprint 15) — `visual-conflict` description validation.
+     * Fields: condition_ratio (object with neutral/congruent/conflict keys summing to 1.0 ±0.01),
+     * pretrain_trial_count (>= 1), trial_count (<= MAX_TRIAL_COUNT), response_window_ms (> 0),
+     * inter_trial_interval_ms (>= 0), randomize_delay_range_ms, shape_size_px (> 0),
+     * phase_transition_display_ms (>= 0).
+     * @param array<string,mixed> $description @throws ApiException
+     */
+    private static function validateVisualConflict(array $description): void
+    {
+        $errors = [];
+
+        self::validateTrialCount($description, $errors);
+
+        // condition_ratio: must have neutral/congruent/conflict keys, all numeric,
+        // and their sum must equal 1.0 within ±0.01 float tolerance.
+        $ratio = $description['condition_ratio'] ?? null;
+        if (!is_array($ratio)) {
+            $errors[] = 'condition_ratio';
+        } else {
+            $neutral   = $ratio['neutral']   ?? null;
+            $congruent = $ratio['congruent'] ?? null;
+            $conflict  = $ratio['conflict']  ?? null;
+            if (
+                (!is_int($neutral)   && !is_float($neutral))
+                || (!is_int($congruent) && !is_float($congruent))
+                || (!is_int($conflict)  && !is_float($conflict))
+                || (float) $neutral   < 0
+                || (float) $congruent < 0
+                || (float) $conflict  < 0
+            ) {
+                $errors[] = 'condition_ratio';
+            } else {
+                $sum = (float) $neutral + (float) $congruent + (float) $conflict;
+                if (abs($sum - 1.0) > 0.01) {
+                    $errors[] = 'condition_ratio';
+                }
+            }
+        }
+
+        // pretrain_trial_count: required, >= 1
+        $pretrainCount = $description['pretrain_trial_count'] ?? null;
+        if (!is_int($pretrainCount) || $pretrainCount < 1) {
+            $errors[] = 'pretrain_trial_count';
+        }
+
+        // response_window_ms: required, > 0
+        $responseWindow = $description['response_window_ms'] ?? null;
+        if (!is_int($responseWindow) || $responseWindow < 1) {
+            $errors[] = 'response_window_ms';
+        }
+
+        // phase_transition_display_ms: optional, >= 0
+        if (array_key_exists('phase_transition_display_ms', $description)) {
+            $ptd = $description['phase_transition_display_ms'];
+            if (!is_int($ptd) || $ptd < 0) {
+                $errors[] = 'phase_transition_display_ms';
+            }
+        }
+
+        self::validateOptionalIti($description, $errors);
+        self::validateOptionalDelayRange($description, $errors);
+
+        // shape_size_px: optional, > 0
+        if (array_key_exists('shape_size_px', $description)) {
+            $size = $description['shape_size_px'];
+            if (!is_int($size) || $size < 1) {
+                $errors[] = 'shape_size_px';
             }
         }
 

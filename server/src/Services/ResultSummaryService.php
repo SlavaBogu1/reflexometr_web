@@ -54,6 +54,9 @@ final class ResultSummaryService
             if (array_key_exists('circle_speed_px_per_ms', $schedule)) {
                 return self::computeTemporalPrediction($trials);
             }
+            if (array_key_exists('condition_ratio', $schedule)) {
+                return self::computeVisualConflict($trials);
+            }
             // Known family but no matching discriminating field — should never reach here if
             // ScheduleCompiler validated the description; surface clearly rather than silently
             // falling through to the classic path (which would crash on missing response_channels).
@@ -392,6 +395,94 @@ final class ResultSummaryService
             'primaryMetricMs' => $primaryMetricMs,
             'sdMs' => $sdMs,
             'cv' => self::coefficientOfVariation($sdMs, $primaryMetricMs === 0.0 ? null : $primaryMetricMs),
+        ];
+    }
+
+    /**
+     * CR-TEST-33 (Sprint 15) — `visual-conflict` KPIs.
+     * Per-trial fields expected: reaction_time_ms (numeric|null),
+     * result ("TRUE_RESPONSE"|"FALSE_RESPONSE"|"MISSED_STIMULUS"),
+     * phase ("pretrain"|"measurement"), condition ("neutral"|"congruent"|"conflict").
+     *
+     * Excludes phase="pretrain" trials from all KPI calculations. Partitions measurement trials
+     * by condition, computing median_RT, mean_RT, error_rate, RT_sd for each. Derives
+     * conflict_RT_cost_ms and conflict_error_cost from conflict vs neutral.
+     * Primary metric = neutral mean_RT, or 0.0 if none.
+     * @param array<int,array<string,mixed>> $trials Already flattened via flattenTrialData.
+     * @return array{summary: array<string,mixed>, primaryMetricMs: float, sdMs: ?float, cv: ?float}
+     */
+    private static function computeVisualConflict(array $trials): array
+    {
+        $total = count($trials);
+        // Exclude pretrain; partition measurement trials per condition.
+        /** @var array<string,array<int,float>> $rtByCondition */
+        $rtByCondition = ['neutral' => [], 'congruent' => [], 'conflict' => []];
+        /** @var array<string,int> $trialsByCondition */
+        $trialsByCondition = ['neutral' => 0, 'congruent' => 0, 'conflict' => 0];
+        $measurementTotal = 0;
+
+        foreach ($trials as $trial) {
+            $phase = $trial['phase'] ?? null;
+            if ($phase === 'pretrain') {
+                continue; // Exclude pretrain from all KPI calculations.
+            }
+            $measurementTotal++;
+            $condition = $trial['condition'] ?? null;
+            if (!is_string($condition) || !array_key_exists($condition, $rtByCondition)) {
+                continue;
+            }
+            $trialsByCondition[$condition]++;
+            $result = $trial['result'] ?? null;
+            if ($result === 'TRUE_RESPONSE' && isset($trial['reaction_time_ms']) && is_numeric($trial['reaction_time_ms'])) {
+                $rtByCondition[$condition][] = (float) $trial['reaction_time_ms'];
+            }
+        }
+
+        // Per-condition KPIs.
+        $conditionStats = [];
+        foreach (['neutral', 'congruent', 'conflict'] as $cond) {
+            $rts     = $rtByCondition[$cond];
+            $n       = $trialsByCondition[$cond];
+            $mean    = self::mean($rts);
+            $median  = self::median($rts);
+            $sd      = self::stddev($rts);
+            $errCount = $n - count($rts); // non-TRUE_RESPONSE measurement trials for this condition
+            $conditionStats[$cond] = [
+                'trial_count' => $n,
+                'mean_RT'     => $mean,
+                'median_RT'   => $median,
+                'RT_sd'       => $sd,
+                'error_rate'  => $n > 0 ? $errCount / $n : null,
+            ];
+        }
+
+        // Derived cost metrics: conflict vs neutral.
+        $conflictRTCostMs = null;
+        if ($conditionStats['conflict']['mean_RT'] !== null && $conditionStats['neutral']['mean_RT'] !== null) {
+            $conflictRTCostMs = $conditionStats['conflict']['mean_RT'] - $conditionStats['neutral']['mean_RT'];
+        }
+        $conflictErrorCost = null;
+        if ($conditionStats['conflict']['error_rate'] !== null && $conditionStats['neutral']['error_rate'] !== null) {
+            $conflictErrorCost = $conditionStats['conflict']['error_rate'] - $conditionStats['neutral']['error_rate'];
+        }
+
+        // Primary metric = neutral mean_RT (baseline); 0.0 if none.
+        $primaryMetricMs = $conditionStats['neutral']['mean_RT'] ?? 0.0;
+        $sdMs            = $conditionStats['neutral']['RT_sd'];
+
+        $summary = [
+            'conditions'              => $conditionStats,
+            'conflict_RT_cost_ms'     => $conflictRTCostMs,
+            'conflict_error_cost'     => $conflictErrorCost,
+            'measurement_trial_count' => $measurementTotal,
+            'total_trials'            => $total,
+        ];
+
+        return [
+            'summary'         => $summary,
+            'primaryMetricMs' => (float) ($primaryMetricMs ?? 0.0),
+            'sdMs'            => $sdMs,
+            'cv'              => self::coefficientOfVariation($sdMs, $primaryMetricMs === 0.0 ? null : $primaryMetricMs),
         ];
     }
 

@@ -68,6 +68,13 @@ final class RunService
         if ($version === null) {
             throw new ApiException(ErrorCode::RTEST_VERSION_NOT_FOUND, 404);
         }
+        // CR-UI-18 (Sprint 15): a version with is_visible = 0 is archived — treat as not found
+        // for the public run surface (same 404 RTEST_NOT_FOUND code, not a new error code, so the
+        // caller can't distinguish "archived" from "never existed" — intentional, avoids leaking
+        // which specific slugs have been archived vs removed).
+        if (!(bool) ($version['is_visible'] ?? true)) {
+            throw new ApiException(ErrorCode::RTEST_NOT_FOUND, 404);
+        }
 
         $description = json_decode((string) $version['description'], true);
         if (!is_array($description)) {

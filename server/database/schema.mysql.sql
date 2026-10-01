@@ -82,12 +82,17 @@ CREATE TABLE IF NOT EXISTS r_tests (
 
 -- The imported description is opaque textual/JSON data (D11) — never parsed/exposed to the
 -- client raw. Only ScheduleCompiler (server-side) reads it.
+-- is_visible (CR-UI-18, Sprint 15): admin toggle — when 0 this version is excluded from public
+-- browsing and run-start. Defaults to 1 (visible) so all existing versions remain accessible
+-- after the migration. Not the same as is_active (which tracks the "current" version pointer);
+-- a version can be active but invisible (hidden) or inactive but still visible (historical).
 CREATE TABLE IF NOT EXISTS r_test_versions (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     r_test_id INT UNSIGNED NOT NULL,
     version INT UNSIGNED NOT NULL,
     description LONGTEXT NOT NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
+    is_visible TINYINT(1) NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_rtestversions_test_version (r_test_id, version),
     CONSTRAINT fk_rtestversions_test FOREIGN KEY (r_test_id) REFERENCES r_tests (id) ON DELETE CASCADE
@@ -303,6 +308,19 @@ SET @col_exists = (
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'results' AND COLUMN_NAME = 'excluded_from_own_stats'
 );
 SET @ddl = IF(@col_exists = 0, 'ALTER TABLE results ADD COLUMN excluded_from_own_stats TINYINT(1) NOT NULL DEFAULT 0', 'SELECT 1');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Sprint 15 upgrade path for an ALREADY-DEPLOYED database: add is_visible to r_test_versions
+-- if missing (CR-UI-18). ADD COLUMN IF NOT EXISTS is not available in plain MySQL, so we use
+-- the same information_schema-guarded PREPARE/EXECUTE pattern as every other post-deploy column
+-- above. Defaults to 1 so all existing versions stay publicly visible after migration.
+SET @col_exists = (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'r_test_versions' AND COLUMN_NAME = 'is_visible'
+);
+SET @ddl = IF(@col_exists = 0, 'ALTER TABLE r_test_versions ADD COLUMN is_visible TINYINT(1) NOT NULL DEFAULT 1', 'SELECT 1');
 PREPARE stmt FROM @ddl;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;

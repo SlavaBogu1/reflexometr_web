@@ -10,6 +10,7 @@ use Reflexometr\Http\ApiException;
 use Reflexometr\Http\ErrorCode;
 use Reflexometr\Http\Request;
 use Reflexometr\Http\Response;
+use Reflexometr\Repositories\ResultRepository;
 use Reflexometr\Repositories\RTestRepository;
 use Reflexometr\Repositories\RTestVersionRepository;
 use Reflexometr\Repositories\TagRepository;
@@ -48,6 +49,8 @@ final class AdminRTestController
                     'id' => (int) $v['id'],
                     'version' => (int) $v['version'],
                     'is_active' => (bool) $v['is_active'],
+                    // CR-UI-18 (Sprint 15): is_visible so the Library UI can render the toggle.
+                    'is_visible' => (bool) ($v['is_visible'] ?? true),
                     'created_at' => $v['created_at'],
                     // Raw description content is deliberately omitted here — use the export
                     // endpoint to fetch it (D11 scopes "never raw to client" to the runtime
@@ -130,6 +133,68 @@ final class AdminRTestController
         }
 
         return Response::json(['updated' => true]);
+    }
+
+    /**
+     * SI-15.5 — CR-UI-18: PATCH /admin/r-tests/{slug}/versions/{version}
+     * Body: { "is_visible": bool }. Toggles the version's public visibility.
+     * 200 on success; 404 VERSION_NOT_FOUND if the r-test or version doesn't exist.
+     */
+    public static function patchVersion(Request $request): array
+    {
+        (new AuthService())->requireAdmin($request);
+
+        $slug    = (string) $request->param('slug');
+        $version = (int) $request->param('version');
+
+        $db     = Database::connection();
+        $rTests = new RTestRepository($db);
+        $rTest  = $rTests->findBySlug($slug);
+        if ($rTest === null) {
+            throw new ApiException(ErrorCode::VERSION_NOT_FOUND, 404);
+        }
+
+        $versions   = new RTestVersionRepository($db);
+        $versionRow = $versions->findByTestAndVersion((int) $rTest['id'], $version);
+        if ($versionRow === null) {
+            throw new ApiException(ErrorCode::VERSION_NOT_FOUND, 404);
+        }
+
+        $body      = $request->all();
+        $isVisible = $body['is_visible'] ?? null;
+        if (!is_bool($isVisible)) {
+            throw new ApiException(ErrorCode::VALIDATION_ERROR, 400, ['fields' => ['is_visible']]);
+        }
+
+        $versions->updateVisibility((int) $versionRow['id'], $isVisible);
+        return Response::json(['updated' => true]);
+    }
+
+    /**
+     * SI-15.6 — CR-UI-18: DELETE /admin/r-tests/{slug}
+     * Deletes the r-test and all its versions/data — but only when no results reference it.
+     * 200 { "deleted": true } on success; 409 RTEST_HAS_RESULTS when any result exists.
+     */
+    public static function deleteRTest(Request $request): array
+    {
+        (new AuthService())->requireAdmin($request);
+
+        $slug   = (string) $request->param('slug');
+        $db     = Database::connection();
+        $rTests = new RTestRepository($db);
+        $rTest  = $rTests->findBySlug($slug);
+        if ($rTest === null) {
+            throw new ApiException(ErrorCode::RTEST_NOT_FOUND, 404);
+        }
+
+        $rTestId     = (int) $rTest['id'];
+        $resultCount = (new ResultRepository($db))->countForRTest($rTestId);
+        if ($resultCount > 0) {
+            throw new ApiException(ErrorCode::RTEST_HAS_RESULTS, 409);
+        }
+
+        $rTests->delete($rTestId);
+        return Response::json(['deleted' => true]);
     }
 
     /**

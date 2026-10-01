@@ -55,12 +55,16 @@ CREATE TABLE IF NOT EXISTS r_test_tag_links (
 );
 CREATE INDEX IF NOT EXISTS ix_tag_links_tag ON r_test_tag_links (tag_id);
 
+-- is_visible (CR-UI-18, Sprint 15): admin toggle — when 0 this version is hidden from public
+-- browsing and run-start. Defaults to 1 so all fresh installs start with all versions visible.
+-- SQLite is local-dev/test-only; no upgrade path needed — tests always rebuild from scratch.
 CREATE TABLE IF NOT EXISTS r_test_versions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     r_test_id INTEGER NOT NULL REFERENCES r_tests (id) ON DELETE CASCADE,
     version INTEGER NOT NULL,
     description TEXT NOT NULL,
     is_active INTEGER NOT NULL DEFAULT 1,
+    is_visible INTEGER NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (r_test_id, version)
 );

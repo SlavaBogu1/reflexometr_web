@@ -4,9 +4,8 @@
 Any change lands here first (version bump + changelog entry below), then the ProductOwner briefs
 ClientTeam on the diff (PRODUCT_OWNER_PROCESS.md § Contract Change Workflow).
 
-**Version:** v1.9 (Sprint 14) — CR-TEST-30/32/34/35 (four new visual-battery test types:
-`random-target-pointing`, `choice-reaction-geometry`, `peripheral-reaction`, `temporal-prediction`)
-— see Changelog.
+**Version:** v2.0 (Sprint 15) — CR-TEST-33 (`visual-conflict` test type) + CR-UI-18 (r-test version
+visibility management: `is_visible` toggle, new admin endpoints) — see Changelog.
 
 **Note for ClientTeam:** `client/js/mock-api.js` / `SPRINT1_REPORT.md` (ClientTeam's) list several
 assumed field names and behaviors made against the still-empty v0.1 contract. This document is now
@@ -142,6 +141,10 @@ description (D11) — only metadata (version number, active flag).
 `tag_id` query param is optional (filters the list to r-tests carrying that one tag, among
 possibly several). `category_id` is accepted as a **deprecated alias** for `tag_id` (same
 filtering semantics against the renamed tag model) — prefer `tag_id` in new code.
+**CR-UI-18 (v2.0):** only r-test versions with `is_visible = true` are considered when resolving
+`current_version`/`current_version_id`. An r-test whose active version has `is_visible = false`
+(all versions archived) is **excluded from this list entirely** — it is not included with a `null`
+version pointer.
 
 **CR-TEST-25 (v1.6):** `category_id`/`category_name` (singular FK) is **replaced** by `tags`
 (array, possibly empty — an r-test can carry any number of tags, including zero).
@@ -172,10 +175,14 @@ admin never hand-edits its content, only `r_tests` metadata (name/description/ca
 "Description JSON format" below for what ServerTeam expects inside it.
 
 ### `GET /admin/r-tests`
-200: `[ { "id", "slug", "name", "description", "tags": [{ "id", "name" }, ...], "versions": [{ "id", "version", "is_active", "created_at" }, ...] }, ... ]`
+200: `[ { "id", "slug", "name", "description", "tags": [{ "id", "name" }, ...], "versions": [{ "id", "version", "is_active", "is_visible": bool, "created_at" }, ...] }, ... ]`
 (Raw description content is *not* included here — use the export endpoint.)
 **CR-TEST-25 (v1.6):** `category_id`/`category_name` replaced by `tags` (array, possibly empty) —
 same shape change as the public `GET /r-tests` above.
+**CR-UI-18 (v2.0):** each version entry gains `is_visible` (bool) — the admin Library UI reads
+this to render the visibility toggle state. `true` by default (all pre-Sprint-15 versions remain
+visible). `false` means the version is excluded from public browsing and run-start (see `GET
+/r-tests`, `GET /r-tests/{slug}`, and `POST /r-tests/{slug}/runs` below).
 
 ### `POST /admin/r-tests`
 Creates a new r-test + its v1 version in one call.
@@ -203,6 +210,25 @@ Errors: `RTEST_NOT_FOUND` (404), `RTEST_VERSION_NOT_FOUND` (404)
 Metadata-only edit (name/description/tags) — never touches version content.
 Body: `{ "name"?, "description"?, "tag_ids"?: int[] }`
 200: `{ "updated": true }`
+
+### `DELETE /admin/r-tests/{slug}` (CR-UI-18, v2.0)
+Permanently removes the r-test and all its versions. **Never permitted when any result row exists
+for this r-test** — archive versions (set `is_visible: false` via `PATCH .../versions/{version}`)
+instead of deleting when results exist; preserves historical data.
+200: `{ "deleted": true }` — the r-test, its versions, and all run_token rows are removed (FK
+cascade). No results are ever deleted by this endpoint.
+Errors: `RTEST_NOT_FOUND` (404), `RTEST_HAS_RESULTS` (409 — one or more results reference this
+r-test; the caller must archive rather than delete)
+
+### `PATCH /admin/r-tests/{slug}/versions/{version}` (CR-UI-18, v2.0)
+Toggles the visibility of one specific version of an r-test. An invisible version (`is_visible:
+false`) is excluded from public `GET /r-tests` (its test is omitted if no other version is active
+and visible), `GET /r-tests/{slug}` (returns `current_version: null`), and
+`POST /r-tests/{slug}/runs` (returns `RTEST_NOT_FOUND` 404 rather than starting a run).
+Body: `{ "is_visible": bool }`
+200: `{ "updated": true }`
+Errors: `VERSION_NOT_FOUND` (404 — either the r-test slug or the version number doesn't exist),
+`VALIDATION_ERROR` (400 — `is_visible` is missing or not a boolean)
 **CR-TEST-25 (v1.6):** `category_id?: int|null` replaced by `tag_ids?: int[]`. `tag_ids`, when
 present, **replaces the full tag set** (not additive/merging) — an explicit empty array `[]`
 clears all tags without deleting the r-test itself; **omitting** the key entirely leaves the
@@ -808,6 +834,62 @@ All stat objects carry: `count`, `mean`, `median`, `sd`, `p10`, `p25`, `p50`, `p
 
 ---
 
+---
+
+## Sprint 15 — Visual Conflict test type (CR-TEST-33, v2.0)
+
+### `visual-conflict` (CR-TEST-33, K6)
+
+A custom-KPI test type from the Sprint 15 visual battery. The discriminating field is
+`condition_ratio`. The test consists of a **pretrain phase** (not scored) followed by a
+**measurement phase** (partitioned by condition).
+
+**Description fields:**
+- `trial_count` (int > 0, ≤ MAX_TRIAL_COUNT, required) — measurement-phase trial count
+- `condition_ratio` (object, required) — fractional allocation of measurement trials across
+  three conditions; must have `neutral`, `congruent`, and `conflict` keys (each numeric ≥ 0), and
+  their sum must be **1.0 within ±0.01** float tolerance. Discriminating field for this test family.
+- `pretrain_trial_count` (int ≥ 1, required) — number of practice trials shown before measurement
+- `response_window_ms` (int > 0, required) — per-trial response deadline
+- `phase_transition_display_ms` (int ≥ 0, optional) — duration of the phase-transition display shown
+  between pretrain and measurement
+- `inter_trial_interval_ms` (int ≥ 0, optional) — gap between trials
+- `randomize_delay_range_ms` (`{min,max}`, both ≥ 0, optional) — randomized pre-stimulus delay range
+- `shape_size_px` (int > 0, optional) — rendered shape size in px
+
+**Per-trial result fields** (submitted by the client inside `trials[]`):
+- `phase`: `"pretrain"` | `"measurement"` — pretrain trials are **never included in KPI calculations**
+- `condition`: `"neutral"` | `"congruent"` | `"conflict"` — only meaningful for `phase="measurement"` trials
+- `result`: `"TRUE_RESPONSE"` | `"FALSE_RESPONSE"` | `"MISSED_STIMULUS"`
+- `reaction_time_ms`: float|null — ms from stimulus onset to response (null for non-TRUE_RESPONSE)
+
+**Summary shape** (returned from submit, also stored and returned by history):
+```json
+{
+  "conditions": {
+    "neutral":   { "trial_count": 7, "mean_RT": 280.0, "median_RT": 270.0, "RT_sd": 35.0, "error_rate": 0.0 },
+    "congruent": { "trial_count": 7, "mean_RT": 265.0, "median_RT": 255.0, "RT_sd": 30.0, "error_rate": 0.0 },
+    "conflict":  { "trial_count": 6, "mean_RT": 340.0, "median_RT": 330.0, "RT_sd": 45.0, "error_rate": 0.167 }
+  },
+  "conflict_RT_cost_ms": 60.0,
+  "conflict_error_cost": 0.167,
+  "measurement_trial_count": 20,
+  "total_trials": 30
+}
+```
+- `conditions.*` — per-condition KPIs computed from TRUE_RESPONSE measurement trials only. `trial_count`
+  is the total number of measurement trials in that condition (including errors). `error_rate` = (non-TRUE_RESPONSE
+  measurement trials) / `trial_count` for that condition; null when `trial_count = 0`.
+- `conflict_RT_cost_ms` = conflict `mean_RT` − neutral `mean_RT`; null if either is null.
+- `conflict_error_cost` = conflict `error_rate` − neutral `error_rate`; null if either is null.
+- `measurement_trial_count` = total measurement-phase trials (excludes pretrain).
+- `total_trials` = all submitted trials including pretrain.
+
+**Primary metric** (`primary_metric_ms`): neutral `mean_RT` (the baseline; lower = faster). 0.0 when
+no TRUE_RESPONSE neutral-condition measurement trials.
+
+---
+
 ## Reconciliation notes for ClientTeam
 
 ClientTeam's Sprint 1 work (`client/js/mock-api.js`) was built against the still-empty v0.1
@@ -852,6 +934,33 @@ ProductOwner should schedule one before any of the above can be wired up for rea
 ---
 
 ## Changelog
+
+- v2.0 (2026-10-01) — Sprint 15: **CR-TEST-33** (`visual-conflict`) + **CR-UI-18** (version
+  visibility management). All changes are additive; no existing test type or endpoint shape is
+  broken.
+  1. **CR-TEST-33 — `visual-conflict` custom-KPI test type (K6):** new test family with
+     discriminating field `condition_ratio`. A two-phase test (pretrain, then measurement):
+     pretrain trials are submitted by the client but **excluded from all KPI calculations server-
+     side**. Measurement trials are partitioned by condition (`neutral`/`congruent`/`conflict`),
+     each yielding `mean_RT`, `median_RT`, `RT_sd`, `error_rate`. Two derived cost metrics:
+     `conflict_RT_cost_ms` = conflict mean_RT − neutral mean_RT; `conflict_error_cost` = conflict
+     error_rate − neutral error_rate. Primary metric = neutral mean_RT. New seed file:
+     `visual-conflict.v1.json` (20 measurement trials, 10 pretrain, 33/33/34% condition split).
+     New `ScheduleCompiler` validation: `condition_ratio` values must sum to 1.0 (±0.01);
+     `pretrain_trial_count` ≥ 1; all `_ms` fields non-negative; `trial_count` ≤ MAX_TRIAL_COUNT.
+  2. **CR-UI-18 — version visibility management:** new `is_visible` (bool, default `true`) column
+     on `r_test_versions`. When `false`, the version is archived: excluded from `GET /r-tests`
+     (a test with no visible active version is omitted from the list entirely), `GET /r-tests/{slug}`
+     (returns `current_version: null`), and `POST /r-tests/{slug}/runs` (returns `RTEST_NOT_FOUND`
+     404). New admin endpoints:
+     - `PATCH /admin/r-tests/{slug}/versions/{version}` — toggle `is_visible`. Body: `{ "is_visible": bool }`.
+       200 `{ "updated": true }` | 404 `VERSION_NOT_FOUND` | 400 `VALIDATION_ERROR`.
+     - `DELETE /admin/r-tests/{slug}` — permanently remove an r-test (no results). 200 `{ "deleted": true }`
+       | 404 `RTEST_NOT_FOUND` | 409 `RTEST_HAS_RESULTS` (archive instead).
+     - `GET /admin/r-tests` each version entry gains `is_visible: bool`.
+     Two new error codes: `VERSION_NOT_FOUND` (404), `RTEST_HAS_RESULTS` (409).
+     Schema migration: `ALTER TABLE r_test_versions ADD COLUMN is_visible TINYINT(1) NOT NULL DEFAULT 1`
+     (idempotent, information_schema-guarded — see `server/database/schema.mysql.sql`).
 
 - v1.9 (2026-09-30) — Sprint 14: **CR-TEST-30** (`random-target-pointing`), **CR-TEST-32**
   (`choice-reaction-geometry`), **CR-TEST-34** (`peripheral-reaction`), **CR-TEST-35**
