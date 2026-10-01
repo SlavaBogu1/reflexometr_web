@@ -76,8 +76,19 @@ final class RunService
         $schedule = ScheduleCompiler::compile($description);
 
         $issuedAtMs = Clock::nowMs();
-        $responseAllowance = $schedule['timeout_ms'] ?? self::DEFAULT_RESPONSE_ALLOWANCE_MS;
-        $sumDelays = array_sum(array_column($schedule['trials'], 'delay_ms'));
+        // For custom-KPI schedules (no trials[] array), use inter_trial_interval_ms as the delay
+        // proxy; for classic schedules, sum the resolved per-trial delays as before.
+        if (($schedule['schedule_family'] ?? '') === 'custom-kpi') {
+            $responseAllowance = $schedule['response_timeout_ms']
+                ?? $schedule['response_window_ms']
+                ?? $schedule['prediction_window_ms']
+                ?? self::DEFAULT_RESPONSE_ALLOWANCE_MS;
+            $interTrialMs = (int) ($schedule['inter_trial_interval_ms'] ?? 0);
+            $sumDelays = $schedule['trial_count'] * $interTrialMs;
+        } else {
+            $responseAllowance = $schedule['timeout_ms'] ?? self::DEFAULT_RESPONSE_ALLOWANCE_MS;
+            $sumDelays = array_sum(array_column($schedule['trials'], 'delay_ms'));
+        }
         $ttlMs = max(
             Config::getInt('RUN_TOKEN_TTL_SECONDS', 300) * 1000,
             $sumDelays + $schedule['trial_count'] * $responseAllowance + self::TTL_BUFFER_MS,

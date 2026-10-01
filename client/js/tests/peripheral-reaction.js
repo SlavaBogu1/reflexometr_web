@@ -32,7 +32,6 @@
       var t = Reflx.i18n.t;
       var schedule = runInfo.schedule;
       var settings = runInfo.settings;
-      var scheduleTrials = schedule.trials;
       var trialCount = schedule.trial_count;
       var responseWindowMs = schedule.response_window_ms || schedule.timeout_ms || 2000;
       var responseType = schedule.response_type || "key"; // "key" | "click"
@@ -50,7 +49,8 @@
       // Response key (for "key" mode): use keyboard setting or Space as fallback
       var responseKey = (settings && settings.keyboardKey) || "Space";
 
-      var scheduleIdx = 0;
+      var delayRange = schedule.randomize_delay_range_ms || null;
+      var fixedIti = schedule.inter_trial_interval_ms || 0;
       var validTrials = [];
       var stopped = false;
       var armTimer = null;
@@ -151,10 +151,9 @@
       function armTrial() {
         if (stopped) return;
         if (validTrials.length >= trialCount) { finish(); return; }
-        if (scheduleIdx >= scheduleTrials.length) { finish(); return; }
-
-        var trial = scheduleTrials[scheduleIdx++];
-        var delay = trial.delay_ms;
+        var delay = delayRange
+          ? delayRange.min + Math.floor(Math.random() * (delayRange.max - delayRange.min + 1))
+          : fixedIti;
         var pos = pickPosition(trial);
 
         stimulusAt = null;

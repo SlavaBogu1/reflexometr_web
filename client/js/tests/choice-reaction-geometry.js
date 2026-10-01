@@ -52,7 +52,6 @@
     start: function (container, runInfo, handlers) {
       var t = Reflx.i18n.t;
       var schedule = runInfo.schedule;
-      var scheduleTrials = schedule.trials;
       var trialCount = schedule.trial_count;
       var responseWindowMs = schedule.response_window_ms || schedule.timeout_ms || 3000;
       var keyMapping = schedule.key_mapping || { "triangle": "ArrowLeft", "circle": "ArrowRight" };
@@ -68,7 +67,8 @@
       // Set of all valid response key codes (for detecting wrong-key vs invalid)
       var validKeys = Object.keys(keyToShape);
 
-      var scheduleIdx = 0;
+      var delayRange = schedule.randomize_delay_range_ms || null;
+      var fixedIti = schedule.inter_trial_interval_ms || 0;
       var validTrials = [];
       var stopped = false;
       var armTimer = null;
@@ -127,10 +127,9 @@
       function armTrial() {
         if (stopped) return;
         if (validTrials.length >= trialCount) { finish(); return; }
-        if (scheduleIdx >= scheduleTrials.length) { finish(); return; }
-
-        var trial = scheduleTrials[scheduleIdx++];
-        var delay = trial.delay_ms;
+        var delay = delayRange
+          ? delayRange.min + Math.floor(Math.random() * (delayRange.max - delayRange.min + 1))
+          : fixedIti;
         // Shape for this trial may be pre-resolved by server or randomly drawn client-side
         var trialShape = trial.shape || pickShape();
 

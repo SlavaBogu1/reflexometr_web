@@ -39,7 +39,6 @@
     start: function (container, runInfo, handlers) {
       var t = Reflx.i18n.t;
       var schedule = runInfo.schedule;
-      var scheduleTrials = schedule.trials;
       var trialCount = schedule.trial_count;
 
       var speedPxPerMs = schedule.circle_speed_px_per_ms || 0.3;
@@ -51,7 +50,8 @@
       var circleDiamPx = schedule.circle_diameter_px || 40;
       var circleRadius = circleDiamPx / 2;
 
-      var scheduleIdx = 0;
+      var delayRange = schedule.randomize_delay_range_ms || null;
+      var fixedIti = schedule.inter_trial_interval_ms || 0;
       var validTrials = [];
       var stopped = false;
       var armTimer = null;
@@ -131,10 +131,9 @@
       function armTrial() {
         if (stopped) return;
         if (validTrials.length >= trialCount) { finish(); return; }
-        if (scheduleIdx >= scheduleTrials.length) { finish(); return; }
-
-        var trial = scheduleTrials[scheduleIdx++];
-        var delay = trial.delay_ms;
+        var delay = delayRange
+          ? delayRange.min + Math.floor(Math.random() * (delayRange.max - delayRange.min + 1))
+          : fixedIti;
         // Per-trial speed override from server if provided; else use schedule-level
         var speed = trial.circle_speed_px_per_ms || speedPxPerMs;
 
