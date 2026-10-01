@@ -1,0 +1,10 @@
+{
+  "trial_count": 20,
+  "pretrain_trial_count": 10,
+  "phase_transition_display_ms": 3000,
+  "condition_ratio": { "neutral": 0.33, "congruent": 0.33, "conflict": 0.34 },
+  "response_window_ms": 2000,
+  "inter_trial_interval_ms": 500,
+  "randomize_delay_range_ms": { "min": 500, "max": 2000 },
+  "shape_size_px": 80
+}

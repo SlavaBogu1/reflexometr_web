@@ -32,6 +32,9 @@ final class ErrorCode
     public const RTEST_SLUG_TAKEN = 'RTEST_SLUG_TAKEN';
     public const RTEST_VERSION_NOT_FOUND = 'RTEST_VERSION_NOT_FOUND';
     public const RTEST_VERSION_DUPLICATE = 'RTEST_VERSION_DUPLICATE';
+    // CR-UI-18 (Sprint 15): version visibility management.
+    public const VERSION_NOT_FOUND = 'VERSION_NOT_FOUND';
+    public const RTEST_HAS_RESULTS = 'RTEST_HAS_RESULTS';
     // CR-TEST-25 (Sprint 11): renamed from CATEGORY_NOT_FOUND/CATEGORY_NAME_TAKEN — the
     // r_test_categories -> r_test_tags rename applies to error codes too, ClientTeam briefed via
     // the v1.6 contract diff (no other consumer of the old names existed yet).

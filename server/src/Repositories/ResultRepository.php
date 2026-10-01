@@ -175,4 +175,16 @@ final class ResultRepository
         $stmt = $this->db->prepare('UPDATE results SET excluded_from_own_stats = ? WHERE id = ?');
         $stmt->execute([$excluded ? 1 : 0, $id]);
     }
+
+    /**
+     * CR-UI-18 (Sprint 15): returns the number of result rows that reference any version of the
+     * given r-test. Used by DELETE /admin/r-tests/{slug} to guard against destructive deletes —
+     * the endpoint returns 409 RTEST_HAS_RESULTS if this count > 0, never cascade-deletes.
+     */
+    public function countForRTest(int $rTestId): int
+    {
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM results WHERE r_test_id = ?');
+        $stmt->execute([$rTestId]);
+        return (int) $stmt->fetchColumn();
+    }
 }
