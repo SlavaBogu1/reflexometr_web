@@ -139,22 +139,13 @@
         if (timeoutTimer !== null) { clearTimeout(timeoutTimer); timeoutTimer = null; }
       }
 
-      /** Pick a position for this trial (random from available positions). */
-      function pickPosition(trial) {
-        if (trial.stimulus_position !== undefined) {
-          // Server-resolved position index
-          return positions[trial.stimulus_position % positions.length];
-        }
-        return positions[Math.floor(Math.random() * positions.length)];
-      }
-
       function armTrial() {
         if (stopped) return;
         if (validTrials.length >= trialCount) { finish(); return; }
         var delay = delayRange
           ? delayRange.min + Math.floor(Math.random() * (delayRange.max - delayRange.min + 1))
           : fixedIti;
-        var pos = pickPosition(trial);
+        var pos = positions[Math.floor(Math.random() * positions.length)];
 
         stimulusAt = null;
         stimulusVisible = false;

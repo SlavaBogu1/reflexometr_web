@@ -134,8 +134,7 @@
         var delay = delayRange
           ? delayRange.min + Math.floor(Math.random() * (delayRange.max - delayRange.min + 1))
           : fixedIti;
-        // Per-trial speed override from server if provided; else use schedule-level
-        var speed = trial.circle_speed_px_per_ms || speedPxPerMs;
+        var speed = speedPxPerMs;
 
         drawScene(circleStartX(), false);
         statusEl.textContent = t("test.temporal.armed");

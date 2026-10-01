@@ -130,8 +130,7 @@
         var delay = delayRange
           ? delayRange.min + Math.floor(Math.random() * (delayRange.max - delayRange.min + 1))
           : fixedIti;
-        // Shape for this trial may be pre-resolved by server or randomly drawn client-side
-        var trialShape = trial.shape || pickShape();
+        var trialShape = pickShape();
 
         stimulusAt = null;
         stimulusVisible = false;
