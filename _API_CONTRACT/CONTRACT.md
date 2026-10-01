@@ -4,8 +4,9 @@
 Any change lands here first (version bump + changelog entry below), then the ProductOwner briefs
 ClientTeam on the diff (PRODUCT_OWNER_PROCESS.md § Contract Change Workflow).
 
-**Version:** v1.8 (Sprint 13) — CR-TEST-28 (Circle Collision: resolved closing-speed field,
-timeout-as-null-response, abs-value summary aggregation scoped to this test family) — see Changelog.
+**Version:** v1.9 (Sprint 14) — CR-TEST-30/32/34/35 (four new visual-battery test types:
+`random-target-pointing`, `choice-reaction-geometry`, `peripheral-reaction`, `temporal-prediction`)
+— see Changelog.
 
 **Note for ClientTeam:** `client/js/mock-api.js` / `SPRINT1_REPORT.md` (ClientTeam's) list several
 assumed field names and behaviors made against the still-empty v0.1 contract. This document is now
@@ -605,6 +606,208 @@ originally Sprint 11, tags `visual` + `dynamic`.
 
 ---
 
+## Sprint 14 — Custom-KPI test families (CR-TEST-30/32/34/35, v1.9)
+
+Four new test types use a different client-side interaction model where the client manages its own
+timing and computes per-trial metrics (reaction time, movement time, error, timing error, etc.),
+submitting them directly as a per-trial result object. These descriptions **do not** use
+`inter_stimulus_delay_ms` or `response_channels` — the compiled schedule carries the validated
+description fields verbatim plus `"schedule_family": "custom-kpi"` (no `trials[]` array).
+
+**Detecting a custom-KPI schedule:** `schedule.schedule_family === "custom-kpi"`.
+
+**Run-token issuance** (`POST /r-tests/{slug}/runs`) is identical to existing tests — the server
+validates and returns the compiled schedule. The compiled schedule is the description fields
+(validated and passed through) plus `"schedule_family": "custom-kpi"`.
+
+**Submit** (`POST /r-tests/runs/{token}/submit`) — the `trials` array has exactly `trial_count`
+entries, each with `"index": int (0-based sequential)` plus test-type-specific fields below.
+`stimulus_at` and `responses` fields are accepted but ignored by the server (client implementations
+may include them for internal bookkeeping — they do not affect validation or KPI computation). The
+`dominant_hand` field is accepted but not used in KPI aggregation for these types.
+
+**Validation (D9)** for custom-KPI families: index ordering checked, wall-clock floor checked
+against `trial_count × (inter_trial_interval_ms + 50ms human reaction floor)`. No per-channel
+or timing-gap checks.
+
+**Summary / KPIs** — custom-KPI families return a test-type-specific `summary` (not
+`overall`/`channels`) from submit. Per-test details follow.
+
+---
+
+### `random-target-pointing` (CR-TEST-30, K3)
+
+**Description fields:**
+- `trial_count` (int > 0, ≤ MAX_TRIAL_COUNT, required)
+- `target_diameter_px` (int > 0, required) — circular target diameter; discriminating field for
+  this test family
+- `min_distance_from_prev_px` (int >= 0, optional) — minimum distance between consecutive target
+  centres
+- `response_timeout_ms` (int > 0, required) — per-trial response deadline
+- `inter_trial_interval_ms` (int >= 0, optional) — gap between trials
+- `randomize_delay_range_ms` (`{min,max}`, min <= max, both >= 0, optional) — randomized
+  pre-stimulus delay range
+- `record_trajectory` (bool, optional) — whether mousemove trajectory is recorded
+
+**Per-trial result fields** (submitted by the client inside `trials[]`):
+- `result`: `"TRUE_RESPONSE"` (click inside target within timeout) | `"FALSE_RESPONSE"` (click outside target) | `"MISSED_STIMULUS"` (no click within timeout)
+- `reaction_time_ms`: float|null — ms from stimulus onset to first click (null for non-TRUE_RESPONSE)
+- `movement_time_ms`: float|null — ms from first click to release / end of movement (null if not recorded)
+- `click_error_px`: float|null — Euclidean distance from click point to target centre (null for non-TRUE_RESPONSE)
+- `trajectory_json`: string|null — optional JSON-encoded array of `[t_ms, x, y]` tuples (null if not recorded or `record_trajectory` is false)
+- `quality_flag`: string|null — optional client-assigned quality annotation
+
+**Summary shape** (returned from submit, also stored and returned by history):
+```json
+{
+  "reaction_time_ms": { "count": 12, "mean": 280.0, "median": 265.0, "sd": 42.0, "p10": 220.0, "p25": 248.0, "p50": 265.0, "p75": 310.0, "p90": 345.0, "min": 180.0, "max": 380.0 },
+  "movement_time_ms": { "count": 12, "mean": 350.0, ... },
+  "click_error_px":   { "count": 12, "mean": 8.5, ... },
+  "false_response_rate": 0.067,
+  "missed_stimulus_rate": 0.133,
+  "true_response_count": 12,
+  "total_trials": 15
+}
+```
+All stat objects carry: `count`, `mean`, `median`, `sd`, `p10`, `p25`, `p50`, `p75`, `p90`, `min`, `max` (null for empty sets).
+
+**Primary metric** (`primary_metric_ms`): median `reaction_time_ms` of TRUE_RESPONSE trials (0.0 when no TRUE_RESPONSE trials).
+
+---
+
+### `choice-reaction-geometry` (CR-TEST-32, K5)
+
+**Description fields:**
+- `trial_count` (int > 0, ≤ MAX_TRIAL_COUNT, required)
+- `shapes` (array of ≥1 known values from `["triangle","circle","square","diamond","star"]`,
+  required) — discriminating field for this test family
+- `key_mapping` (object — key per entry in `shapes`, value is the expected keyboard key string,
+  required) — every shape in `shapes` must have a non-empty entry
+- `response_window_ms` (int > 0, required) — per-trial response deadline
+- `inter_trial_interval_ms` (int >= 0, optional)
+- `randomize_delay_range_ms` (`{min,max}`, both >= 0, optional)
+- `shape_size_px` (int > 0, optional)
+- `show_mapping_during_measurement` (bool, optional)
+
+**Per-trial result fields:**
+- `result`: `"TRUE_RESPONSE"` (correct mapped key pressed within window) | `"FALSE_RESPONSE"` (wrong mapped key pressed) | `"MISSED_STIMULUS"` (no key press within window) | `"INVALID_RESPONSE"` (key pressed but not in mapping)
+- `stimulus_shape`: string — the shape shown this trial
+- `response_key`: string|null — the key the user pressed (null for MISSED_STIMULUS)
+- `reaction_time_ms`: float|null — ms from stimulus onset to key press (null for MISSED_STIMULUS)
+- `quality_flag`: string|null
+
+**Summary shape:**
+```json
+{
+  "reaction_time_ms": { "count": 14, "mean": 310.0, "median": 295.0, "sd": 38.0, "p10": ..., "p25": ..., "p50": ..., "p75": ..., "p90": ..., "min": ..., "max": ... },
+  "correct_response_rate": 0.70,
+  "wrong_response_rate": 0.10,
+  "missed_response_rate": 0.15,
+  "correct_count": 14,
+  "total_trials": 20
+}
+```
+`reaction_time_ms` stats are computed from **TRUE_RESPONSE (correct) trials only** — never averaged with error trials. `INVALID_RESPONSE` trials are counted in `total_trials` but not in any rate field above (they do not increment `correct_count`, `wrong_response_rate`, or `missed_response_rate` — clients should handle this gracefully).
+
+**Primary metric** (`primary_metric_ms`): mean `reaction_time_ms` of correct-response trials (0.0 when no correct trials).
+
+---
+
+### `peripheral-reaction` (CR-TEST-34, K7)
+
+**Description fields:**
+- `trial_count` (int > 0, ≤ MAX_TRIAL_COUNT, required)
+- `positions` (array of ≥1 objects, required) — discriminating field for this test family. Each
+  object: `{ "label"?: string (non-empty, optional), "angle_deg": number in [0,360], "eccentricity_px": number > 0 }`
+- `stimulus_diameter_px` (int > 0, optional)
+- `response_window_ms` (int > 0, required)
+- `inter_trial_interval_ms` (int >= 0, optional)
+- `randomize_delay_range_ms` (`{min,max}`, both >= 0, optional)
+- `response_type`: `"key"` | `"click"` (optional, default `"key"`)
+
+**Per-trial result fields:**
+- `result`: `"TRUE_RESPONSE"` | `"FALSE_RESPONSE"` | `"MISSED_STIMULUS"`
+- `stimulus_position_label`: string — label of the position shown (from `positions[].label`)
+- `stimulus_angle_deg`: number — angle of the stimulus
+- `stimulus_eccentricity_px`: number — eccentricity of the stimulus
+- `reaction_time_ms`: float|null — ms from stimulus onset to response (null for non-TRUE_RESPONSE)
+- `quality_flag`: string|null
+
+**Summary shape:**
+```json
+{
+  "reaction_time_ms": { "count": 18, "mean": 290.0, "median": 280.0, "sd": 35.0, "p10": ..., "p25": ..., "p50": ..., "p75": ..., "p90": ..., "min": ..., "max": ... },
+  "false_response_rate": 0.05,
+  "missed_stimulus_rate": 0.10,
+  "true_response_count": 18,
+  "total_trials": 20,
+  "per_position": {
+    "left":  { "count": 5, "mean": 310.0, ... },
+    "right": { "count": 5, "mean": 270.0, ... }
+  }
+}
+```
+`per_position` is only present when at least one position has **≥ 3** TRUE_RESPONSE trials; positions below that threshold are omitted from the map (not an error — just no per-position stats yet).
+
+**Primary metric** (`primary_metric_ms`): mean overall `reaction_time_ms` (0.0 when no TRUE_RESPONSE trials).
+
+---
+
+### `temporal-prediction` (CR-TEST-35, K8)
+
+**Description fields:**
+- `trial_count` (int > 0, ≤ MAX_TRIAL_COUNT, required)
+- `circle_speed_px_per_ms` (float > 0, required) — discriminating field for this test family;
+  constant speed of the moving circle
+- `target_line_x_ratio` (float in (0,1), required) — x-position of the target line as a fraction
+  of stage width
+- `start_x_ratio` (float in (0,1) and strictly < `target_line_x_ratio`, required) — starting
+  x-position of the circle as a fraction of stage width
+- `prediction_window_ms` (int > 0, required) — window around arrival time counted as TRUE_RESPONSE
+- `miss_tolerance_px` (int > 0, optional) — how many px past the target line before MISSED_STIMULUS
+  is recorded if no click
+- `disappear_before_target_px` (int >= 0, optional, default 0) — circle becomes invisible when
+  this many px from the target line (0 = always visible)
+- `inter_trial_interval_ms` (int >= 0, optional)
+- `circle_diameter_px` (int > 0, optional)
+
+**Per-trial result fields:**
+- `result`: `"TRUE_RESPONSE"` (click within `prediction_window_ms`) | `"FALSE_RESPONSE"` (click outside window) | `"MISSED_STIMULUS"` (circle passed target by `miss_tolerance_px` with no click)
+- `timing_error_ms`: float (signed) — ms between the user's click and the circle's predicted
+  arrival at the target line; **negative** = clicked early (before arrival), **positive** = clicked
+  late (after arrival)
+- `absolute_timing_error_ms`: float — `abs(timing_error_ms)`
+- `spatial_error_px`: float — pixel distance between circle centre and target line at click time
+- `circle_visible_at_click`: bool — whether the circle was visible when the user clicked
+  (false when `disappear_before_target_px > 0` and circle had already disappeared)
+- `quality_flag`: string|null
+
+**Summary shape:**
+```json
+{
+  "timing_error_ms": {
+    "count": 13,
+    "mean_signed": -12.0,
+    "mean_abs": 55.0,
+    "median_abs": 48.0,
+    "sd": 38.0,
+    "early_pct": 46.2,
+    "late_pct": 38.5
+  },
+  "false_response_rate": 0.067,
+  "missed_stimulus_rate": 0.133,
+  "true_response_count": 13,
+  "total_trials": 15,
+  "visible_circle":  { "count": 8, "mean_signed": -5.0, "mean_abs": 42.0, "median_abs": 40.0, "sd": 28.0, "early_pct": 50.0, "late_pct": 37.5 },
+  "hidden_circle":   { "count": 5, "mean_signed": -23.0, "mean_abs": 75.0, "median_abs": 68.0, "sd": 50.0, "early_pct": 40.0, "late_pct": 40.0 }
+}
+```
+`visible_circle`/`hidden_circle` are only present when **both** states occur in the session (i.e. the description's `disappear_before_target_px > 0` and the user clicked both before and after the circle disappeared). `timing_error_ms.early_pct` + `late_pct` do not necessarily sum to 100 — the remainder are trials where `timing_error_ms == 0` exactly.
+
+**Primary metric** (`primary_metric_ms`): `timing_error_ms.mean_abs` (0.0 when no TRUE_RESPONSE trials).
+
+---
+
 ## Reconciliation notes for ClientTeam
 
 ClientTeam's Sprint 1 work (`client/js/mock-api.js`) was built against the still-empty v0.1
@@ -650,6 +853,34 @@ ProductOwner should schedule one before any of the above can be wired up for rea
 
 ## Changelog
 
+- v1.9 (2026-09-30) — Sprint 14: **CR-TEST-30** (`random-target-pointing`), **CR-TEST-32**
+  (`choice-reaction-geometry`), **CR-TEST-34** (`peripheral-reaction`), **CR-TEST-35**
+  (`temporal-prediction`) — four new visual-battery test types (K3/K5/K7/K8). All changes are
+  purely additive; no existing test type's schedule, submission, or summary shape is affected. Key
+  design decisions:
+  1. **Custom-KPI schedule family** — all four new types use a new client-interaction model: the
+     client manages its own trial timing and computes per-trial metrics, submitting them as a
+     structured `trials[]` object. Their descriptions do **not** carry `inter_stimulus_delay_ms` or
+     `response_channels`; the compiled schedule carries validated description fields verbatim plus
+     `"schedule_family": "custom-kpi"` (no `trials[]` array). Detected by the presence of a
+     discriminating field: `target_diameter_px` / `shapes` / `positions` /
+     `circle_speed_px_per_ms` respectively.
+  2. **Submit validation (D9)** for custom-KPI families: index-ordering and wall-clock floor only —
+     no per-channel or timing-gap checks (not applicable to this interaction model).
+  3. **Per-test KPI sets** (see "Sprint 14 — Custom-KPI test families" section above for full
+     shapes):
+     - `random-target-pointing`: RT/movement/error stats for TRUE_RESPONSE only; false/missed rates.
+     - `choice-reaction-geometry`: RT stats for correct (TRUE_RESPONSE) trials only; correct/wrong/
+       missed response rates. FALSE_RESPONSE never bleeds into RT mean.
+     - `peripheral-reaction`: overall RT stats; per-position RT when ≥3 TRUE_RESPONSE trials at
+       that position; missed/false rates.
+     - `temporal-prediction`: signed timing-error stats (mean signed, mean abs, median abs, SD,
+       early %, late %); per-visibility breakdown when both visible and hidden trials occur.
+  4. **Seed files**: `random-target-pointing.v1.json` (15 trials, 80px target, 3000ms timeout),
+     `choice-reaction-geometry.v1.json` (20 trials, triangle/circle, 2000ms window),
+     `peripheral-reaction.v1.json` (20 trials, 8 positions × 200px eccentricity, key response),
+     `temporal-prediction.v1.json` (15 trials, 0.3 px/ms speed, always-visible). No existing seed
+     modified.
 - v1.8 (2026-09-23) — Sprint 13: **CR-TEST-28** (Circle Collision: full-stage travel, timeout-based
   stop, real distance-based KPI — ServerTeam half; supersedes CR-TEST-26's shipped
   motion-continuation behavior, see `REQUIREMENTS/BACKLOG.md` for the conflict verdict). Three

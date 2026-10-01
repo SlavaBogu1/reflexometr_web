@@ -1,0 +1,9 @@
+{
+  "trial_count": 15,
+  "target_diameter_px": 80,
+  "min_distance_from_prev_px": 100,
+  "response_timeout_ms": 3000,
+  "inter_trial_interval_ms": 500,
+  "randomize_delay_range_ms": { "min": 500, "max": 2000 },
+  "record_trajectory": false
+}

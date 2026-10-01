@@ -24,6 +24,21 @@ use Reflexometr\Support\Rand;
  *   "false_start_buffer": int >= 0 | omitted (defaults to DEFAULT_FALSE_START_BUFFER)
  * }
  *
+ * Sprint 14 (K3/K5/K7/K8) new test families — four new test types that use a different client-
+ * side interaction model where the client computes per-trial metrics (reaction time, movement
+ * time, error, timing error, etc.) and submits them directly. These descriptions do NOT carry
+ * inter_stimulus_delay_ms or response_channels (the client manages its own timing), so they
+ * cannot share the classic compiled-trials-array approach. Detection is by the presence of their
+ * own discriminating description fields:
+ *   - random-target-pointing  → presence of "target_diameter_px"
+ *   - choice-reaction-geometry → presence of "shapes"
+ *   - peripheral-reaction      → presence of "positions"
+ *   - temporal-prediction      → presence of "circle_speed_px_per_ms"
+ * Their compiled schedule carries schedule_family = "custom-kpi", trial_count, and the validated
+ * description fields verbatim (no per-trial resolution is needed — no random delays to draw).
+ * RunService and ResultSummaryService branch on schedule_family to apply appropriate validation
+ * and aggregation for these types.
+ *
  * CR-TEST-23 (Sprint 11, Circle Collision Simple) adds three optional fields, all resolved into
  * the compiled schedule exactly like inter_stimulus_delay_ms already was — concrete per-trial
  * numbers only, never the raw min/max range itself (D11):
@@ -113,6 +128,26 @@ final class ScheduleCompiler
     /** @param array<string,mixed> $description @throws ApiException */
     public static function validateDescription(array $description): void
     {
+        // Sprint 14 (K3/K5/K7/K8): detect new custom-KPI test families by their discriminating
+        // fields and route to their own validators before touching classic required fields.
+        if (array_key_exists('target_diameter_px', $description)) {
+            self::validateRandomTargetPointing($description);
+            return;
+        }
+        if (array_key_exists('shapes', $description)) {
+            self::validateChoiceReactionGeometry($description);
+            return;
+        }
+        if (array_key_exists('positions', $description)) {
+            self::validatePeripheralReaction($description);
+            return;
+        }
+        if (array_key_exists('circle_speed_px_per_ms', $description)) {
+            self::validateTemporalPrediction($description);
+            return;
+        }
+
+        // --- Classic stimulus/response family ---
         $errors = [];
 
         $trialCount = $description['trial_count'] ?? null;
@@ -194,6 +229,305 @@ final class ScheduleCompiler
         }
     }
 
+    // -------------------------------------------------------------------------
+    // Sprint 14 (K3/K5/K7/K8) — custom-KPI test family validators
+    // -------------------------------------------------------------------------
+
+    /**
+     * CR-TEST-30 — `random-target-pointing` description validation.
+     * Fields: target_diameter_px (> 0), min_distance_from_prev_px (>= 0), trial_count (<=
+     * MAX_TRIAL_COUNT), response_timeout_ms (> 0), inter_trial_interval_ms (>= 0),
+     * randomize_delay_range_ms.min/.max (min <= max, both >= 0), record_trajectory (bool).
+     * @param array<string,mixed> $description @throws ApiException
+     */
+    private static function validateRandomTargetPointing(array $description): void
+    {
+        $errors = [];
+
+        $trialCount = $description['trial_count'] ?? null;
+        if (!is_int($trialCount) || $trialCount < 1 || $trialCount > self::MAX_TRIAL_COUNT) {
+            $errors[] = 'trial_count';
+        }
+
+        $diameter = $description['target_diameter_px'] ?? null;
+        if (!is_int($diameter) || $diameter < 1) {
+            $errors[] = 'target_diameter_px';
+        }
+
+        if (array_key_exists('min_distance_from_prev_px', $description)) {
+            $minDist = $description['min_distance_from_prev_px'];
+            if (!is_int($minDist) || $minDist < 0) {
+                $errors[] = 'min_distance_from_prev_px';
+            }
+        }
+
+        $timeout = $description['response_timeout_ms'] ?? null;
+        if (!is_int($timeout) || $timeout < 1) {
+            $errors[] = 'response_timeout_ms';
+        }
+
+        if (array_key_exists('inter_trial_interval_ms', $description)) {
+            $iti = $description['inter_trial_interval_ms'];
+            if (!is_int($iti) || $iti < 0) {
+                $errors[] = 'inter_trial_interval_ms';
+            }
+        }
+
+        if (array_key_exists('randomize_delay_range_ms', $description)) {
+            if (!self::isValidIntRange($description['randomize_delay_range_ms'], 0)) {
+                $errors[] = 'randomize_delay_range_ms';
+            }
+        }
+
+        if (array_key_exists('record_trajectory', $description)) {
+            if (!is_bool($description['record_trajectory'])) {
+                $errors[] = 'record_trajectory';
+            }
+        }
+
+        if ($errors !== []) {
+            throw new ApiException(ErrorCode::VALIDATION_ERROR, 400, ['fields' => array_values(array_unique($errors))]);
+        }
+    }
+
+    /**
+     * CR-TEST-32 — `choice-reaction-geometry` description validation.
+     * Fields: shapes (non-empty array of known values), key_mapping (object with entry for every
+     * shape), trial_count (<= MAX_TRIAL_COUNT), response_window_ms (> 0), inter_trial_interval_ms
+     * (>= 0), randomize_delay_range_ms, shape_size_px (> 0), show_mapping_during_measurement (bool).
+     * @param array<string,mixed> $description @throws ApiException
+     */
+    private static function validateChoiceReactionGeometry(array $description): void
+    {
+        $errors = [];
+
+        $trialCount = $description['trial_count'] ?? null;
+        if (!is_int($trialCount) || $trialCount < 1 || $trialCount > self::MAX_TRIAL_COUNT) {
+            $errors[] = 'trial_count';
+        }
+
+        $shapes = $description['shapes'] ?? null;
+        $validShapes = ['triangle', 'circle', 'square', 'diamond', 'star'];
+        if (
+            !is_array($shapes)
+            || count($shapes) < 1
+            || array_filter($shapes, static fn ($s) => !is_string($s) || !in_array($s, $validShapes, true)) !== []
+        ) {
+            $errors[] = 'shapes';
+            // If shapes is invalid we can't validate key_mapping against it, so mark both and bail.
+            $errors[] = 'key_mapping';
+        } else {
+            $keyMapping = $description['key_mapping'] ?? null;
+            if (!is_array($keyMapping)) {
+                $errors[] = 'key_mapping';
+            } else {
+                // Every shape in $shapes must have a non-empty string key in key_mapping.
+                foreach ($shapes as $shape) {
+                    if (!array_key_exists($shape, $keyMapping) || !is_string($keyMapping[$shape]) || $keyMapping[$shape] === '') {
+                        $errors[] = 'key_mapping';
+                        break;
+                    }
+                }
+            }
+        }
+
+        $responseWindow = $description['response_window_ms'] ?? null;
+        if (!is_int($responseWindow) || $responseWindow < 1) {
+            $errors[] = 'response_window_ms';
+        }
+
+        if (array_key_exists('inter_trial_interval_ms', $description)) {
+            $iti = $description['inter_trial_interval_ms'];
+            if (!is_int($iti) || $iti < 0) {
+                $errors[] = 'inter_trial_interval_ms';
+            }
+        }
+
+        if (array_key_exists('randomize_delay_range_ms', $description)) {
+            if (!self::isValidIntRange($description['randomize_delay_range_ms'], 0)) {
+                $errors[] = 'randomize_delay_range_ms';
+            }
+        }
+
+        if (array_key_exists('shape_size_px', $description)) {
+            $size = $description['shape_size_px'];
+            if (!is_int($size) || $size < 1) {
+                $errors[] = 'shape_size_px';
+            }
+        }
+
+        if (array_key_exists('show_mapping_during_measurement', $description)) {
+            if (!is_bool($description['show_mapping_during_measurement'])) {
+                $errors[] = 'show_mapping_during_measurement';
+            }
+        }
+
+        if ($errors !== []) {
+            throw new ApiException(ErrorCode::VALIDATION_ERROR, 400, ['fields' => array_values(array_unique($errors))]);
+        }
+    }
+
+    /**
+     * CR-TEST-34 — `peripheral-reaction` description validation.
+     * Fields: positions (non-empty array, each with angle_deg in [0,360] and eccentricity_px > 0,
+     * and an optional label string), stimulus_diameter_px (> 0), trial_count (<= MAX_TRIAL_COUNT),
+     * response_window_ms (> 0), inter_trial_interval_ms (>= 0), randomize_delay_range_ms,
+     * response_type ("key" | "click").
+     * @param array<string,mixed> $description @throws ApiException
+     */
+    private static function validatePeripheralReaction(array $description): void
+    {
+        $errors = [];
+
+        $trialCount = $description['trial_count'] ?? null;
+        if (!is_int($trialCount) || $trialCount < 1 || $trialCount > self::MAX_TRIAL_COUNT) {
+            $errors[] = 'trial_count';
+        }
+
+        $positions = $description['positions'] ?? null;
+        if (!is_array($positions) || count($positions) < 1) {
+            $errors[] = 'positions';
+        } else {
+            foreach ($positions as $pos) {
+                if (!is_array($pos)) {
+                    $errors[] = 'positions';
+                    break;
+                }
+                $angle = $pos['angle_deg'] ?? null;
+                $ecc   = $pos['eccentricity_px'] ?? null;
+                if (
+                    (!is_int($angle) && !is_float($angle))
+                    || $angle < 0 || $angle > 360
+                    || (!is_int($ecc) && !is_float($ecc))
+                    || $ecc <= 0
+                ) {
+                    $errors[] = 'positions';
+                    break;
+                }
+                // label is optional; if present must be a non-empty string
+                if (array_key_exists('label', $pos) && (!is_string($pos['label']) || $pos['label'] === '')) {
+                    $errors[] = 'positions';
+                    break;
+                }
+            }
+        }
+
+        if (array_key_exists('stimulus_diameter_px', $description)) {
+            $diam = $description['stimulus_diameter_px'];
+            if (!is_int($diam) || $diam < 1) {
+                $errors[] = 'stimulus_diameter_px';
+            }
+        }
+
+        $responseWindow = $description['response_window_ms'] ?? null;
+        if (!is_int($responseWindow) || $responseWindow < 1) {
+            $errors[] = 'response_window_ms';
+        }
+
+        if (array_key_exists('inter_trial_interval_ms', $description)) {
+            $iti = $description['inter_trial_interval_ms'];
+            if (!is_int($iti) || $iti < 0) {
+                $errors[] = 'inter_trial_interval_ms';
+            }
+        }
+
+        if (array_key_exists('randomize_delay_range_ms', $description)) {
+            if (!self::isValidIntRange($description['randomize_delay_range_ms'], 0)) {
+                $errors[] = 'randomize_delay_range_ms';
+            }
+        }
+
+        if (array_key_exists('response_type', $description)) {
+            $rt = $description['response_type'];
+            if (!in_array($rt, ['key', 'click'], true)) {
+                $errors[] = 'response_type';
+            }
+        }
+
+        if ($errors !== []) {
+            throw new ApiException(ErrorCode::VALIDATION_ERROR, 400, ['fields' => array_values(array_unique($errors))]);
+        }
+    }
+
+    /**
+     * CR-TEST-35 — `temporal-prediction` description validation.
+     * Fields: circle_speed_px_per_ms (> 0), target_line_x_ratio in (0,1),
+     * start_x_ratio in (0,1) and < target_line_x_ratio, prediction_window_ms (> 0),
+     * miss_tolerance_px (> 0), disappear_before_target_px (>= 0),
+     * trial_count (<= MAX_TRIAL_COUNT), inter_trial_interval_ms (>= 0), circle_diameter_px (> 0).
+     * @param array<string,mixed> $description @throws ApiException
+     */
+    private static function validateTemporalPrediction(array $description): void
+    {
+        $errors = [];
+
+        $trialCount = $description['trial_count'] ?? null;
+        if (!is_int($trialCount) || $trialCount < 1 || $trialCount > self::MAX_TRIAL_COUNT) {
+            $errors[] = 'trial_count';
+        }
+
+        $speed = $description['circle_speed_px_per_ms'] ?? null;
+        if (!is_float($speed) && !is_int($speed)) {
+            $errors[] = 'circle_speed_px_per_ms';
+        } elseif ((float) $speed <= 0) {
+            $errors[] = 'circle_speed_px_per_ms';
+        }
+
+        $targetRatio = $description['target_line_x_ratio'] ?? null;
+        if ((!is_float($targetRatio) && !is_int($targetRatio)) || (float) $targetRatio <= 0 || (float) $targetRatio >= 1) {
+            $errors[] = 'target_line_x_ratio';
+        }
+
+        $startRatio = $description['start_x_ratio'] ?? null;
+        if ((!is_float($startRatio) && !is_int($startRatio)) || (float) $startRatio <= 0 || (float) $startRatio >= 1) {
+            $errors[] = 'start_x_ratio';
+        }
+
+        // start_x_ratio must be strictly less than target_line_x_ratio.
+        if (!in_array('start_x_ratio', $errors, true) && !in_array('target_line_x_ratio', $errors, true)) {
+            if ((float) $startRatio >= (float) $targetRatio) {
+                $errors[] = 'start_x_ratio';
+            }
+        }
+
+        $predWindow = $description['prediction_window_ms'] ?? null;
+        if (!is_int($predWindow) || $predWindow < 1) {
+            $errors[] = 'prediction_window_ms';
+        }
+
+        if (array_key_exists('miss_tolerance_px', $description)) {
+            $missTol = $description['miss_tolerance_px'];
+            if (!is_int($missTol) || $missTol < 1) {
+                $errors[] = 'miss_tolerance_px';
+            }
+        }
+
+        if (array_key_exists('disappear_before_target_px', $description)) {
+            $disappear = $description['disappear_before_target_px'];
+            if (!is_int($disappear) || $disappear < 0) {
+                $errors[] = 'disappear_before_target_px';
+            }
+        }
+
+        if (array_key_exists('inter_trial_interval_ms', $description)) {
+            $iti = $description['inter_trial_interval_ms'];
+            if (!is_int($iti) || $iti < 0) {
+                $errors[] = 'inter_trial_interval_ms';
+            }
+        }
+
+        if (array_key_exists('circle_diameter_px', $description)) {
+            $diam = $description['circle_diameter_px'];
+            if (!is_int($diam) || $diam < 1) {
+                $errors[] = 'circle_diameter_px';
+            }
+        }
+
+        if ($errors !== []) {
+            throw new ApiException(ErrorCode::VALIDATION_ERROR, 400, ['fields' => array_values(array_unique($errors))]);
+        }
+    }
+
     /**
      * CR-TEST-24 (Circle Collision Complex): { "start_speed_px_per_s": {min,max}, "mid_speed_px_per_s": {min,max},
      * "end_speed_px_per_s": {min,max}, "travel_distance_px": int > 0 } — three resolved waypoint
@@ -243,6 +577,17 @@ final class ScheduleCompiler
     public static function compile(array $description): array
     {
         self::validateDescription($description);
+
+        // Sprint 14 (K3/K5/K7/K8): custom-KPI test families — no per-trial delay resolution
+        // needed; the description IS the schedule (the client handles its own timing).
+        if (
+            array_key_exists('target_diameter_px', $description)
+            || array_key_exists('shapes', $description)
+            || array_key_exists('positions', $description)
+            || array_key_exists('circle_speed_px_per_ms', $description)
+        ) {
+            return array_merge($description, ['schedule_family' => 'custom-kpi']);
+        }
 
         $trialCount = (int) $description['trial_count'];
         $bufferTrials = (int) ($description['false_start_buffer'] ?? self::DEFAULT_FALSE_START_BUFFER);

@@ -1,0 +1,11 @@
+{
+  "trial_count": 15,
+  "circle_speed_px_per_ms": 0.3,
+  "target_line_x_ratio": 0.85,
+  "start_x_ratio": 0.05,
+  "prediction_window_ms": 200,
+  "miss_tolerance_px": 30,
+  "disappear_before_target_px": 0,
+  "inter_trial_interval_ms": 500,
+  "circle_diameter_px": 40
+}
