@@ -72,7 +72,8 @@
     "random-target-pointing": "Separating visual reaction from physical pointing movement reveals whether slowdowns come from perceiving the stimulus or from executing the movement — a useful distinction for tracking fine motor coordination alongside raw detection speed.",
     "choice-reaction-geometry": "Adding a discrimination and selection stage to the reaction task more closely models real-world decision-making speed than pure detection — the gap between your correct-response RT and simple RT reflects the cognitive cost of the choice.",
     "peripheral-reaction": "The ability to respond quickly to stimuli outside the focus of attention is a distinct skill from central-focus reaction — relevant wherever broad-field awareness matters, from driving to sports.",
-    "temporal-prediction": "Predicting when a moving object will arrive at a known point requires internal time-estimation rather than simple reaction — a skill that varies independently from detection-based RT and can be tracked and improved over time."
+    "temporal-prediction": "Predicting when a moving object will arrive at a known point requires internal time-estimation rather than simple reaction — a skill that varies independently from detection-based RT and can be tracked and improved over time.",
+    "visual-conflict": "When color and shape give conflicting cues — one pointing left, the other right — the brain must suppress the more automatic (color) response and apply the learned rule (shape). The conflict cost, the RT gap between conflict and neutral trials, reflects the cognitive load of that suppression."
   };
   function renderWhyItMatters() {
     var el = document.getElementById("desc-why-it-matters");
@@ -315,13 +316,14 @@
     });
   }
 
-  /** Sprint 14: map the four new test slugs to their own kind names for result rendering. */
+  /** Sprint 14/15: map test slugs to their own kind names for result rendering. */
   function kindForSlug(s) {
     if (s === "two-hand-reaction") return "two-hand";
     if (s === "random-target-pointing") return "random-target";
     if (s === "choice-reaction-geometry") return "choice-geometry";
     if (s === "peripheral-reaction") return "peripheral";
     if (s === "temporal-prediction") return "temporal";
+    if (s === "visual-conflict") return "visual-conflict";
     return "simple";
   }
 
@@ -609,6 +611,52 @@
       if (visibleRTs.length && invisibleRTs.length) {
         row(t("test.temporal.result.abs_error_visible"), fmtMs(avg(visibleRTs)));
         row(t("test.temporal.result.abs_error_invisible"), fmtMs(avg(invisibleRTs)));
+      }
+
+    } else if (last.kind === "visual-conflict") {
+      // CR-TEST-33 result display (CI-15.2) — measurement phase only; pretrain not shown.
+      // Per-condition RT and error rate side by side: neutral / congruent / conflict.
+      var CONDITIONS = ["neutral", "congruent", "conflict"];
+      var condRTs = { neutral: [], congruent: [], conflict: [] };
+      var condErrors = { neutral: 0, congruent: 0, conflict: 0 };
+      var condTotal = { neutral: 0, congruent: 0, conflict: 0 };
+
+      last.trials.forEach(function (tr) {
+        var d = tr.trial_data;
+        if (!d || d.phase !== "measurement") return;
+        var cond = d.condition;
+        if (!cond || !(cond in condRTs)) return;
+        condTotal[cond]++;
+        if (d.result === "TRUE_RESPONSE" && isNum(d.reaction_time_ms)) {
+          condRTs[cond].push(d.reaction_time_ms);
+        } else if (d.result === "FALSE_RESPONSE" || d.result === "MISSED_STIMULUS") {
+          condErrors[cond]++;
+        }
+      });
+
+      CONDITIONS.forEach(function (cond) {
+        var labelKey = "result.visual_conflict." + cond;
+        var label = t(labelKey);
+        var meanRt = condRTs[cond].length ? avg(condRTs[cond]) : null;
+        var errRate = condTotal[cond] > 0 ? Math.round((condErrors[cond] / condTotal[cond]) * 100) : 0;
+        row(label + " RT", fmtMs(meanRt));
+        row(label + " errors", condTotal[cond] > 0 ? condErrors[cond] + " / " + condTotal[cond] + " (" + errRate + "%)" : "—");
+      });
+
+      // Conflict cost: signed delta of conflict vs neutral RT and error rate
+      var neutralMean = condRTs.neutral.length ? avg(condRTs.neutral) : null;
+      var conflictMean = condRTs.conflict.length ? avg(condRTs.conflict) : null;
+      if (neutralMean !== null && conflictMean !== null) {
+        var rtDelta = conflictMean - neutralMean;
+        var sign = rtDelta >= 0 ? "+" : "";
+        row(t("result.visual_conflict.conflict_cost") + " RT", sign + Reflx.i18n.formatNumber(Math.round(rtDelta), { maximumFractionDigits: 0 }) + " ms");
+      }
+      var neutralErrRate = condTotal.neutral > 0 ? condErrors.neutral / condTotal.neutral : null;
+      var conflictErrRate = condTotal.conflict > 0 ? condErrors.conflict / condTotal.conflict : null;
+      if (neutralErrRate !== null && conflictErrRate !== null) {
+        var errDelta = Math.round((conflictErrRate - neutralErrRate) * 100);
+        var errSign = errDelta >= 0 ? "+" : "";
+        row(t("result.visual_conflict.conflict_cost") + " errors", errSign + errDelta + "%");
       }
 
     } else {

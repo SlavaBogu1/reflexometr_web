@@ -76,6 +76,15 @@
       deviceHint: function () {
         return { key: "test.temporal.header_devices", params: {} };
       }
+    },
+    // CR-TEST-33: Visual Conflict (K6) — keyboard arrow keys; two-phase state machine
+    // (pretrain: respond to color; measurement: respond to shape, ignore color).
+    "visual-conflict": {
+      prefix: "test.visual_conflict",
+      headerStimulusKey: "test.visual_conflict.header.stimulus",
+      deviceHint: function () {
+        return { key: "test.visual_conflict.header.devices", params: {} };
+      }
     }
   };
 })(window);

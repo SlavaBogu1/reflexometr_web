@@ -54,16 +54,65 @@
     var tbody = document.getElementById("rtests-tbody");
     tbody.innerHTML = "";
     state.rtests.forEach(function (r) {
-      var currentV = r.versions.slice().sort(function (a, b) { return b.version - a.version; })[0];
+      // Sort versions newest-first for display
+      var sortedVersions = r.versions.slice().sort(function (a, b) { return b.version - a.version; });
+      var currentV = sortedVersions[0];
+
+      // Build version rows with Archive/Restore toggle (CI-15.4)
+      var versionRowsEl = Reflx.util.el("td", {});
+      sortedVersions.forEach(function (v) {
+        var isVisible = v.is_visible !== false; // default true if not present
+        var vRow = Reflx.util.el("div", { class: "lib-version-row" + (isVisible ? "" : " lib-version-dimmed") }, [
+          Reflx.util.el("span", { class: "chip version" }, [
+            "v" + v.version + (isVisible ? "" : " " + t("library.version.archived_label"))
+          ]),
+          " ",
+          Reflx.util.el("button", { class: "btn secondary small", onclick: (function (rslug, ver, vis) {
+            return function () {
+              Reflx.util.hideBanner("library-error");
+              api.patchRTestVersion(rslug, ver, { is_visible: !vis }).then(function (res) {
+                if (!res.ok) { reportError(res); return; }
+                loadAll();
+              });
+            };
+          })(r.slug, v.version, isVisible) }, [isVisible ? t("library.version.archive") : t("library.version.restore")]),
+          " ",
+          Reflx.util.el("button", { class: "btn secondary small", onclick: (function (rslug, ver) {
+            return function () { doExport(rslug, ver); };
+          })(r.slug, v.version) }, [t("common.export")]),
+          " ",
+          Reflx.util.el("button", { class: "btn secondary small", onclick: (function (rslug, ver) {
+            return function () { selectVersion(r, v); };
+          })(r.slug, v.version) }, [t("common.view")])
+        ]);
+        versionRowsEl.appendChild(vRow);
+      });
+
+      // Delete r-test button (CI-15.5)
+      var deleteBtn = Reflx.util.el("button", { class: "btn danger small", onclick: (function (rslug, rname) {
+        return function () {
+          if (!confirm(t("library.rtest.delete_confirm"))) return;
+          Reflx.util.hideBanner("library-error");
+          api.deleteRTest(rslug).then(function (res) {
+            if (!res.ok) {
+              if (res.code === "RTEST_HAS_RESULTS") {
+                Reflx.util.showBanner("library-error", t("library.rtest.delete_has_results"));
+              } else {
+                reportError(res);
+              }
+              return;
+            }
+            loadAll();
+          });
+        };
+      })(r.slug, r.name) }, [t("library.rtest.delete")]);
+
       var tr = Reflx.util.el("tr", {}, [
         Reflx.util.el("td", {}, [r.name]),
         Reflx.util.el("td", {}, [Reflx.util.el("span", { class: "chip" }, [categoryLabel(r)])]),
         Reflx.util.el("td", {}, [currentV ? Reflx.util.el("span", { class: "chip version" }, ["v" + currentV.version]) : t("common.none")]),
-        Reflx.util.el("td", {}, currentV ? [
-          Reflx.util.el("button", { class: "btn secondary", onclick: function () { selectVersion(r, currentV); } }, [t("common.view")]),
-          " ",
-          Reflx.util.el("button", { class: "btn secondary", onclick: function () { doExport(r.slug, currentV.version); } }, [t("common.export")])
-        ] : [])
+        versionRowsEl,
+        Reflx.util.el("td", {}, [deleteBtn])
       ]);
       tbody.appendChild(tr);
     });
