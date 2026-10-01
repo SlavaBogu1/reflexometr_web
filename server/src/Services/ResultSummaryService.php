@@ -38,6 +38,10 @@ final class ResultSummaryService
     {
         // Sprint 14 (K3/K5/K7/K8): dispatch to custom-KPI aggregators.
         if (($schedule['schedule_family'] ?? '') === 'custom-kpi') {
+            // Custom-KPI JS modules pre-compute per-trial metrics and nest them under trial_data.
+            // Flatten trial_data into the top-level trial array so the aggregators can read fields
+            // directly (e.g. $trial['reaction_time_ms'] instead of $trial['trial_data']['reaction_time_ms']).
+            $trials = self::flattenTrialData($trials);
             if (array_key_exists('target_diameter_px', $schedule)) {
                 return self::computeRandomTargetPointing($trials);
             }
@@ -566,5 +570,25 @@ final class ResultSummaryService
             return ($values[$mid - 1] + $values[$mid]) / 2;
         }
         return $values[$mid];
+    }
+
+    /**
+     * Merges each trial's `trial_data` sub-array into the trial's top level.
+     * Custom-KPI JS modules nest pre-computed per-trial metrics under trial_data;
+     * the aggregators read them at the top level, so we flatten before dispatching.
+     * Keys in trial_data win over any same-named top-level key (there should be none).
+     * @param array<int,array<string,mixed>> $trials
+     * @return array<int,array<string,mixed>>
+     */
+    private static function flattenTrialData(array $trials): array
+    {
+        return array_map(static function (array $trial): array {
+            $td = $trial['trial_data'] ?? null;
+            if (is_array($td)) {
+                unset($trial['trial_data']);
+                $trial = array_merge($trial, $td);
+            }
+            return $trial;
+        }, $trials);
     }
 }
