@@ -76,8 +76,8 @@
         canvas.width = w;
         canvas.height = h;
       }
-      resizeCanvas();
       var ctx = canvas.getContext("2d");
+      requestAnimationFrame(function () { resizeCanvas(); drawScene(circleStartX(), false); });
 
       function canvasW() { return canvas.width; }
       function canvasH() { return canvas.height; }

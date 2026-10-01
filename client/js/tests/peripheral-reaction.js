@@ -73,15 +73,15 @@
       container.appendChild(stage);
       var statusEl = document.getElementById("stage-status");
 
-      // Size canvas to stage
+      // Size canvas to stage — deferred one frame so the stage is laid out first
       function resizeCanvas() {
         var w = stage.offsetWidth || 600;
         var h = stage.offsetHeight || 400;
         canvas.width = w;
         canvas.height = h;
       }
-      resizeCanvas();
       var ctx = canvas.getContext("2d");
+      requestAnimationFrame(function () { resizeCanvas(); drawFixation(); });
 
       function centerX() { return canvas.width / 2; }
       function centerY() { return canvas.height / 2; }
@@ -165,20 +165,17 @@
           setTimeout(armTrial, 500);
         }
 
-        // Pre-stimulus input handlers
-        if (responseType === "key") {
-          onKeyDown = function (e) {
-            if (stopped) return;
-            if (!stimulusVisible && e.code === responseKey) falseStart();
-          };
-          document.addEventListener("keydown", onKeyDown);
-        } else {
-          onMouseDown = function () {
-            if (stopped) return;
-            if (!stimulusVisible) falseStart();
-          };
-          canvas.addEventListener("mousedown", onMouseDown);
-        }
+        // Pre-stimulus: both key and click accepted (either can be the configured response device)
+        onKeyDown = function (e) {
+          if (stopped) return;
+          if (!stimulusVisible && e.code === responseKey) falseStart();
+        };
+        document.addEventListener("keydown", onKeyDown);
+        onMouseDown = function () {
+          if (stopped) return;
+          if (!stimulusVisible) falseStart();
+        };
+        canvas.addEventListener("mousedown", onMouseDown);
 
         armTimer = setTimeout(function () {
           if (stopped) return;
@@ -211,19 +208,17 @@
             setTimeout(armTrial, 350);
           }
 
-          if (responseType === "key") {
-            onKeyDown = function (e) {
-              if (stopped || !stimulusVisible) return;
-              if (e.code === responseKey) recordResponse(performance.now());
-            };
-            document.addEventListener("keydown", onKeyDown);
-          } else {
-            onMouseDown = function () {
-              if (stopped || !stimulusVisible) return;
-              recordResponse(performance.now());
-            };
-            canvas.addEventListener("mousedown", onMouseDown);
-          }
+          // Post-stimulus: accept key or click, whichever comes first
+          onKeyDown = function (e) {
+            if (stopped || !stimulusVisible) return;
+            if (e.code === responseKey) recordResponse(performance.now());
+          };
+          document.addEventListener("keydown", onKeyDown);
+          onMouseDown = function () {
+            if (stopped || !stimulusVisible) return;
+            recordResponse(performance.now());
+          };
+          canvas.addEventListener("mousedown", onMouseDown);
 
           // Timeout: MISSED_STIMULUS
           timeoutTimer = setTimeout(function () {
