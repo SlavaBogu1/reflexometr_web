@@ -199,6 +199,34 @@ final class RunService
     private function validateTrialLog(array $schedule, array $trials, int $issuedAtMs, int $nowMs): void
     {
         $expectedCount = (int) $schedule['trial_count'];
+
+        if (!array_is_list($trials) || count($trials) !== $expectedCount) {
+            throw new ApiException(ErrorCode::TRIAL_LOG_INVALID, 400, ['reason' => 'TRIAL_COUNT_MISMATCH']);
+        }
+
+        // Sprint 14 (K3/K5/K7/K8): custom-KPI families submit per-trial computed metrics (not
+        // stimulus_at/responses). Structural validation is simpler — just index ordering and a
+        // minimum plausibility wall-clock check. No per-channel or timing-gap checks apply.
+        if (($schedule['schedule_family'] ?? '') === 'custom-kpi') {
+            foreach ($trials as $i => $trial) {
+                if (!is_array($trial) || !array_key_exists('index', $trial)) {
+                    throw new ApiException(ErrorCode::TRIAL_LOG_INVALID, 400, ['reason' => 'MALFORMED_TRIAL', 'index' => $i]);
+                }
+                if ((int) $trial['index'] !== $i) {
+                    throw new ApiException(ErrorCode::TRIAL_LOG_INVALID, 400, ['reason' => 'INDEX_OUT_OF_ORDER', 'index' => $i]);
+                }
+            }
+            // Wall-clock: at least trial_count * a generous per-trial floor (inter_trial_interval
+            // + minimum human RT), so a zero-latency bulk fabrication is still caught.
+            $interTrialMs = (int) ($schedule['inter_trial_interval_ms'] ?? 0);
+            $minPlausibleMs = $expectedCount * ($interTrialMs + self::MIN_HUMAN_REACTION_MS);
+            if (($nowMs - $issuedAtMs) < $minPlausibleMs) {
+                throw new ApiException(ErrorCode::TRIAL_LOG_INVALID, 400, ['reason' => 'WALLCLOCK_TOO_FAST']);
+            }
+            return;
+        }
+
+        // --- Classic stimulus/response family ---
         $channels = $schedule['response_channels'];
         $timeoutMs = $schedule['timeout_ms'] ?? null;
         // CR-TEST-23 (Sprint 11): coincidence-anticipation tests (Circle Collision) have no
@@ -210,10 +238,6 @@ final class RunService
         // can set it too. All other structural checks (timeout, malformed shape, wall-clock) are
         // unchanged regardless of this flag.
         $allowEarlyResponse = (bool) ($schedule['allow_early_response'] ?? false);
-
-        if (!array_is_list($trials) || count($trials) !== $expectedCount) {
-            throw new ApiException(ErrorCode::TRIAL_LOG_INVALID, 400, ['reason' => 'TRIAL_COUNT_MISMATCH']);
-        }
 
         // The compiled schedule over-provisions resolved delays (trial_count + a false-start
         // buffer, see ScheduleCompiler) so a submitted trial's position no longer maps 1:1 to one

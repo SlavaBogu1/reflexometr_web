@@ -1,0 +1,10 @@
+{
+  "trial_count": 20,
+  "shapes": ["triangle", "circle"],
+  "key_mapping": { "triangle": "ArrowLeft", "circle": "ArrowRight" },
+  "response_window_ms": 2000,
+  "inter_trial_interval_ms": 500,
+  "randomize_delay_range_ms": { "min": 500, "max": 2000 },
+  "shape_size_px": 80,
+  "show_mapping_during_measurement": true
+}

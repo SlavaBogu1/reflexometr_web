@@ -36,6 +36,22 @@ final class ResultSummaryService
      */
     public static function compute(array $schedule, array $trials, ?string $dominantHand): array
     {
+        // Sprint 14 (K3/K5/K7/K8): dispatch to custom-KPI aggregators.
+        if (($schedule['schedule_family'] ?? '') === 'custom-kpi') {
+            if (array_key_exists('target_diameter_px', $schedule)) {
+                return self::computeRandomTargetPointing($trials);
+            }
+            if (array_key_exists('shapes', $schedule)) {
+                return self::computeChoiceReactionGeometry($trials);
+            }
+            if (array_key_exists('positions', $schedule)) {
+                return self::computePeripheralReaction($trials);
+            }
+            if (array_key_exists('circle_speed_px_per_ms', $schedule)) {
+                return self::computeTemporalPrediction($trials);
+            }
+        }
+
         $channels = $schedule['response_channels'];
         $absValueAggregation = (bool) ($schedule['abs_value_aggregation'] ?? false);
         /** @var array<string,array<int,float>> $perChannelSignedTimes */
@@ -108,6 +124,354 @@ final class ResultSummaryService
             'sdMs' => $overallSdMs,
             'cv' => self::coefficientOfVariation($overallSdMs, $overallMeanMs),
         ];
+    }
+
+    // -------------------------------------------------------------------------
+    // Sprint 14 (K3/K5/K7/K8) — custom-KPI aggregators
+    // -------------------------------------------------------------------------
+
+    /**
+     * CR-TEST-30 — `random-target-pointing` KPIs.
+     * Per-trial fields expected: reaction_time_ms (numeric|null), movement_time_ms (numeric|null),
+     * click_error_px (numeric|null), result ("TRUE_RESPONSE"|"FALSE_RESPONSE"|"MISSED_STIMULUS").
+     *
+     * Aggregates reaction_time_ms/movement_time_ms/click_error_px for TRUE_RESPONSE trials only
+     * (each with median, mean, SD, P10/25/50/75/90). Reports false_response_rate and
+     * missed_stimulus_rate over all trials. Primary metric = median reaction_time_ms (TRUE only).
+     * @param array<int,array<string,mixed>> $trials
+     * @return array{summary: array<string,mixed>, primaryMetricMs: float, sdMs: ?float, cv: ?float}
+     */
+    private static function computeRandomTargetPointing(array $trials): array
+    {
+        $total = count($trials);
+        $falseCount  = 0;
+        $missedCount = 0;
+        $rtTrue  = [];
+        $mtTrue  = [];
+        $errTrue = [];
+
+        foreach ($trials as $trial) {
+            $result = $trial['result'] ?? null;
+            if ($result === 'FALSE_RESPONSE') {
+                $falseCount++;
+            } elseif ($result === 'MISSED_STIMULUS') {
+                $missedCount++;
+            }
+            if ($result === 'TRUE_RESPONSE') {
+                if (isset($trial['reaction_time_ms']) && is_numeric($trial['reaction_time_ms'])) {
+                    $rtTrue[] = (float) $trial['reaction_time_ms'];
+                }
+                if (isset($trial['movement_time_ms']) && is_numeric($trial['movement_time_ms'])) {
+                    $mtTrue[] = (float) $trial['movement_time_ms'];
+                }
+                if (isset($trial['click_error_px']) && is_numeric($trial['click_error_px'])) {
+                    $errTrue[] = (float) $trial['click_error_px'];
+                }
+            }
+        }
+
+        $rtStats  = self::fullStats($rtTrue);
+        $mtStats  = self::fullStats($mtTrue);
+        $errStats = self::fullStats($errTrue);
+
+        $primaryMetricMs = $rtStats['median'] ?? 0.0;
+        $sdMs = $rtStats['sd'] ?? null;
+
+        $summary = [
+            'reaction_time_ms'    => $rtStats,
+            'movement_time_ms'    => $mtStats,
+            'click_error_px'      => $errStats,
+            'false_response_rate' => $total > 0 ? $falseCount / $total : null,
+            'missed_stimulus_rate' => $total > 0 ? $missedCount / $total : null,
+            'true_response_count'  => count($rtTrue),
+            'total_trials'         => $total,
+        ];
+
+        return [
+            'summary' => $summary,
+            'primaryMetricMs' => $primaryMetricMs,
+            'sdMs' => $sdMs,
+            'cv' => self::coefficientOfVariation($sdMs, $primaryMetricMs === 0.0 ? null : $primaryMetricMs),
+        ];
+    }
+
+    /**
+     * CR-TEST-32 — `choice-reaction-geometry` KPIs.
+     * Per-trial fields expected: reaction_time_ms (numeric|null), result
+     * ("TRUE_RESPONSE"|"FALSE_RESPONSE"|"MISSED_STIMULUS"|"INVALID_RESPONSE"), stimulus_shape,
+     * response_key.
+     *
+     * Aggregates RT for TRUE_RESPONSE (correct) trials only. Reports correct_response_rate,
+     * wrong_response_rate, missed_response_rate. Primary metric = mean correct-trial RT.
+     * @param array<int,array<string,mixed>> $trials
+     * @return array{summary: array<string,mixed>, primaryMetricMs: float, sdMs: ?float, cv: ?float}
+     */
+    private static function computeChoiceReactionGeometry(array $trials): array
+    {
+        $total        = count($trials);
+        $correctCount = 0;
+        $wrongCount   = 0;
+        $missedCount  = 0;
+        $correctRt    = [];
+
+        foreach ($trials as $trial) {
+            $result = $trial['result'] ?? null;
+            if ($result === 'TRUE_RESPONSE') {
+                $correctCount++;
+                if (isset($trial['reaction_time_ms']) && is_numeric($trial['reaction_time_ms'])) {
+                    $correctRt[] = (float) $trial['reaction_time_ms'];
+                }
+            } elseif ($result === 'FALSE_RESPONSE') {
+                $wrongCount++;
+            } elseif ($result === 'MISSED_STIMULUS') {
+                $missedCount++;
+            }
+        }
+
+        $rtStats = self::fullStats($correctRt);
+        $meanRt  = $rtStats['mean'] ?? 0.0;
+        $sdMs    = $rtStats['sd'] ?? null;
+
+        $summary = [
+            'reaction_time_ms'      => $rtStats,
+            'correct_response_rate' => $total > 0 ? $correctCount / $total : null,
+            'wrong_response_rate'   => $total > 0 ? $wrongCount / $total : null,
+            'missed_response_rate'  => $total > 0 ? $missedCount / $total : null,
+            'correct_count'         => $correctCount,
+            'total_trials'          => $total,
+        ];
+
+        return [
+            'summary' => $summary,
+            'primaryMetricMs' => $meanRt,
+            'sdMs' => $sdMs,
+            'cv' => self::coefficientOfVariation($sdMs, $meanRt === 0.0 ? null : $meanRt),
+        ];
+    }
+
+    /**
+     * CR-TEST-34 — `peripheral-reaction` KPIs.
+     * Per-trial fields expected: reaction_time_ms (numeric|null),
+     * result ("TRUE_RESPONSE"|"FALSE_RESPONSE"|"MISSED_STIMULUS"),
+     * stimulus_position_label (string), stimulus_angle_deg (numeric), stimulus_eccentricity_px (numeric).
+     *
+     * Overall RT stats for TRUE_RESPONSE trials. Per-position RT stats keyed by
+     * stimulus_position_label when per-position count >= 3. Primary metric = mean RT.
+     * @param array<int,array<string,mixed>> $trials
+     * @return array{summary: array<string,mixed>, primaryMetricMs: float, sdMs: ?float, cv: ?float}
+     */
+    private static function computePeripheralReaction(array $trials): array
+    {
+        $total       = count($trials);
+        $falseCount  = 0;
+        $missedCount = 0;
+        $overallRt   = [];
+        /** @var array<string,array<int,float>> $byPosition */
+        $byPosition  = [];
+
+        foreach ($trials as $trial) {
+            $result = $trial['result'] ?? null;
+            if ($result === 'FALSE_RESPONSE') {
+                $falseCount++;
+            } elseif ($result === 'MISSED_STIMULUS') {
+                $missedCount++;
+            }
+            if ($result === 'TRUE_RESPONSE' && isset($trial['reaction_time_ms']) && is_numeric($trial['reaction_time_ms'])) {
+                $rt  = (float) $trial['reaction_time_ms'];
+                $overallRt[] = $rt;
+                $label = is_string($trial['stimulus_position_label'] ?? null) ? $trial['stimulus_position_label'] : null;
+                if ($label !== null) {
+                    $byPosition[$label][] = $rt;
+                }
+            }
+        }
+
+        $overallStats = self::fullStats($overallRt);
+        $meanRt       = $overallStats['mean'] ?? 0.0;
+        $sdMs         = $overallStats['sd'] ?? null;
+
+        $perPosition = [];
+        foreach ($byPosition as $label => $values) {
+            if (count($values) >= 3) {
+                $perPosition[$label] = self::fullStats($values);
+            }
+        }
+
+        $summary = [
+            'reaction_time_ms'     => $overallStats,
+            'false_response_rate'  => $total > 0 ? $falseCount / $total : null,
+            'missed_stimulus_rate' => $total > 0 ? $missedCount / $total : null,
+            'true_response_count'  => count($overallRt),
+            'total_trials'         => $total,
+        ];
+
+        if ($perPosition !== []) {
+            $summary['per_position'] = $perPosition;
+        }
+
+        return [
+            'summary' => $summary,
+            'primaryMetricMs' => $meanRt,
+            'sdMs' => $sdMs,
+            'cv' => self::coefficientOfVariation($sdMs, $meanRt === 0.0 ? null : $meanRt),
+        ];
+    }
+
+    /**
+     * CR-TEST-35 — `temporal-prediction` KPIs.
+     * Per-trial fields expected: timing_error_ms (numeric, signed), result
+     * ("TRUE_RESPONSE"|"FALSE_RESPONSE"|"MISSED_STIMULUS"),
+     * circle_visible_at_click (bool).
+     *
+     * For TRUE_RESPONSE trials: mean_signed_timing_error_ms, mean_abs_timing_error_ms,
+     * median_abs_timing_error_ms, sd_timing_error_ms, early_pct, late_pct.
+     * If both visible and hidden circle trials occur in the session, reports stats separately.
+     * Primary metric = mean absolute timing error.
+     * @param array<int,array<string,mixed>> $trials
+     * @return array{summary: array<string,mixed>, primaryMetricMs: float, sdMs: ?float, cv: ?float}
+     */
+    private static function computeTemporalPrediction(array $trials): array
+    {
+        $total       = count($trials);
+        $falseCount  = 0;
+        $missedCount = 0;
+
+        // Signed timing errors for TRUE_RESPONSE, partitioned by circle_visible_at_click.
+        /** @var array<int,float> $signedAll */
+        $signedAll     = [];
+        $signedVisible = [];
+        $signedHidden  = [];
+
+        foreach ($trials as $trial) {
+            $result = $trial['result'] ?? null;
+            if ($result === 'FALSE_RESPONSE') {
+                $falseCount++;
+            } elseif ($result === 'MISSED_STIMULUS') {
+                $missedCount++;
+            }
+            if ($result === 'TRUE_RESPONSE' && isset($trial['timing_error_ms']) && is_numeric($trial['timing_error_ms'])) {
+                $err = (float) $trial['timing_error_ms'];
+                $signedAll[] = $err;
+                $visible = $trial['circle_visible_at_click'] ?? null;
+                if ($visible === true) {
+                    $signedVisible[] = $err;
+                } elseif ($visible === false) {
+                    $signedHidden[] = $err;
+                }
+            }
+        }
+
+        $timingStats = self::timingErrorStats($signedAll);
+        $primaryMetricMs = $timingStats['mean_abs'] ?? 0.0;
+        $sdMs = $timingStats['sd'] ?? null;
+
+        $summary = [
+            'timing_error_ms'      => $timingStats,
+            'false_response_rate'  => $total > 0 ? $falseCount / $total : null,
+            'missed_stimulus_rate' => $total > 0 ? $missedCount / $total : null,
+            'true_response_count'  => count($signedAll),
+            'total_trials'         => $total,
+        ];
+
+        // Report per-visibility breakdown only if both states occurred.
+        if ($signedVisible !== [] && $signedHidden !== []) {
+            $summary['visible_circle']  = self::timingErrorStats($signedVisible);
+            $summary['hidden_circle']   = self::timingErrorStats($signedHidden);
+        }
+
+        return [
+            'summary' => $summary,
+            'primaryMetricMs' => $primaryMetricMs,
+            'sdMs' => $sdMs,
+            'cv' => self::coefficientOfVariation($sdMs, $primaryMetricMs === 0.0 ? null : $primaryMetricMs),
+        ];
+    }
+
+    /**
+     * Computes full descriptive stats for a set of values: mean, median, sd, P10/P25/P50/P75/P90.
+     * @param array<int,float> $values
+     * @return array<string,?float>
+     */
+    private static function fullStats(array $values): array
+    {
+        if ($values === []) {
+            return [
+                'count' => 0,
+                'mean' => null, 'median' => null, 'sd' => null,
+                'p10' => null, 'p25' => null, 'p50' => null, 'p75' => null, 'p90' => null,
+                'min' => null, 'max' => null,
+            ];
+        }
+        sort($values);
+        $mean   = self::mean($values);
+        $sd     = self::stddev($values);
+        return [
+            'count'  => count($values),
+            'mean'   => $mean,
+            'median' => self::median($values),
+            'sd'     => $sd,
+            'p10'    => self::percentile($values, 10),
+            'p25'    => self::percentile($values, 25),
+            'p50'    => self::percentile($values, 50),
+            'p75'    => self::percentile($values, 75),
+            'p90'    => self::percentile($values, 90),
+            'min'    => min($values),
+            'max'    => max($values),
+        ];
+    }
+
+    /**
+     * Computes signed timing-error KPIs: mean_signed, mean_abs, median_abs, sd, early_pct, late_pct.
+     * @param array<int,float> $signed Signed timing error values (ms).
+     * @return array<string,?float>
+     */
+    private static function timingErrorStats(array $signed): array
+    {
+        if ($signed === []) {
+            return [
+                'count' => 0,
+                'mean_signed' => null, 'mean_abs' => null, 'median_abs' => null, 'sd' => null,
+                'early_pct' => null, 'late_pct' => null,
+            ];
+        }
+        $n     = count($signed);
+        $abs   = array_map('abs', $signed);
+        $early = count(array_filter($signed, static fn (float $v): bool => $v < 0));
+        $late  = count(array_filter($signed, static fn (float $v): bool => $v > 0));
+        return [
+            'count'       => $n,
+            'mean_signed' => self::mean($signed),
+            'mean_abs'    => self::mean($abs),
+            'median_abs'  => self::median($abs),
+            'sd'          => self::stddev($signed),
+            'early_pct'   => round($early / $n * 100, 1),
+            'late_pct'    => round($late / $n * 100, 1),
+        ];
+    }
+
+    /**
+     * Linear-interpolation percentile (nearest-rank for whole-array; interpolated between
+     * neighbours for fractional positions). Works on a pre-sorted array.
+     * @param array<int,float> $sorted Pre-sorted values.
+     */
+    private static function percentile(array $sorted, float $p): ?float
+    {
+        $n = count($sorted);
+        if ($n === 0) {
+            return null;
+        }
+        if ($n === 1) {
+            return $sorted[0];
+        }
+        // Using the "exclusive" method: rank = p/100 * (n-1), then linear interpolation.
+        $rank  = ($p / 100) * ($n - 1);
+        $lower = (int) floor($rank);
+        $upper = (int) ceil($rank);
+        if ($lower === $upper) {
+            return $sorted[$lower];
+        }
+        $frac = $rank - $lower;
+        return $sorted[$lower] * (1 - $frac) + $sorted[$upper] * $frac;
     }
 
     /**

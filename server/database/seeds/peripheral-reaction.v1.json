@@ -1,0 +1,18 @@
+{
+  "trial_count": 20,
+  "positions": [
+    { "label": "left",       "angle_deg": 180, "eccentricity_px": 200 },
+    { "label": "right",      "angle_deg": 0,   "eccentricity_px": 200 },
+    { "label": "top",        "angle_deg": 90,  "eccentricity_px": 200 },
+    { "label": "bottom",     "angle_deg": 270, "eccentricity_px": 200 },
+    { "label": "top-left",   "angle_deg": 135, "eccentricity_px": 200 },
+    { "label": "top-right",  "angle_deg": 45,  "eccentricity_px": 200 },
+    { "label": "bot-left",   "angle_deg": 225, "eccentricity_px": 200 },
+    { "label": "bot-right",  "angle_deg": 315, "eccentricity_px": 200 }
+  ],
+  "stimulus_diameter_px": 40,
+  "response_window_ms": 2000,
+  "inter_trial_interval_ms": 500,
+  "randomize_delay_range_ms": { "min": 500, "max": 2000 },
+  "response_type": "key"
+}
