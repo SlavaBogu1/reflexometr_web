@@ -146,6 +146,7 @@ final class ScheduleCompiler
             self::validateTemporalPrediction($description);
             return;
         }
+        // NOTE: isCustomKpiDescription() below must stay in sync with this detection order.
 
         // --- Classic stimulus/response family ---
         $errors = [];
@@ -233,6 +234,53 @@ final class ScheduleCompiler
     // Sprint 14 (K3/K5/K7/K8) — custom-KPI test family validators
     // -------------------------------------------------------------------------
 
+    /** Returns true when $description belongs to the Sprint 14 custom-KPI family. */
+    private static function isCustomKpiDescription(array $description): bool
+    {
+        return array_key_exists('target_diameter_px', $description)
+            || array_key_exists('shapes', $description)
+            || array_key_exists('positions', $description)
+            || array_key_exists('circle_speed_px_per_ms', $description);
+    }
+
+    /** Shared: validates trial_count (required, 1..MAX_TRIAL_COUNT) and appends to $errors. */
+    private static function validateTrialCount(array $description, array &$errors): void
+    {
+        $trialCount = $description['trial_count'] ?? null;
+        if (!is_int($trialCount) || $trialCount < 1 || $trialCount > self::MAX_TRIAL_COUNT) {
+            $errors[] = 'trial_count';
+        }
+    }
+
+    /** Shared: validates optional inter_trial_interval_ms (int >= 0) and appends to $errors. */
+    private static function validateOptionalIti(array $description, array &$errors): void
+    {
+        if (array_key_exists('inter_trial_interval_ms', $description)) {
+            $iti = $description['inter_trial_interval_ms'];
+            if (!is_int($iti) || $iti < 0) {
+                $errors[] = 'inter_trial_interval_ms';
+            }
+        }
+    }
+
+    /** Shared: validates optional randomize_delay_range_ms ({min,max}, both >= 0) and appends to $errors. */
+    private static function validateOptionalDelayRange(array $description, array &$errors): void
+    {
+        if (array_key_exists('randomize_delay_range_ms', $description)) {
+            if (!self::isValidIntRange($description['randomize_delay_range_ms'], 0)) {
+                $errors[] = 'randomize_delay_range_ms';
+            }
+        }
+    }
+
+    /** Shared: throws VALIDATION_ERROR if $errors is non-empty. */
+    private static function throwIfErrors(array $errors): void
+    {
+        if ($errors !== []) {
+            throw new ApiException(ErrorCode::VALIDATION_ERROR, 400, ['fields' => array_values(array_unique($errors))]);
+        }
+    }
+
     /**
      * CR-TEST-30 — `random-target-pointing` description validation.
      * Fields: target_diameter_px (> 0), min_distance_from_prev_px (>= 0), trial_count (<=
@@ -244,10 +292,7 @@ final class ScheduleCompiler
     {
         $errors = [];
 
-        $trialCount = $description['trial_count'] ?? null;
-        if (!is_int($trialCount) || $trialCount < 1 || $trialCount > self::MAX_TRIAL_COUNT) {
-            $errors[] = 'trial_count';
-        }
+        self::validateTrialCount($description, $errors);
 
         $diameter = $description['target_diameter_px'] ?? null;
         if (!is_int($diameter) || $diameter < 1) {
@@ -266,18 +311,8 @@ final class ScheduleCompiler
             $errors[] = 'response_timeout_ms';
         }
 
-        if (array_key_exists('inter_trial_interval_ms', $description)) {
-            $iti = $description['inter_trial_interval_ms'];
-            if (!is_int($iti) || $iti < 0) {
-                $errors[] = 'inter_trial_interval_ms';
-            }
-        }
-
-        if (array_key_exists('randomize_delay_range_ms', $description)) {
-            if (!self::isValidIntRange($description['randomize_delay_range_ms'], 0)) {
-                $errors[] = 'randomize_delay_range_ms';
-            }
-        }
+        self::validateOptionalIti($description, $errors);
+        self::validateOptionalDelayRange($description, $errors);
 
         if (array_key_exists('record_trajectory', $description)) {
             if (!is_bool($description['record_trajectory'])) {
@@ -285,9 +320,7 @@ final class ScheduleCompiler
             }
         }
 
-        if ($errors !== []) {
-            throw new ApiException(ErrorCode::VALIDATION_ERROR, 400, ['fields' => array_values(array_unique($errors))]);
-        }
+        self::throwIfErrors($errors);
     }
 
     /**
@@ -301,10 +334,7 @@ final class ScheduleCompiler
     {
         $errors = [];
 
-        $trialCount = $description['trial_count'] ?? null;
-        if (!is_int($trialCount) || $trialCount < 1 || $trialCount > self::MAX_TRIAL_COUNT) {
-            $errors[] = 'trial_count';
-        }
+        self::validateTrialCount($description, $errors);
 
         $shapes = $description['shapes'] ?? null;
         $validShapes = ['triangle', 'circle', 'square', 'diamond', 'star'];
@@ -336,18 +366,8 @@ final class ScheduleCompiler
             $errors[] = 'response_window_ms';
         }
 
-        if (array_key_exists('inter_trial_interval_ms', $description)) {
-            $iti = $description['inter_trial_interval_ms'];
-            if (!is_int($iti) || $iti < 0) {
-                $errors[] = 'inter_trial_interval_ms';
-            }
-        }
-
-        if (array_key_exists('randomize_delay_range_ms', $description)) {
-            if (!self::isValidIntRange($description['randomize_delay_range_ms'], 0)) {
-                $errors[] = 'randomize_delay_range_ms';
-            }
-        }
+        self::validateOptionalIti($description, $errors);
+        self::validateOptionalDelayRange($description, $errors);
 
         if (array_key_exists('shape_size_px', $description)) {
             $size = $description['shape_size_px'];
@@ -362,9 +382,7 @@ final class ScheduleCompiler
             }
         }
 
-        if ($errors !== []) {
-            throw new ApiException(ErrorCode::VALIDATION_ERROR, 400, ['fields' => array_values(array_unique($errors))]);
-        }
+        self::throwIfErrors($errors);
     }
 
     /**
@@ -379,10 +397,7 @@ final class ScheduleCompiler
     {
         $errors = [];
 
-        $trialCount = $description['trial_count'] ?? null;
-        if (!is_int($trialCount) || $trialCount < 1 || $trialCount > self::MAX_TRIAL_COUNT) {
-            $errors[] = 'trial_count';
-        }
+        self::validateTrialCount($description, $errors);
 
         $positions = $description['positions'] ?? null;
         if (!is_array($positions) || count($positions) < 1) {
@@ -424,18 +439,8 @@ final class ScheduleCompiler
             $errors[] = 'response_window_ms';
         }
 
-        if (array_key_exists('inter_trial_interval_ms', $description)) {
-            $iti = $description['inter_trial_interval_ms'];
-            if (!is_int($iti) || $iti < 0) {
-                $errors[] = 'inter_trial_interval_ms';
-            }
-        }
-
-        if (array_key_exists('randomize_delay_range_ms', $description)) {
-            if (!self::isValidIntRange($description['randomize_delay_range_ms'], 0)) {
-                $errors[] = 'randomize_delay_range_ms';
-            }
-        }
+        self::validateOptionalIti($description, $errors);
+        self::validateOptionalDelayRange($description, $errors);
 
         if (array_key_exists('response_type', $description)) {
             $rt = $description['response_type'];
@@ -444,9 +449,7 @@ final class ScheduleCompiler
             }
         }
 
-        if ($errors !== []) {
-            throw new ApiException(ErrorCode::VALIDATION_ERROR, 400, ['fields' => array_values(array_unique($errors))]);
-        }
+        self::throwIfErrors($errors);
     }
 
     /**
@@ -461,10 +464,7 @@ final class ScheduleCompiler
     {
         $errors = [];
 
-        $trialCount = $description['trial_count'] ?? null;
-        if (!is_int($trialCount) || $trialCount < 1 || $trialCount > self::MAX_TRIAL_COUNT) {
-            $errors[] = 'trial_count';
-        }
+        self::validateTrialCount($description, $errors);
 
         $speed = $description['circle_speed_px_per_ms'] ?? null;
         if (!is_float($speed) && !is_int($speed)) {
@@ -509,12 +509,7 @@ final class ScheduleCompiler
             }
         }
 
-        if (array_key_exists('inter_trial_interval_ms', $description)) {
-            $iti = $description['inter_trial_interval_ms'];
-            if (!is_int($iti) || $iti < 0) {
-                $errors[] = 'inter_trial_interval_ms';
-            }
-        }
+        self::validateOptionalIti($description, $errors);
 
         if (array_key_exists('circle_diameter_px', $description)) {
             $diam = $description['circle_diameter_px'];
@@ -523,9 +518,7 @@ final class ScheduleCompiler
             }
         }
 
-        if ($errors !== []) {
-            throw new ApiException(ErrorCode::VALIDATION_ERROR, 400, ['fields' => array_values(array_unique($errors))]);
-        }
+        self::throwIfErrors($errors);
     }
 
     /**
@@ -580,12 +573,9 @@ final class ScheduleCompiler
 
         // Sprint 14 (K3/K5/K7/K8): custom-KPI test families — no per-trial delay resolution
         // needed; the description IS the schedule (the client handles its own timing).
-        if (
-            array_key_exists('target_diameter_px', $description)
-            || array_key_exists('shapes', $description)
-            || array_key_exists('positions', $description)
-            || array_key_exists('circle_speed_px_per_ms', $description)
-        ) {
+        // validateDescription() already ran the discriminating-field check above; here we check the
+        // same predicate rather than duplicating the field names.
+        if (self::isCustomKpiDescription($description)) {
             return array_merge($description, ['schedule_family' => 'custom-kpi']);
         }
 

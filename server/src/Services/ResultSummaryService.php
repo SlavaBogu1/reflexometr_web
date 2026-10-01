@@ -50,6 +50,10 @@ final class ResultSummaryService
             if (array_key_exists('circle_speed_px_per_ms', $schedule)) {
                 return self::computeTemporalPrediction($trials);
             }
+            // Known family but no matching discriminating field — should never reach here if
+            // ScheduleCompiler validated the description; surface clearly rather than silently
+            // falling through to the classic path (which would crash on missing response_channels).
+            throw new \RuntimeException('custom-kpi schedule has no recognised discriminating field');
         }
 
         $channels = $schedule['response_channels'];
@@ -181,8 +185,8 @@ final class ResultSummaryService
             'reaction_time_ms'    => $rtStats,
             'movement_time_ms'    => $mtStats,
             'click_error_px'      => $errStats,
-            'false_response_rate' => $total > 0 ? $falseCount / $total : null,
-            'missed_stimulus_rate' => $total > 0 ? $missedCount / $total : null,
+            'false_response_rate' => self::rate($falseCount, $total),
+            'missed_stimulus_rate' => self::rate($missedCount, $total),
             'true_response_count'  => count($rtTrue),
             'total_trials'         => $total,
         ];
@@ -234,9 +238,9 @@ final class ResultSummaryService
 
         $summary = [
             'reaction_time_ms'      => $rtStats,
-            'correct_response_rate' => $total > 0 ? $correctCount / $total : null,
-            'wrong_response_rate'   => $total > 0 ? $wrongCount / $total : null,
-            'missed_response_rate'  => $total > 0 ? $missedCount / $total : null,
+            'correct_response_rate' => self::rate($correctCount, $total),
+            'wrong_response_rate'   => self::rate($wrongCount, $total),
+            'missed_response_rate'  => self::rate($missedCount, $total),
             'correct_count'         => $correctCount,
             'total_trials'          => $total,
         ];
@@ -299,8 +303,8 @@ final class ResultSummaryService
 
         $summary = [
             'reaction_time_ms'     => $overallStats,
-            'false_response_rate'  => $total > 0 ? $falseCount / $total : null,
-            'missed_stimulus_rate' => $total > 0 ? $missedCount / $total : null,
+            'false_response_rate'  => self::rate($falseCount, $total),
+            'missed_stimulus_rate' => self::rate($missedCount, $total),
             'true_response_count'  => count($overallRt),
             'total_trials'         => $total,
         ];
@@ -367,8 +371,8 @@ final class ResultSummaryService
 
         $summary = [
             'timing_error_ms'      => $timingStats,
-            'false_response_rate'  => $total > 0 ? $falseCount / $total : null,
-            'missed_stimulus_rate' => $total > 0 ? $missedCount / $total : null,
+            'false_response_rate'  => self::rate($falseCount, $total),
+            'missed_stimulus_rate' => self::rate($missedCount, $total),
             'true_response_count'  => count($signedAll),
             'total_trials'         => $total,
         ];
@@ -405,14 +409,15 @@ final class ResultSummaryService
         sort($values);
         $mean   = self::mean($values);
         $sd     = self::stddev($values);
+        $p50    = self::percentile($values, 50);
         return [
             'count'  => count($values),
             'mean'   => $mean,
-            'median' => self::median($values),
+            'median' => $p50,
             'sd'     => $sd,
             'p10'    => self::percentile($values, 10),
             'p25'    => self::percentile($values, 25),
-            'p50'    => self::percentile($values, 50),
+            'p50'    => $p50,
             'p75'    => self::percentile($values, 75),
             'p90'    => self::percentile($values, 90),
             'min'    => min($values),
@@ -435,9 +440,17 @@ final class ResultSummaryService
             ];
         }
         $n     = count($signed);
-        $abs   = array_map('abs', $signed);
-        $early = count(array_filter($signed, static fn (float $v): bool => $v < 0));
-        $late  = count(array_filter($signed, static fn (float $v): bool => $v > 0));
+        $abs   = [];
+        $early = 0;
+        $late  = 0;
+        foreach ($signed as $v) {
+            $abs[] = abs($v);
+            if ($v < 0) {
+                $early++;
+            } elseif ($v > 0) {
+                $late++;
+            }
+        }
         return [
             'count'       => $n,
             'mean_signed' => self::mean($signed),
@@ -447,6 +460,12 @@ final class ResultSummaryService
             'early_pct'   => round($early / $n * 100, 1),
             'late_pct'    => round($late / $n * 100, 1),
         ];
+    }
+
+    /** Returns $n/$total as a float, or null when $total is 0. */
+    private static function rate(int $n, int $total): ?float
+    {
+        return $total > 0 ? $n / $total : null;
     }
 
     /**

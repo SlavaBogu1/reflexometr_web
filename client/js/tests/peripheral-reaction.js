@@ -96,21 +96,21 @@
       }
 
       function drawFixation() {
-        var ctx2 = ctx;
-        ctx2.clearRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         var cx = centerX();
         var cy = centerY();
         var armLen = 12;
-        ctx2.save();
-        ctx2.strokeStyle = "var(--text, #333)";
-        ctx2.lineWidth = 2;
-        ctx2.beginPath();
-        ctx2.moveTo(cx - armLen, cy);
-        ctx2.lineTo(cx + armLen, cy);
-        ctx2.moveTo(cx, cy - armLen);
-        ctx2.lineTo(cx, cy + armLen);
-        ctx2.stroke();
-        ctx2.restore();
+        ctx.save();
+        ctx.strokeStyle = "var(--text, #333)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - armLen, cy);
+        ctx.lineTo(cx + armLen, cy);
+        ctx.moveTo(cx, cy - armLen);
+        ctx.lineTo(cx, cy + armLen);
+        ctx.stroke();
+        ctx.restore();
       }
 
       function drawFixationAndStimulus(pos) {
