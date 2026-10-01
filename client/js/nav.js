@@ -78,6 +78,7 @@
         { href: "settings.html", key: "nav.settings", page: "settings" }
       ];
       if (user) links.push({ href: "stats.html", key: "nav.stats", page: "stats" });
+      if (user) links.push({ href: "report.html", key: "nav.report", page: "report" });
       if (Reflx.session.isAdmin()) {
         links.push({ href: "library.html", key: "nav.library", page: "library" });
         links.push({ href: "admin-results.html", key: "nav.admin_results", page: "admin-results" });

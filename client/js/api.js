@@ -112,6 +112,8 @@
     importVersion: function (slug, payload) { return request("POST", "/admin/r-tests/" + encodeURIComponent(slug) + "/versions", payload); },
     exportVersion: function (slug, version) { return request("GET", "/admin/r-tests/" + encodeURIComponent(slug) + "/versions/" + version + "/export"); },
     patchRTestMeta: function (slug, patch) { return request("PATCH", "/admin/r-tests/" + encodeURIComponent(slug), patch); },
+    patchRTestVersion: function (slug, version, patch) { return request("PATCH", "/admin/r-tests/" + encodeURIComponent(slug) + "/versions/" + version, patch); },
+    deleteRTest: function (slug) { return request("DELETE", "/admin/r-tests/" + encodeURIComponent(slug)); },
     createTag: function (name) { return request("POST", "/admin/tags", { name: name }); },
     patchTag: function (id, name) { return request("PATCH", "/admin/tags/" + id, { name: name }); },
     deleteTag: function (id) { return request("DELETE", "/admin/tags/" + id); },
