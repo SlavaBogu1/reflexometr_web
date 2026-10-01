@@ -87,19 +87,6 @@ final class RTestVersionRepository
     }
 
     /**
-     * CR-UI-18 (Sprint 15): returns only versions with is_visible = 1 for a given r-test,
-     * ordered by version number ascending. Used by public browsing and run-start to exclude
-     * archived (is_visible = 0) versions from the public surface.
-     * @return array<int,array<string,mixed>>
-     */
-    public function listVisibleForTest(int $rTestId): array
-    {
-        $stmt = $this->db->prepare('SELECT * FROM r_test_versions WHERE r_test_id = ? AND is_visible = 1 ORDER BY version ASC');
-        $stmt->execute([$rTestId]);
-        return $stmt->fetchAll();
-    }
-
-    /**
      * CR-UI-18 (Sprint 15): finds a version by its numeric version number, only if it is
      * visible (is_visible = 1). Returns null for both "not found" and "found but hidden" —
      * callers that need to distinguish (e.g. admin endpoints) should use findByTestAndVersion()

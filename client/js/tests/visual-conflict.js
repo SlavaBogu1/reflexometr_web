@@ -75,7 +75,7 @@
       var schedule = runInfo.schedule;
       var pretrainCount = schedule.pretrain_trial_count || 10;
       var measurementCount = schedule.trial_count || 20;
-      var responseWindowMs = schedule.response_window_ms || schedule.timeout_ms || 3000;
+      var responseWindowMs = schedule.response_window_ms || 2000;
       var phaseTransitionMs = schedule.phase_transition_display_ms || 2000;
       var shapeSizePx = schedule.shape_size_px || 120;
       var delayRange = schedule.randomize_delay_range_ms || null;
