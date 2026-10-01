@@ -36,7 +36,13 @@ abstract class TestCase extends BaseTestCase
 
         $db = Database::connection();
         $schema = file_get_contents(dirname(__DIR__) . '/database/schema.sqlite.sql');
-        foreach (array_filter(array_map('trim', explode(';', $schema))) as $statement) {
+
+        // HF-SI-1 (CR-INFRA-07): strip `-- ...` line comments before splitting on `;` — a bare
+        // explode() breaks mid-statement whenever a comment happens to contain a literal semicolon
+        // (English prose often does), producing a garbage fragment SQLite then rejects with a
+        // confusing syntax error. Mirrors server/bin/migrate.php's identical fix (HF-02 follow-up).
+        $withoutComments = preg_replace('/^\s*--.*$/m', '', $schema);
+        foreach (array_filter(array_map('trim', explode(';', $withoutComments))) as $statement) {
             if ($statement !== '') {
                 $db->exec($statement);
             }
