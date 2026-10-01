@@ -515,10 +515,17 @@
       row(t("runner.result.variability"), fmtVariability(overall.sd_ms));
 
     } else if (last.kind === "random-target") {
-      // CR-TEST-30 result display (CI-14.2)
-      var rtVals = trialDataValues(last.trials, "reaction_time_ms");
-      var mvVals = trialDataValues(last.trials, "movement_time_ms");
-      var errVals = trialDataValues(last.trials, "click_error_px");
+      // CR-TEST-30 result display (CI-14.2) — single pass over trials
+      var rtVals = [], mvVals = [], errVals = [], pathVals = [], effVals = [];
+      last.trials.forEach(function (tr) {
+        var d = tr.trial_data;
+        if (!d) return;
+        if (isNum(d.reaction_time_ms))  rtVals.push(d.reaction_time_ms);
+        if (isNum(d.movement_time_ms))  mvVals.push(d.movement_time_ms);
+        if (isNum(d.click_error_px))    errVals.push(d.click_error_px);
+        if (isNum(d.path_length_px))    pathVals.push(d.path_length_px);
+        if (isNum(d.path_efficiency))   effVals.push(d.path_efficiency);
+      });
       row(t("test.random_target.result.reaction_time_mean"), fmtMs(avg(rtVals)));
       row(t("test.random_target.result.movement_time_mean"), fmtMs(avg(mvVals)));
       row(t("test.random_target.result.click_error_mean"), fmtPx(avg(errVals)));
@@ -526,14 +533,10 @@
         row(t("test.random_target.result.click_error_best"), fmtPx(Math.min.apply(null, errVals)));
         row(t("test.random_target.result.click_error_worst"), fmtPx(Math.max.apply(null, errVals)));
       }
-      // Trajectory path metrics (shown only when at least one trial has them)
-      var pathVals = trialDataValues(last.trials, "path_length_px");
       if (pathVals.length) {
         row(t("test.random_target.result.path_length_mean"), fmtPx(avg(pathVals)));
-        var effVals = trialDataValues(last.trials, "path_efficiency");
         if (effVals.length) {
-          var effPct = Math.round(avg(effVals) * 100);
-          row(t("test.random_target.result.path_efficiency"), effPct + "%");
+          row(t("test.random_target.result.path_efficiency"), Math.round(avg(effVals) * 100) + "%");
         }
       }
 
@@ -578,41 +581,32 @@
       }
 
     } else if (last.kind === "temporal") {
-      // CR-TEST-35 result display (CI-14.11)
-      var signedErrors = trialDataValues(last.trials, "timing_error_ms");
-      var absErrors = trialDataValues(last.trials, "absolute_timing_error_ms");
-      row(t("test.temporal.result.timing_error_mean"), fmtMs(avg(signedErrors)));
-      row(t("test.temporal.result.abs_error_mean"), fmtMs(avg(absErrors)));
-      // Early / late split
+      // CR-TEST-35 result display (CI-14.11) — single pass over trials
+      var signedErrors = [], absErrors = [], visibleRTs = [], invisibleRTs = [];
       var earlyCount = 0, lateCount = 0, onTimeCount = 0;
       last.trials.forEach(function (tr) {
-        if (!tr.trial_data || !isNum(tr.trial_data.timing_error_ms)) return;
-        if (tr.trial_data.result !== "TRUE_RESPONSE") return;
-        if (tr.trial_data.timing_error_ms < 0) earlyCount++;
-        else if (tr.trial_data.timing_error_ms > 0) lateCount++;
-        else onTimeCount++;
+        var d = tr.trial_data;
+        if (!d || d.result !== "TRUE_RESPONSE") return;
+        if (isNum(d.timing_error_ms)) {
+          signedErrors.push(d.timing_error_ms);
+          if (d.timing_error_ms < 0) earlyCount++;
+          else if (d.timing_error_ms > 0) lateCount++;
+          else onTimeCount++;
+        }
+        if (isNum(d.absolute_timing_error_ms)) {
+          absErrors.push(d.absolute_timing_error_ms);
+          if (d.circle_visible_at_click === true)  visibleRTs.push(d.absolute_timing_error_ms);
+          else if (d.circle_visible_at_click === false) invisibleRTs.push(d.absolute_timing_error_ms);
+        }
       });
+      row(t("test.temporal.result.timing_error_mean"), fmtMs(avg(signedErrors)));
+      row(t("test.temporal.result.abs_error_mean"), fmtMs(avg(absErrors)));
       var validCount = earlyCount + lateCount + onTimeCount;
       if (validCount > 0) {
         row(t("test.temporal.result.early_pct"), Math.round((earlyCount / validCount) * 100) + "%");
         row(t("test.temporal.result.late_pct"), Math.round((lateCount / validCount) * 100) + "%");
       }
-      // Disappear-before-target split: show if both visible and invisible trials exist
-      var hasVisible = false, hasInvisible = false;
-      last.trials.forEach(function (tr) {
-        if (!tr.trial_data) return;
-        if (tr.trial_data.result !== "TRUE_RESPONSE") return;
-        if (tr.trial_data.circle_visible_at_click === true) hasVisible = true;
-        if (tr.trial_data.circle_visible_at_click === false) hasInvisible = true;
-      });
-      if (hasVisible && hasInvisible) {
-        var visibleRTs = [], invisibleRTs = [];
-        last.trials.forEach(function (tr) {
-          if (!tr.trial_data || tr.trial_data.result !== "TRUE_RESPONSE") return;
-          if (!isNum(tr.trial_data.absolute_timing_error_ms)) return;
-          if (tr.trial_data.circle_visible_at_click) visibleRTs.push(tr.trial_data.absolute_timing_error_ms);
-          else invisibleRTs.push(tr.trial_data.absolute_timing_error_ms);
-        });
+      if (visibleRTs.length && invisibleRTs.length) {
         row(t("test.temporal.result.abs_error_visible"), fmtMs(avg(visibleRTs)));
         row(t("test.temporal.result.abs_error_invisible"), fmtMs(avg(invisibleRTs)));
       }
