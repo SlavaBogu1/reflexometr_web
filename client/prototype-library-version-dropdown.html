@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mockup — CR-UI-30: Admin Library version-dropdown selector</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .mockup-wrap { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+    .mockup-label { font-size: 0.85rem; color: var(--color-text-dim); margin: 2rem 0 0.5rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th { text-align: left; font-size: 0.8rem; color: var(--color-text-dim); text-transform: uppercase; letter-spacing: 0.03em; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border); }
+    td { padding: 0.75rem; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    th:nth-child(1), td:nth-child(1) { width: 24%; }
+    th:nth-child(2), td:nth-child(2) { width: 14%; }
+    th:nth-child(3), td:nth-child(3) { width: 16%; }
+    th:nth-child(4), td:nth-child(4) { width: 20%; }
+    th:nth-child(5), td:nth-child(5) { width: 26%; }
+    /* --- Carried over from the approved CR-UI-29 mockup, unchanged --- */
+    .icon-btn {
+      width: 1.8rem; height: 1.8rem; display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 4px; border: 1px solid var(--color-accent-dim); background: none; cursor: pointer;
+      color: var(--color-text-dim); flex: 0 0 auto;
+    }
+    .icon-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+    .icon-btn.danger { border-color: var(--color-danger); color: var(--color-danger); }
+    .icon-btn.danger:hover { background: var(--color-danger); color: #2b0507; }
+    .icon-btn svg { width: 1rem; height: 1rem; }
+    .btn-group { display: flex; gap: 0.4rem; align-items: center; }
+    /* --- New: version dropdown, reusing the app's existing form-control styling --- */
+    .lib-version-select {
+      width: 100%; max-width: 11rem; padding: 0.35rem 0.5rem; border-radius: 4px;
+      border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text);
+      font-size: 0.9rem;
+    }
+    .lib-version-select:disabled { opacity: 0.7; cursor: default; }
+  </style>
+</head>
+<body>
+  <div class="mockup-wrap">
+    <h1>CR-UI-30 mockup — admin Library version-dropdown selector</h1>
+    <p class="field-desc">Replaces CR-UI-29's per-version stacked action-button groups with a single
+    version <code>&lt;select&gt;</code> per r-test row plus one shared Archive/Restore + Export + View
+    action group, wired to whichever version is currently selected. Delete is unaffected — still one
+    button per r-test, acting on the whole r-test regardless of selection (same as CR-UI-29).</p>
+
+    <p class="mockup-label">Case 1 — single version (baseline; should look/feel the same as CR-UI-29 today)</p>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Tags</th><th>Current Version</th><th>Versions</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Simple Visual Reaction Time</td>
+          <td><span class="chip">visual</span></td>
+          <td><span class="chip version">v1</span></td>
+          <td>
+            <select class="lib-version-select" disabled>
+              <option>v1</option>
+            </select>
+          </td>
+          <td>
+            <div class="btn-group">
+              <button class="icon-btn" title="Archive" aria-label="Archive">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><path d="M10 13h4"/></svg>
+              </button>
+              <button class="icon-btn" title="Export" aria-label="Export">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+              </button>
+              <button class="icon-btn" title="View" aria-label="View">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <button class="icon-btn danger" title="Delete r-test" aria-label="Delete r-test">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6h12z"/><path d="M10 11v6M14 11v6"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="field-desc">The dropdown still renders (for row-layout consistency) but is disabled with
+    a single option — no functional choice to make, so it's visually inert rather than a clickable
+    no-op. ClientTeam may instead hide it entirely for the single-version case if that reads cleaner
+    once built against real rows; either is acceptable, confirm whichever is chosen doesn't shift the
+    Actions column's horizontal position row-to-row.</p>
+
+    <p class="mockup-label">Case 2 — multiple versions, newest (visible) selected</p>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Tags</th><th>Current Version</th><th>Versions</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Temporal Prediction</td>
+          <td><span class="chip">timing</span></td>
+          <td><span class="chip version">v2</span></td>
+          <td>
+            <select class="lib-version-select">
+              <option selected>v2</option>
+              <option>v1 (archived)</option>
+            </select>
+          </td>
+          <td>
+            <div class="btn-group">
+              <button class="icon-btn" title="Archive" aria-label="Archive">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><path d="M10 13h4"/></svg>
+              </button>
+              <button class="icon-btn" title="Export" aria-label="Export">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+              </button>
+              <button class="icon-btn" title="View" aria-label="View">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <button class="icon-btn danger" title="Delete r-test" aria-label="Delete r-test">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6h12z"/><path d="M10 11v6M14 11v6"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="field-desc">v2 (the newest/visible version) is selected by default, matching
+    <code>sortedVersions</code> order today. The Archive icon shown here reflects v2's visible state.</p>
+
+    <p class="mockup-label">Case 3 — multiple versions, archived version selected</p>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Tags</th><th>Current Version</th><th>Versions</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Temporal Prediction</td>
+          <td><span class="chip">timing</span></td>
+          <td><span class="chip version">v2</span></td>
+          <td>
+            <select class="lib-version-select">
+              <option>v2</option>
+              <option selected>v1 (archived)</option>
+            </select>
+          </td>
+          <td>
+            <div class="btn-group">
+              <button class="icon-btn" title="Restore" aria-label="Restore">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+              </button>
+              <button class="icon-btn" title="Export" aria-label="Export">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+              </button>
+              <button class="icon-btn" title="View" aria-label="View">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <button class="icon-btn danger" title="Delete r-test" aria-label="Delete r-test">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6h12z"/><path d="M10 11v6M14 11v6"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="field-desc">Selecting "v1 (archived)" swaps the first action button from Archive to
+    Restore (same icon-swap logic CR-UI-29 already has, just re-evaluated on selection change instead
+    of baked in at render time). Export/View/Delete are unaffected by visibility state. The "Current
+    Version" column (always the newest version, independent of dropdown selection) is unchanged by
+    this CR — it continues to show v2 regardless of which version is selected below.</p>
+  </div>
+</body>
+</html>

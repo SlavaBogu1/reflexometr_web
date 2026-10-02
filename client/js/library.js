@@ -81,6 +81,36 @@
     }, [Reflx.util.svgIcon(iconShapes)]);
   }
 
+  // CR-UI-30: builds/refreshes the single shared Archive|Restore + Export + View
+  // action group for whichever version is currently selected in the row's dropdown.
+  // Called once at render time and again on every dropdown `change` — Archive/Restore
+  // icon+tooltip re-evaluates the selected version's visibility state each time
+  // (mirrors CR-UI-29's old per-version `isVisible` branch, just re-run instead of
+  // baked in once). `groupEl` is emptied and rebuilt in place so the row's DOM node
+  // identity (and the Delete button appended after it) is undisturbed.
+  function renderVersionActionsGroup(groupEl, r, v) {
+    groupEl.innerHTML = "";
+    var isVisible = v.is_visible !== false; // default true if not present
+    var rslug = r.slug, ver = v.version;
+    groupEl.appendChild(iconButton(
+      isVisible ? t("library.version.archive") : t("library.version.restore"),
+      isVisible ? ARCHIVE_ICON_SHAPES : RESTORE_ICON_PATHS,
+      function () {
+        Reflx.util.hideBanner("library-error");
+        api.patchRTestVersion(rslug, ver, { is_visible: !isVisible }).then(function (res) {
+          if (!res.ok) { reportError(res); return; }
+          loadAll();
+        });
+      }
+    ));
+    groupEl.appendChild(iconButton(t("common.export"), [EXPORT_ICON_PATH], function () {
+      doExport(rslug, ver);
+    }));
+    groupEl.appendChild(iconButton(t("common.view"), VIEW_ICON_SHAPES, function () {
+      selectVersion(r, v);
+    }));
+  }
+
   function renderTests() {
     var tbody = document.getElementById("rtests-tbody");
     tbody.innerHTML = "";
@@ -89,58 +119,36 @@
       var sortedVersions = r.versions.slice().sort(function (a, b) { return b.version - a.version; });
       var currentV = sortedVersions[0];
 
-      // Versions column (CR-UI-29): version chip only — no action buttons here anymore.
-      var versionRowsEl = Reflx.util.el("td", {});
-      sortedVersions.forEach(function (v) {
-        var isVisible = v.is_visible !== false; // default true if not present
-        var vRow = Reflx.util.el("div", { class: "lib-version-row" + (isVisible ? "" : " lib-version-dimmed") }, [
-          Reflx.util.el("span", { class: "chip version" }, [
-            "v" + v.version + (isVisible ? "" : " " + t("library.version.archived_label"))
-          ])
-        ]);
-        versionRowsEl.appendChild(vRow);
-      });
-
-      // Actions column (CR-UI-29): per-version Archive/Restore+Export+View icon-button
-      // group (one row per version, vertically aligned with its Versions-column chip),
-      // plus the single per-r-test Delete button appended once at the end.
-      //
-      // Judgment call (multi-version case — flagged to ProductOwner, not resolved by
-      // either mockup example, which both show exactly one version): the approved
-      // mockup shows ONE shared "Actions" column containing all 4 action types with no
-      // visual sub-grouping, for an r-test with a single version. With N versions this
-      // renders N per-version action-groups stacked here (mirroring the N stacked
-      // version-chip rows in the Versions column 1:1) with the single shared Delete
-      // button appended once below all of them — preserving "Delete is per-r-test, not
-      // per-version" while still keeping every action under one Actions column/cell, per
-      // the approved layout's intent. If this reads wrong in practice (e.g. Delete
-      // should sit beside the newest version's group instead of below all groups),
-      // that's a visual-polish follow-up for the ProductOwner/Tester to weigh in on.
-      var actionsEl = Reflx.util.el("td", {});
+      // Versions column (CR-UI-30): single <select> listing every version
+      // newest-first (per sortedVersions), each option labeled with its version
+      // number + archived state (reusing library.version.archived_label exactly as
+      // CR-UI-29 left it — no new i18n keys). Single-version case: dropdown still
+      // renders (keeps the Actions column's horizontal position consistent row-to-
+      // row, per the mockup's note) but is disabled since there is no choice to make.
+      var selectEl = Reflx.util.el("select", { class: "lib-version-select" });
+      var versionsByStr = {};
       sortedVersions.forEach(function (v) {
         var isVisible = v.is_visible !== false;
-        var group = Reflx.util.el("div", { class: "lib-actions-group" }, [
-          iconButton(
-            isVisible ? t("library.version.archive") : t("library.version.restore"),
-            isVisible ? ARCHIVE_ICON_SHAPES : RESTORE_ICON_PATHS,
-            (function (rslug, ver, vis) {
-              return function () {
-                Reflx.util.hideBanner("library-error");
-                api.patchRTestVersion(rslug, ver, { is_visible: !vis }).then(function (res) {
-                  if (!res.ok) { reportError(res); return; }
-                  loadAll();
-                });
-              };
-            })(r.slug, v.version, isVisible)
-          ),
-          iconButton(t("common.export"), [EXPORT_ICON_PATH], (function (rslug, ver) {
-            return function () { doExport(rslug, ver); };
-          })(r.slug, v.version)),
-          iconButton(t("common.view"), VIEW_ICON_SHAPES, (function (rslug, ver) {
-            return function () { selectVersion(r, v); };
-          })(r.slug, v.version))
-        ]);
-        actionsEl.appendChild(group);
+        var opt = document.createElement("option");
+        opt.value = String(v.version);
+        opt.textContent = "v" + v.version + (isVisible ? "" : " " + t("library.version.archived_label"));
+        selectEl.appendChild(opt);
+        versionsByStr[opt.value] = v;
+      });
+      selectEl.value = String(currentV.version); // newest/visible version selected by default
+      if (sortedVersions.length <= 1) selectEl.disabled = true;
+      var versionsEl = Reflx.util.el("td", {}, [selectEl]);
+
+      // Actions column (CR-UI-30): one shared Archive/Restore+Export+View group per
+      // r-test row (not per version), wired to whichever version the dropdown above
+      // currently has selected, plus the single per-r-test Delete button in its own
+      // group appended once at the end (unchanged from CR-UI-29 — kept in a separate
+      // .lib-actions-group div so re-rendering the version-actions group on dropdown
+      // `change` never touches Delete).
+      var actionsGroupEl = Reflx.util.el("div", { class: "lib-actions-group" });
+      renderVersionActionsGroup(actionsGroupEl, r, currentV);
+      selectEl.addEventListener("change", function () {
+        renderVersionActionsGroup(actionsGroupEl, r, versionsByStr[selectEl.value]);
       });
 
       // Delete r-test button (CI-15.5) — unchanged confirm()/RTEST_HAS_RESULTS handling (CI-16.10).
@@ -161,13 +169,16 @@
           });
         };
       })(r.slug, r.name), true);
-      actionsEl.appendChild(Reflx.util.el("div", { class: "lib-actions-group" }, [deleteBtn]));
+      var actionsEl = Reflx.util.el("td", {}, [
+        actionsGroupEl,
+        Reflx.util.el("div", { class: "lib-actions-group" }, [deleteBtn])
+      ]);
 
       var tr = Reflx.util.el("tr", {}, [
         Reflx.util.el("td", {}, [r.name]),
         Reflx.util.el("td", {}, [Reflx.util.el("span", { class: "chip" }, [categoryLabel(r)])]),
         Reflx.util.el("td", {}, [currentV ? Reflx.util.el("span", { class: "chip version" }, ["v" + currentV.version]) : t("common.none")]),
-        versionRowsEl,
+        versionsEl,
         actionsEl
       ]);
       tbody.appendChild(tr);

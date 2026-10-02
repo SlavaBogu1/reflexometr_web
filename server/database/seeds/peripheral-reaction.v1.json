@@ -1,5 +1,5 @@
 {
-  "trial_count": 20,
+  "trial_count": 35,
   "positions": [
     { "label": "left",       "angle_deg": 180, "eccentricity_px": 200 },
     { "label": "right",      "angle_deg": 0,   "eccentricity_px": 200 },
@@ -8,7 +8,13 @@
     { "label": "top-left",   "angle_deg": 135, "eccentricity_px": 200 },
     { "label": "top-right",  "angle_deg": 45,  "eccentricity_px": 200 },
     { "label": "bot-left",   "angle_deg": 225, "eccentricity_px": 200 },
-    { "label": "bot-right",  "angle_deg": 315, "eccentricity_px": 200 }
+    { "label": "bot-right",  "angle_deg": 315, "eccentricity_px": 200 },
+    { "label": "left-upper",  "angle_deg": 165, "eccentricity_px": 900 },
+    { "label": "left-mid",    "angle_deg": 180, "eccentricity_px": 900 },
+    { "label": "left-lower",  "angle_deg": 195, "eccentricity_px": 900 },
+    { "label": "right-upper", "angle_deg": 15,  "eccentricity_px": 900 },
+    { "label": "right-mid",   "angle_deg": 0,   "eccentricity_px": 900 },
+    { "label": "right-lower", "angle_deg": 345, "eccentricity_px": 900 }
   ],
   "stimulus_diameter_px": 40,
   "response_window_ms": 2000,

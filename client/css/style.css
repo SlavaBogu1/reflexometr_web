@@ -465,8 +465,14 @@ tr.selectable:hover { background: var(--color-surface-alt); }
 .vc-stage #trial-progress {
   position: absolute; top: 1rem; left: 50%; transform: translateX(-50%);
 }
+/* CR-TEST-40: own vertical slot below #trial-progress so the two never overlap
+   during K6's pretrain phase, even when the pretrain instruction text wraps to
+   2 lines (observed in ru, not en). width/text-align keep a 2-line wrap centered
+   without widening past the stage. Does not touch .vc-mapping (bottom: 1rem) or
+   .vc-shape-display's centering (both CR-TEST-38). */
 .vc-phase-label {
-  position: absolute; top: 1rem; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 2.5rem; left: 50%; transform: translateX(-50%);
+  width: 90%; max-width: 28rem; text-align: center;
   font-size: 0.95rem; color: var(--color-text);
 }
 .vc-shape-display {
@@ -638,6 +644,13 @@ footer.site-footer {
    Restore, Export, View, Delete) grouped together under a single Actions column. */
 .lib-actions-group { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.3rem; }
 .lib-actions-group:last-child { margin-bottom: 0; }
+
+/* --- CR-UI-30: version-dropdown selector replacing per-version stacked action
+   groups. Mockup: client/prototype-library-version-dropdown.html (approved
+   2026-10-02). Base look (border/background/padding/font-size) comes from the
+   shared `select` rule above — only the width constraint is new here. */
+.lib-version-select { width: 100%; max-width: 11rem; }
+.lib-version-select:disabled { opacity: 0.7; cursor: default; }
 
 /* --- CR-UI-08 prototype (method-info research blurb + Measurement Paths) --- */
 .research-blurb {
