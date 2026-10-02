@@ -62,16 +62,24 @@ final class RunService
             throw new ApiException(ErrorCode::RTEST_NOT_FOUND, 404);
         }
 
-        $version = $requestedVersion !== null
-            ? $this->versions->findByTestAndVersion((int) $rTest['id'], $requestedVersion)
-            : $this->versions->findActiveForTest((int) $rTest['id']);
+        if ($requestedVersion !== null) {
+            $version = $this->versions->findByTestAndVersion((int) $rTest['id'], $requestedVersion);
+        } else {
+            // CR-UI-31 (Sprint 18): resolve the default version the same way the public browsing
+            // surface does (RTestController), rather than ignoring is_visible entirely — that
+            // let an archived-but-still-active version be started via direct API call even
+            // though it had already disappeared from the public UI.
+            $version = $this->versions->findEffectiveVersionForTest((int) $rTest['id']);
+        }
         if ($version === null) {
             throw new ApiException(ErrorCode::RTEST_VERSION_NOT_FOUND, 404);
         }
         // CR-UI-18 (Sprint 15): a version with is_visible = 0 is archived — treat as not found
         // for the public run surface (same 404 RTEST_NOT_FOUND code, not a new error code, so the
         // caller can't distinguish "archived" from "never existed" — intentional, avoids leaking
-        // which specific slugs have been archived vs removed).
+        // which specific slugs have been archived vs removed). Still enforced here for the
+        // explicit-$requestedVersion path (the no-version-requested branch above already only
+        // ever returns visible rows, so this is a no-op there, not a second source of truth).
         if (!(bool) ($version['is_visible'] ?? true)) {
             throw new ApiException(ErrorCode::RTEST_NOT_FOUND, 404);
         }

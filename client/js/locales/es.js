@@ -235,7 +235,6 @@
     "library.tab.packages": "Paquetes",
     "library.col.name": "Nombre",
     "library.col.category": "Etiquetas",
-    "library.col.version": "Versión actual",
     "library.col.versions": "Versiones",
     "library.col.actions": "Acciones",
     "library.import": "Importar archivo…",
@@ -492,7 +491,7 @@
     "test.temporal.result.abs_error_visible": "Error abs. (círculo visible)",
     "test.temporal.result.abs_error_invisible": "Error abs. (círculo oculto)",
 
-    "test.visual_conflict.name": "Conflicto Visual",
+    "test.visual_conflict.name": "Tarea de Flexibilidad Cognitiva",
     "test.visual_conflict.description": "Aparece un rectángulo rojo o verde — pulsa la tecla de flecha que corresponde al color. Luego aparecen formas: responde a la forma, ignorando el color. Mide cuánto ralentizan tus reacciones las señales de color conflictivas.",
     "test.visual_conflict.expected1": "Primero aparece un rectángulo de color. Pulsa ← para rojo, → para verde.",
     "test.visual_conflict.expected2": "Tras la fase de preentrenamiento aparecen formas de varios colores. Ahora pulsa la tecla asociada a la FORMA: ← para triángulo, → para círculo.",

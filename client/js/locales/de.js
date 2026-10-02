@@ -235,7 +235,6 @@
     "library.tab.packages": "Pakete",
     "library.col.name": "Name",
     "library.col.category": "Tags",
-    "library.col.version": "Aktuelle Version",
     "library.col.versions": "Versionen",
     "library.col.actions": "Aktionen",
     "library.import": "Datei importieren…",
@@ -492,7 +491,7 @@
     "test.temporal.result.abs_error_visible": "Abs. Fehler (Kreis sichtbar)",
     "test.temporal.result.abs_error_invisible": "Abs. Fehler (Kreis verdeckt)",
 
-    "test.visual_conflict.name": "Visueller Konflikt",
+    "test.visual_conflict.name": "Kognitive Flexibilitätsaufgabe",
     "test.visual_conflict.description": "Ein Rechteck erscheint in Rot oder Grün — drücke die Pfeiltaste, die der Farbe entspricht. Dann erscheinen Formen: reagiere auf die Form, ignoriere die Farbe. Misst, wie sehr konfliktierende Farbhinweise deine Reaktionen verlangsamen.",
     "test.visual_conflict.expected1": "Zunächst erscheint ein farbiges Rechteck. Drücke ← für Rot, → für Grün.",
     "test.visual_conflict.expected2": "Nach der Vortrainingsphase erscheinen Formen in verschiedenen Farben. Reagiere jetzt auf die FORM: ← für Dreieck, → für Kreis.",

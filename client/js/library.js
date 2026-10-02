@@ -141,11 +141,13 @@
 
       // Actions column (CR-UI-30): one shared Archive/Restore+Export+View group per
       // r-test row (not per version), wired to whichever version the dropdown above
-      // currently has selected, plus the single per-r-test Delete button in its own
-      // group appended once at the end (unchanged from CR-UI-29 — kept in a separate
-      // .lib-actions-group div so re-rendering the version-actions group on dropdown
-      // `change` never touches Delete).
-      var actionsGroupEl = Reflx.util.el("div", { class: "lib-actions-group" });
+      // currently has selected. CI-18.1 (CR-UI-32): the per-r-test Delete button now
+      // renders in the same visual .lib-actions-group as Archive/Restore+Export+View
+      // (see actionsEl below) — actionsGroupEl itself uses the distinct .lib-version-actions
+      // class (not .lib-actions-group, to avoid nesting two same-classed elements), since
+      // renderVersionActionsGroup() wipes/rebuilds *that* element's innerHTML on every
+      // dropdown `change`; Delete is a sibling of it, not a child, so it survives.
+      var actionsGroupEl = Reflx.util.el("div", { class: "lib-version-actions" });
       renderVersionActionsGroup(actionsGroupEl, r, currentV);
       selectEl.addEventListener("change", function () {
         renderVersionActionsGroup(actionsGroupEl, r, versionsByStr[selectEl.value]);
@@ -169,15 +171,21 @@
           });
         };
       })(r.slug, r.name), true);
+      // CI-18.1 (CR-UI-32): Delete merged into the same visual group as
+      // Archive/Restore+Export+View. Must NOT be appended inside actionsGroupEl
+      // itself — that element's innerHTML is wiped/rebuilt on every dropdown
+      // `change` (renderVersionActionsGroup() above) — so both actionsGroupEl and
+      // deleteBtn are appended as direct children of one shared wrapper instead.
       var actionsEl = Reflx.util.el("td", {}, [
-        actionsGroupEl,
-        Reflx.util.el("div", { class: "lib-actions-group" }, [deleteBtn])
+        Reflx.util.el("div", { class: "lib-actions-group" }, [actionsGroupEl, deleteBtn])
       ]);
 
+      // CI-18.2 (CR-UI-33): Current Version <td> removed from this row — currentV
+      // itself is still needed below (default dropdown selection + initial
+      // renderVersionActionsGroup() call above), just no longer rendered as a column.
       var tr = Reflx.util.el("tr", {}, [
         Reflx.util.el("td", {}, [r.name]),
         Reflx.util.el("td", {}, [Reflx.util.el("span", { class: "chip" }, [categoryLabel(r)])]),
-        Reflx.util.el("td", {}, [currentV ? Reflx.util.el("span", { class: "chip version" }, ["v" + currentV.version]) : t("common.none")]),
         versionsEl,
         actionsEl
       ]);
@@ -386,6 +394,19 @@
     });
   }
 
+  // CI-18.4 (CR-UI-35): adds the View icon glyph to the static "Version detail"
+  // heading, reusing VIEW_ICON_SHAPES + Reflx.util.svgIcon() (same glyph as the
+  // row-level View button) — not a new inline SVG. Rendered once at boot so it's
+  // visible before any row's View button has been clicked, independent of
+  // selectVersion().
+  function renderVersionDetailHeadingIcon() {
+    var heading = document.getElementById("version-detail-title");
+    if (!heading) return;
+    var icon = Reflx.util.svgIcon(VIEW_ICON_SHAPES);
+    icon.classList.add("heading-icon");
+    heading.insertBefore(icon, heading.firstChild);
+  }
+
   function boot() {
     Reflx.i18n.loadLocaleConfig().then(function () {
       Reflx.i18n.init();
@@ -394,6 +415,7 @@
       wireTabs();
       wireImport();
       wirePackageCreate();
+      renderVersionDetailHeadingIcon();
       if (showGate()) loadAll();
     });
     document.addEventListener("reflx:sessionchange", function () { if (showGate()) loadAll(); });

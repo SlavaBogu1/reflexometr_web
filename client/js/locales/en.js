@@ -235,7 +235,6 @@
     "library.tab.packages": "Packages",
     "library.col.name": "Name",
     "library.col.category": "Tags",
-    "library.col.version": "Current version",
     "library.col.versions": "Versions",
     "library.col.actions": "Actions",
     "library.import": "Import file…",
@@ -492,7 +491,7 @@
     "test.temporal.result.abs_error_visible": "Abs. error (circle visible)",
     "test.temporal.result.abs_error_invisible": "Abs. error (circle hidden)",
 
-    "test.visual_conflict.name": "Visual Conflict",
+    "test.visual_conflict.name": "Cognitive Flexibility Task",
     "test.visual_conflict.description": "A rectangle appears in red or green — press the arrow key matching the color. Then shapes appear: respond to the shape, ignoring the color. Measures how much conflicting color cues slow your reactions.",
     "test.visual_conflict.expected1": "First, a colored rectangle appears. Press ← for red, → for green.",
     "test.visual_conflict.expected2": "After the pretrain phase, shapes appear in various colors. Now press the key mapped to the SHAPE: ← for triangle, → for circle.",

@@ -235,7 +235,6 @@
     "library.tab.packages": "Packages",
     "library.col.name": "Nom",
     "library.col.category": "Étiquettes",
-    "library.col.version": "Version actuelle",
     "library.col.versions": "Versions",
     "library.col.actions": "Actions",
     "library.import": "Importer un fichier…",
@@ -492,7 +491,7 @@
     "test.temporal.result.abs_error_visible": "Erreur abs. (cercle visible)",
     "test.temporal.result.abs_error_invisible": "Erreur abs. (cercle masqué)",
 
-    "test.visual_conflict.name": "Conflit Visuel",
+    "test.visual_conflict.name": "Tâche de Flexibilité Cognitive",
     "test.visual_conflict.description": "Un rectangle apparaît en rouge ou vert — appuyez sur la touche fléchée correspondant à la couleur. Puis des formes apparaissent : répondez à la forme, ignorez la couleur. Mesure combien les indices de couleur conflictuels ralentissent vos réactions.",
     "test.visual_conflict.expected1": "D'abord, un rectangle coloré apparaît. Appuyez sur ← pour rouge, → pour vert.",
     "test.visual_conflict.expected2": "Après la phase d'entraînement, des formes apparaissent en diverses couleurs. Appuyez maintenant sur la touche associée à la FORME : ← pour triangle, → pour cercle.",

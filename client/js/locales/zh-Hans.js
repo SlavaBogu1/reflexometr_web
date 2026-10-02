@@ -235,7 +235,6 @@
     "library.tab.packages": "套装包",
     "library.col.name": "名称",
     "library.col.category": "标签",
-    "library.col.version": "当前版本",
     "library.col.versions": "版本列表",
     "library.col.actions": "操作",
     "library.import": "导入文件…",
@@ -492,7 +491,7 @@
     "test.temporal.result.abs_error_visible": "绝对误差（圆可见时）",
     "test.temporal.result.abs_error_invisible": "绝对误差（圆隐藏时）",
 
-    "test.visual_conflict.name": "视觉冲突",
+    "test.visual_conflict.name": "认知灵活性任务",
     "test.visual_conflict.description": "屏幕出现红色或绿色矩形——按对应颜色的方向键。然后出现形状：根据形状作出反应，忽略颜色。测量颜色冲突线索对反应速度的影响。",
     "test.visual_conflict.expected1": "首先出现一个彩色矩形。红色按 ←，绿色按 →。",
     "test.visual_conflict.expected2": "预训练阶段结束后，各种颜色的形状会出现。现在按形状对应的键：三角形 → ←，圆形 → →。",

@@ -44,11 +44,13 @@ final class RTestController
             if ($tagFilter !== null && !in_array($tagFilter, array_column($testTags, 'id'), true)) {
                 continue;
             }
-            // CR-UI-18 (Sprint 15): only consider visible versions. A test with no visible
-            // active version (all versions archived) is excluded from the public list entirely.
-            $active = $versions->findActiveVisibleForTest((int) $rTest['id']);
+            // CR-UI-18 (Sprint 15) + CR-UI-31 (Sprint 18): only consider visible versions,
+            // falling back from the active version to the highest-numbered visible one if the
+            // active version has been archived. A test with no visible version at all (every
+            // version archived) is excluded from the public list entirely.
+            $active = $versions->findEffectiveVersionForTest((int) $rTest['id']);
             if ($active === null) {
-                continue; // zero visible versions — exclude from public list
+                continue;
             }
             $out[] = self::summarize($rTest, $active, $testTags);
         }
@@ -67,8 +69,10 @@ final class RTestController
         if ($rTest === null) {
             throw new ApiException(ErrorCode::RTEST_NOT_FOUND, 404);
         }
-        // CR-UI-18 (Sprint 15): only surface the visible active version.
-        $active = $versions->findActiveVisibleForTest((int) $rTest['id']);
+        // CR-UI-18 (Sprint 15) + CR-UI-31 (Sprint 18): same effective-version resolution as
+        // list() — falls back from the active version to the highest-numbered visible one if
+        // the active version has been archived.
+        $active = $versions->findEffectiveVersionForTest((int) $rTest['id']);
         $packages = (new PackageRepository($db))->listPackagesForTest((int) $rTest['id']);
 
         $payload = self::summarize($rTest, $active, $tags->tagsForTest((int) $rTest['id']));

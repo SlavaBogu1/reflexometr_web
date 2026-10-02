@@ -636,14 +636,23 @@ footer.site-footer {
 .manage-results-toggle-btn:hover, .icon-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
 .manage-results-toggle-btn.is-excluded, .icon-btn.danger { border-color: var(--color-danger); color: var(--color-danger); }
 .icon-btn.danger:hover { background: var(--color-danger); color: #2b0507; }
-.manage-results-toggle-btn svg, .icon-btn svg { width: 1rem; height: 1rem; }
+.manage-results-toggle-btn svg, .icon-btn svg, .heading-icon { width: 1rem; height: 1rem; }
 .manage-results-note { font-size: 0.78rem; color: var(--color-text-dim); font-style: italic; margin-top: 0.5rem; }
+
+/* CI-18.4 (CR-UI-35): static View-icon glyph next to a heading (e.g. library.html's
+   "Version detail" h3) — shares its size with .icon-btn svg above; only the inline-placement
+   alignment/spacing/color are new here. */
+.heading-icon { vertical-align: -0.1em; margin-right: 0.4rem; color: var(--color-text-dim); }
 
 /* --- CR-UI-29: admin Library row-action icon buttons. Layout approved (2 revision
    rounds): client/prototype-library-icon-buttons.html — all 4 actions (Archive/
    Restore, Export, View, Delete) grouped together under a single Actions column. */
 .lib-actions-group { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.3rem; }
 .lib-actions-group:last-child { margin-bottom: 0; }
+/* CI-18.1 (CR-UI-32): inner rebuildable Archive/Restore+Export+View subgroup, nested inside a
+   .lib-actions-group wrapper alongside Delete — same flex layout, distinct class so the two
+   nesting levels aren't both ".lib-actions-group" (that one carried the per-version rebuild). */
+.lib-version-actions { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
 
 /* --- CR-UI-30: version-dropdown selector replacing per-version stacked action
    groups. Mockup: client/prototype-library-version-dropdown.html (approved

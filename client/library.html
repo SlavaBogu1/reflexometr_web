@@ -28,28 +28,6 @@
           <button class="btn" id="btn-open-import" data-i18n="library.import">Import file…</button>
         </div>
 
-        <div class="card">
-          <table>
-            <thead>
-              <tr>
-                <th data-i18n="library.col.name">Name</th>
-                <th data-i18n="library.col.category">Category</th>
-                <th data-i18n="library.col.version">Current version</th>
-                <th data-i18n="library.col.versions">Versions</th>
-                <th data-i18n="library.col.actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="rtests-tbody"></tbody>
-          </table>
-        </div>
-
-        <div class="card">
-          <h3 data-i18n="library.detail.title">Version detail</h3>
-          <div id="version-detail">
-            <p class="field-desc" data-i18n="library.detail.select_hint"></p>
-          </div>
-        </div>
-
         <div class="card" id="import-panel" style="display:none;">
           <h3 data-i18n="library.import.title">Import r-test description</h3>
           <div class="field-row">
@@ -86,6 +64,27 @@
           <div class="btn-row">
             <button class="btn" id="btn-do-import" data-i18n="library.import.submit">Import</button>
             <button class="btn secondary" id="btn-cancel-import" data-i18n="common.cancel">Cancel</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="library.col.name">Name</th>
+                <th data-i18n="library.col.category">Category</th>
+                <th data-i18n="library.col.versions">Versions</th>
+                <th data-i18n="library.col.actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rtests-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h3 id="version-detail-title" data-i18n="library.detail.title">Version detail</h3>
+          <div id="version-detail">
+            <p class="field-desc" data-i18n="library.detail.select_hint"></p>
           </div>
         </div>
       </div>

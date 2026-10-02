@@ -52,15 +52,6 @@ final class RTestVersionRepository
     }
 
     /** @return array<string,mixed>|null */
-    public function findActiveForTest(int $rTestId): ?array
-    {
-        $stmt = $this->db->prepare('SELECT * FROM r_test_versions WHERE r_test_id = ? AND is_active = 1 LIMIT 1');
-        $stmt->execute([$rTestId]);
-        $row = $stmt->fetch();
-        return $row === false ? null : $row;
-    }
-
-    /** @return array<string,mixed>|null */
     public function findByTestAndVersion(int $rTestId, int $version): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM r_test_versions WHERE r_test_id = ? AND version = ?');
@@ -102,13 +93,23 @@ final class RTestVersionRepository
     }
 
     /**
-     * CR-UI-18 (Sprint 15): finds the active version for a test only if it is visible. Used by
-     * RunService::startRun() to respect the is_visible flag when resolving the default version.
+     * CR-UI-18 (Sprint 15) + CR-UI-31 (Sprint 18): the effective "current version" for a test's
+     * public surface (listing, detail page, default run-start). Prefers the active version if
+     * it's still visible; if the active version has been archived (is_visible = 0) but an older
+     * version of the same test is still visible, falls back to the highest-numbered visible
+     * version rather than treating the test as having no visible version at all. Returns null
+     * only when every version of the test is archived.
      * @return array<string,mixed>|null
      */
-    public function findActiveVisibleForTest(int $rTestId): ?array
+    public function findEffectiveVersionForTest(int $rTestId): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM r_test_versions WHERE r_test_id = ? AND is_active = 1 AND is_visible = 1 LIMIT 1');
+        $stmt->execute([$rTestId]);
+        $row = $stmt->fetch();
+        if ($row !== false) {
+            return $row;
+        }
+        $stmt = $this->db->prepare('SELECT * FROM r_test_versions WHERE r_test_id = ? AND is_visible = 1 ORDER BY version DESC LIMIT 1');
         $stmt->execute([$rTestId]);
         $row = $stmt->fetch();
         return $row === false ? null : $row;
