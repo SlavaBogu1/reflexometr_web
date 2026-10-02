@@ -150,6 +150,20 @@
         var xy = positionToXY(pos);
         ctx.save();
         ctx.fillStyle = "var(--stimulus-red, #e03030)";
+        // TEMPORARY DEBUG (CR-TEST-39 follow-up investigation) — remove once the
+        // off-canvas/invisible-stimulus report is resolved.
+        console.log("[K7 DEBUG] drawFixationAndStimulus", {
+          position_label: pos.label,
+          angle_deg: pos.angle_deg,
+          eccentricity_px: pos.eccentricity_px,
+          computed_x: xy.x,
+          computed_y: xy.y,
+          stimRadius: stimRadius,
+          canvas_width: canvas.width,
+          canvas_height: canvas.height,
+          fillStyle_requested: "var(--stimulus-red, #e03030)",
+          fillStyle_resolved: ctx.fillStyle
+        });
         ctx.beginPath();
         ctx.arc(xy.x, xy.y, stimRadius, 0, 2 * Math.PI);
         ctx.fill();
