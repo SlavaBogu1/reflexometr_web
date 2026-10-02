@@ -264,7 +264,7 @@
 
     hideRunError();
     api.startRun(slug, opts).then(function (res) {
-      if (!res.ok) { showRunError(api.messageFor(res.code)); return; }
+      if (!res.ok) { showRunError(api.messageForResponse(res)); return; }
       var run = res.data;
       runState.falseStartsThisRun = 0;
       runState.currentToken = run.token;
@@ -335,7 +335,7 @@
     }
     hideRunError();
     api.submitRun(runState.currentToken, payload).then(function (res) {
-      if (!res.ok) { showRunError(api.messageFor(res.code)); return; }
+      if (!res.ok) { showRunError(api.messageForResponse(res)); return; }
       var d = res.data;
       runState.completedRuns.push({
         resultId: d.result_id, rTestId: d.r_test_id, versionId: d.r_test_version_id,
@@ -675,7 +675,7 @@
     compareBox.innerHTML = t("common.loading");
     api.getComparison(last.resultId).then(function (res) {
       compareBox.innerHTML = "";
-      if (!res.ok) { compareBox.textContent = api.messageFor(res.code); return; }
+      if (!res.ok) { compareBox.textContent = api.messageForResponse(res); return; }
       var d = res.data;
       if (d.percentile === null || d.percentile === undefined) { compareBox.textContent = t("compare.no_data"); return; }
       compareBox.appendChild(Reflx.util.el("p", {}, [t("compare.percentile", { pct: Math.round(d.percentile) })]));
@@ -692,7 +692,7 @@
     // which is what submit's r_test_version_id is) — captured from the run-start response.
     api.getHistory(slug, runState.currentRunVersion).then(function (res) {
       trendBox.innerHTML = "";
-      if (!res.ok) { trendBox.textContent = api.messageFor(res.code); return; }
+      if (!res.ok) { trendBox.textContent = api.messageForResponse(res); return; }
       var entries = res.data.entries || [];
       if (entries.length <= 1) { trendBox.textContent = t("compare.trend.none"); return; }
       // Defensive chronological (ascending) sort before taking the last 8 — CONTRACT.md

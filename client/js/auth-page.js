@@ -23,9 +23,9 @@
     hideError();
   }
 
-  function showError(code) {
+  function showError(message) {
     var box = document.getElementById("auth-error");
-    box.textContent = api.messageFor(code);
+    box.textContent = message;
     box.style.display = "block";
   }
   function hideError() { document.getElementById("auth-error").style.display = "none"; }
@@ -46,7 +46,7 @@
 
     if (mode === "register") {
       var confirm = document.getElementById("auth-password-confirm").value;
-      if (confirm !== password) { showError("AUTH_PASSWORD_CONFIRM_MISMATCH"); return; }
+      if (confirm !== password) { showError(api.messageFor("AUTH_PASSWORD_CONFIRM_MISMATCH")); return; }
     }
 
     var submitBtn = document.getElementById("auth-submit");
@@ -57,7 +57,7 @@
     call.then(function (res) {
       submitBtn.disabled = false;
       submitBtn.textContent = t(mode === "login" ? "auth.login.submit" : "auth.register.submit");
-      if (!res.ok) { showError(res.code); return; }
+      if (!res.ok) { showError(api.messageForResponse(res)); return; }
       Reflx.session.set(res.data.token, res.data.user);
       adoptServerProfile(res.data.user);
       location.href = returnTo;

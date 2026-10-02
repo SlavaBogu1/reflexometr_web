@@ -447,6 +447,39 @@ tr.selectable:hover { background: var(--color-surface-alt); }
   font-size: 0.85rem; color: var(--color-text-dim); white-space: nowrap;
 }
 
+/* CR-TEST-38: Visual Conflict — centered stage, mirrors .crg-stage (CR-TEST-32's
+   proven pattern). Mockup: client/prototype-visual-conflict-centered-stage.html. */
+.vc-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 320px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  position: relative;
+  user-select: none;
+  gap: 1rem;
+}
+.vc-stage #trial-progress {
+  position: absolute; top: 1rem; left: 50%; transform: translateX(-50%);
+}
+.vc-phase-label {
+  position: absolute; top: 1rem; left: 50%; transform: translateX(-50%);
+  font-size: 0.95rem; color: var(--color-text);
+}
+.vc-shape-display {
+  color: var(--color-accent);
+  display: flex; align-items: center; justify-content: center;
+}
+.vc-mapping {
+  position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%);
+}
+.vc-mapping-hint {
+  font-size: 0.85rem; color: var(--color-text-dim); white-space: nowrap;
+}
+
 /* CR-TEST-34: Peripheral Reaction — canvas fills the stage. */
 .pr-stage {
   position: relative;
@@ -585,15 +618,26 @@ footer.site-footer {
 .manage-results-meta { display: flex; gap: 0.75rem; align-items: baseline; }
 .manage-results-value { font-weight: 600; min-width: 4.5rem; }
 .manage-results-date { color: var(--color-text-dim); font-size: 0.82rem; }
-.manage-results-toggle-btn {
+/* Shared small-icon-button look (1.8rem square, bordered, accent-color hover) — used by
+   stats-page.js's result-exclude toggle and, since CR-UI-29, library.js's row actions.
+   Each consumer keeps its own class name (so neither page depends on the other's
+   class) plus its own state modifier: `.is-excluded` / `.icon-btn.danger`. */
+.manage-results-toggle-btn, .icon-btn {
   width: 1.8rem; height: 1.8rem; display: inline-flex; align-items: center; justify-content: center;
   border-radius: 4px; border: 1px solid var(--color-accent-dim); background: none; cursor: pointer;
   color: var(--color-text-dim); flex: 0 0 auto;
 }
-.manage-results-toggle-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
-.manage-results-toggle-btn.is-excluded { border-color: var(--color-danger); color: var(--color-danger); }
-.manage-results-toggle-btn svg { width: 1rem; height: 1rem; }
+.manage-results-toggle-btn:hover, .icon-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.manage-results-toggle-btn.is-excluded, .icon-btn.danger { border-color: var(--color-danger); color: var(--color-danger); }
+.icon-btn.danger:hover { background: var(--color-danger); color: #2b0507; }
+.manage-results-toggle-btn svg, .icon-btn svg { width: 1rem; height: 1rem; }
 .manage-results-note { font-size: 0.78rem; color: var(--color-text-dim); font-style: italic; margin-top: 0.5rem; }
+
+/* --- CR-UI-29: admin Library row-action icon buttons. Layout approved (2 revision
+   rounds): client/prototype-library-icon-buttons.html — all 4 actions (Archive/
+   Restore, Export, View, Delete) grouped together under a single Actions column. */
+.lib-actions-group { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.3rem; }
+.lib-actions-group:last-child { margin-bottom: 0; }
 
 /* --- CR-UI-08 prototype (method-info research blurb + Measurement Paths) --- */
 .research-blurb {

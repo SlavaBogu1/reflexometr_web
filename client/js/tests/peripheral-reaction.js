@@ -86,12 +86,44 @@
       function centerX() { return canvas.width / 2; }
       function centerY() { return canvas.height / 2; }
 
-      /** Compute pixel position from angle + eccentricity relative to canvas center. */
+      /**
+       * Compute pixel position from angle + eccentricity relative to canvas center,
+       * clamping the rendered distance (not the configured angle/eccentricity — those
+       * stay as-authored in the stored trial_data, see below) so the full stimulus
+       * circle (center ± stimRadius) always stays within the canvas bounds. The
+       * `trial-progress` text overlay occupies a band near the top of the canvas
+       * (CSS: `top: 1rem`, ~2rem tall incl. line height); stimuli are additionally
+       * kept clear of that band so they never render stacked under it.
+       *
+       * Generalizes to any positions[] (seed- or admin-configured): each axis is
+       * clamped independently against the *current* canvas size, never against
+       * numbers tuned to a specific stage height/eccentricity.
+       */
       function positionToXY(pos) {
         var rad = pos.angle_deg * DEG_TO_RAD;
+        var cx = centerX();
+        var cy = centerY();
+        var dx = Math.cos(rad);
+        var dy = -Math.sin(rad); // Y increases downward
+
+        // Reserve space for the trial-progress overlay at the top of the canvas.
+        var topOverlayPx = 32;
+        var minY = topOverlayPx + stimRadius;
+        var maxX = canvas.width - stimRadius;
+        var minX = stimRadius;
+        var maxY = canvas.height - stimRadius;
+
+        // Max eccentricity (from center) that keeps the full stimulus circle inside
+        // the clamped bounds along this specific direction (dx, dy); Infinity for an
+        // axis the direction doesn't move along (avoids a divide-by-zero cap).
+        var maxEccX = dx !== 0 ? (dx > 0 ? (maxX - cx) / dx : (minX - cx) / dx) : Infinity;
+        var maxEccY = dy !== 0 ? (dy > 0 ? (maxY - cy) / dy : (minY - cy) / dy) : Infinity;
+        var maxEcc = Reflx.util.clamp(Math.min(maxEccX, maxEccY), 0, Infinity);
+        var effectiveEcc = Reflx.util.clamp(pos.eccentricity_px, 0, maxEcc);
+
         return {
-          x: centerX() + Math.cos(rad) * pos.eccentricity_px,
-          y: centerY() - Math.sin(rad) * pos.eccentricity_px  // Y increases downward
+          x: cx + dx * effectiveEcc,
+          y: cy + dy * effectiveEcc
         };
       }
 

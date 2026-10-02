@@ -101,11 +101,22 @@
       var shapeEl = Reflx.util.el("div", { class: "vc-shape-display" });
       var trialProgressEl = Reflx.util.el("span", { id: "trial-progress", class: "field-desc" });
       var phaseEl = Reflx.util.el("div", { class: "vc-phase-label" });
+      // CR-TEST-38: persistent measurement-phase shape->key mapping hint (was blank
+      // during measurement before). Localized via t() (CI-16.3's corrected
+      // direction-word wording convention) — never choice-reaction-geometry.js's
+      // unlocalized `shape + " → " + km[shape]` string concatenation, which leaks a
+      // raw KeyboardEvent.code value instead of a translated label. Visibility is
+      // toggled per-trial in armTrial() below, for the full duration of each
+      // measurement trial (not just on trial start).
+      var mappingEl = Reflx.util.el("div", { class: "vc-mapping" });
+      mappingEl.innerHTML = '<span class="vc-mapping-hint">' + t("test.visual_conflict.measurement_mapping_hint") + "</span>";
+      mappingEl.style.display = "none";
 
       var stage = Reflx.util.el("div", { class: "vc-stage" }, [
         trialProgressEl,
         phaseEl,
-        shapeEl
+        shapeEl,
+        mappingEl
       ]);
       container.innerHTML = "";
       container.appendChild(stage);
@@ -162,6 +173,7 @@
         // i18n locale strings are trusted content (never user input) — same trust boundary as all other i18n-driven content in the app.
         shapeEl.innerHTML = '<div class="vc-transition-msg">' + t("test.visual_conflict.transition_instruction") + '</div>';
         phaseEl.textContent = "";
+        mappingEl.style.display = "none";
         if (statusEl) statusEl.textContent = "";
         transitionTimer = setTimeout(function () {
           if (stopped) return;
@@ -202,6 +214,7 @@
         phaseEl.textContent = currentPhase === "pretrain"
           ? t("test.visual_conflict.pretrain_instruction")
           : "";
+        mappingEl.style.display = currentPhase === "measurement" ? "" : "none";
         if (statusEl) statusEl.textContent = t("runner.test.countdown_label");
 
         stopKeyListener();

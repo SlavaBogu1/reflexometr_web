@@ -26,7 +26,7 @@
     return admin;
   }
 
-  function reportError(res) { Reflx.util.showBanner("library-error", api.messageFor(res.code)); }
+  function reportError(res) { Reflx.util.showBanner("library-error", api.messageForResponse(res)); }
 
   function loadAll() {
     Reflx.util.hideBanner("library-error");
@@ -50,6 +50,37 @@
     return tags.length ? tags.map(function (tg) { return tg.name; }).join(", ") : t("library.uncategorized");
   }
 
+  // CR-UI-29 icon glyphs (see client/prototype-library-icon-buttons.html for the
+  // exact approved SVG paths). Archive intentionally uses its own lidded-box glyph
+  // rather than stats-page.js's EXCLUDE_ICON_PATH — that path also reads as a trash
+  // can (an earlier mockup round accidentally gave Archive and Delete the same
+  // shape); Restore reuses stats-page.js's circular-undo glyph since that one isn't
+  // visually confusable with anything else here.
+  var ARCHIVE_ICON_SHAPES = [
+    { tag: "rect", attrs: { x: "3", y: "4", width: "18", height: "4", rx: "1" } },
+    "M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8",
+    "M10 13h4"
+  ];
+  // Matches stats-page.js's existing INCLUDE_ICON_PATHS exactly (task instruction: reuse it).
+  var RESTORE_ICON_PATHS = ["M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0z", "M9 9l6 6M15 9l-6 6"];
+  var EXPORT_ICON_PATH = "M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2";
+  var VIEW_ICON_SHAPES = [
+    "M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z",
+    { tag: "circle", attrs: { cx: "12", cy: "12", r: "3" } }
+  ];
+  var DELETE_ICON_PATH = "M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6h12zM10 11v6M14 11v6";
+
+  /** Small icon-button helper: aria-label + title both carry `label` (existing i18n string, reused not renamed). */
+  function iconButton(label, iconShapes, onclick, danger) {
+    return Reflx.util.el("button", {
+      class: "icon-btn" + (danger ? " danger" : ""),
+      type: "button",
+      "aria-label": label,
+      title: label,
+      onclick: onclick
+    }, [Reflx.util.svgIcon(iconShapes)]);
+  }
+
   function renderTests() {
     var tbody = document.getElementById("rtests-tbody");
     tbody.innerHTML = "";
@@ -58,38 +89,62 @@
       var sortedVersions = r.versions.slice().sort(function (a, b) { return b.version - a.version; });
       var currentV = sortedVersions[0];
 
-      // Build version rows with Archive/Restore toggle (CI-15.4)
+      // Versions column (CR-UI-29): version chip only — no action buttons here anymore.
       var versionRowsEl = Reflx.util.el("td", {});
       sortedVersions.forEach(function (v) {
         var isVisible = v.is_visible !== false; // default true if not present
         var vRow = Reflx.util.el("div", { class: "lib-version-row" + (isVisible ? "" : " lib-version-dimmed") }, [
           Reflx.util.el("span", { class: "chip version" }, [
             "v" + v.version + (isVisible ? "" : " " + t("library.version.archived_label"))
-          ]),
-          " ",
-          Reflx.util.el("button", { class: "btn secondary small", onclick: (function (rslug, ver, vis) {
-            return function () {
-              Reflx.util.hideBanner("library-error");
-              api.patchRTestVersion(rslug, ver, { is_visible: !vis }).then(function (res) {
-                if (!res.ok) { reportError(res); return; }
-                loadAll();
-              });
-            };
-          })(r.slug, v.version, isVisible) }, [isVisible ? t("library.version.archive") : t("library.version.restore")]),
-          " ",
-          Reflx.util.el("button", { class: "btn secondary small", onclick: (function (rslug, ver) {
-            return function () { doExport(rslug, ver); };
-          })(r.slug, v.version) }, [t("common.export")]),
-          " ",
-          Reflx.util.el("button", { class: "btn secondary small", onclick: (function (rslug, ver) {
-            return function () { selectVersion(r, v); };
-          })(r.slug, v.version) }, [t("common.view")])
+          ])
         ]);
         versionRowsEl.appendChild(vRow);
       });
 
-      // Delete r-test button (CI-15.5)
-      var deleteBtn = Reflx.util.el("button", { class: "btn danger small", onclick: (function (rslug, rname) {
+      // Actions column (CR-UI-29): per-version Archive/Restore+Export+View icon-button
+      // group (one row per version, vertically aligned with its Versions-column chip),
+      // plus the single per-r-test Delete button appended once at the end.
+      //
+      // Judgment call (multi-version case — flagged to ProductOwner, not resolved by
+      // either mockup example, which both show exactly one version): the approved
+      // mockup shows ONE shared "Actions" column containing all 4 action types with no
+      // visual sub-grouping, for an r-test with a single version. With N versions this
+      // renders N per-version action-groups stacked here (mirroring the N stacked
+      // version-chip rows in the Versions column 1:1) with the single shared Delete
+      // button appended once below all of them — preserving "Delete is per-r-test, not
+      // per-version" while still keeping every action under one Actions column/cell, per
+      // the approved layout's intent. If this reads wrong in practice (e.g. Delete
+      // should sit beside the newest version's group instead of below all groups),
+      // that's a visual-polish follow-up for the ProductOwner/Tester to weigh in on.
+      var actionsEl = Reflx.util.el("td", {});
+      sortedVersions.forEach(function (v) {
+        var isVisible = v.is_visible !== false;
+        var group = Reflx.util.el("div", { class: "lib-actions-group" }, [
+          iconButton(
+            isVisible ? t("library.version.archive") : t("library.version.restore"),
+            isVisible ? ARCHIVE_ICON_SHAPES : RESTORE_ICON_PATHS,
+            (function (rslug, ver, vis) {
+              return function () {
+                Reflx.util.hideBanner("library-error");
+                api.patchRTestVersion(rslug, ver, { is_visible: !vis }).then(function (res) {
+                  if (!res.ok) { reportError(res); return; }
+                  loadAll();
+                });
+              };
+            })(r.slug, v.version, isVisible)
+          ),
+          iconButton(t("common.export"), [EXPORT_ICON_PATH], (function (rslug, ver) {
+            return function () { doExport(rslug, ver); };
+          })(r.slug, v.version)),
+          iconButton(t("common.view"), VIEW_ICON_SHAPES, (function (rslug, ver) {
+            return function () { selectVersion(r, v); };
+          })(r.slug, v.version))
+        ]);
+        actionsEl.appendChild(group);
+      });
+
+      // Delete r-test button (CI-15.5) — unchanged confirm()/RTEST_HAS_RESULTS handling (CI-16.10).
+      var deleteBtn = iconButton(t("library.rtest.delete"), [DELETE_ICON_PATH], (function (rslug, rname) {
         return function () {
           if (!confirm(t("library.rtest.delete_confirm"))) return;
           Reflx.util.hideBanner("library-error");
@@ -105,14 +160,15 @@
             loadAll();
           });
         };
-      })(r.slug, r.name) }, [t("library.rtest.delete")]);
+      })(r.slug, r.name), true);
+      actionsEl.appendChild(Reflx.util.el("div", { class: "lib-actions-group" }, [deleteBtn]));
 
       var tr = Reflx.util.el("tr", {}, [
         Reflx.util.el("td", {}, [r.name]),
         Reflx.util.el("td", {}, [Reflx.util.el("span", { class: "chip" }, [categoryLabel(r)])]),
         Reflx.util.el("td", {}, [currentV ? Reflx.util.el("span", { class: "chip version" }, ["v" + currentV.version]) : t("common.none")]),
         versionRowsEl,
-        Reflx.util.el("td", {}, [deleteBtn])
+        actionsEl
       ]);
       tbody.appendChild(tr);
     });

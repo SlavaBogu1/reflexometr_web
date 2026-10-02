@@ -50,6 +50,32 @@
   }
 
   /**
+   * CR-UI-28: turn a failed response into the most specific message it supports.
+   * When `res.code === "VALIDATION_ERROR"` and the server attached
+   * `details.fields: string[]` (confirmed server-side at
+   * server/src/Services/ImportService.php — e.g. `["slug"]`/`["description"]`),
+   * build a human-readable comma-joined field-label list (via the `field.*` i18n
+   * keys, CI-16.6) and resolve `error.VALIDATION_ERROR_FIELDS` instead of the bare
+   * generic `error.VALIDATION_ERROR` text. Falls back to today's existing generic
+   * `messageFor(res.code)` behavior whenever `details.fields` is absent (some
+   * VALIDATION_ERRORs may not carry field info) or for any other error code — no
+   * regression to non-field error handling.
+   */
+  function messageForResponse(res) {
+    var fields = res && res.code === "VALIDATION_ERROR" && res.details && res.details.fields;
+    if (fields && fields.length) {
+      var t = Reflx.i18n.t;
+      var labels = fields.map(function (f) {
+        var key = "field." + f;
+        var resolved = t(key);
+        return resolved === key ? f : resolved;
+      });
+      return messageFor("VALIDATION_ERROR_FIELDS", { fields: labels.join(", ") });
+    }
+    return messageFor(res.code);
+  }
+
+  /**
    * Core request helper. Attaches the bearer token if one exists. A 401 with
    * AUTH_REQUIRED/AUTH_SESSION_EXPIRED clears the session and redirects to the
    * login screen (CR-AUTH-01 acceptance 6) unless `opts.noAuthRedirect` is set
@@ -89,6 +115,7 @@
 
   var api = {
     messageFor: messageFor,
+    messageForResponse: messageForResponse,
 
     // --- CR-AUTH-01 ---
     register: function (email, password) { return request("POST", "/auth/register", { email: email, password: password }, { noAuthRedirect: true }); },

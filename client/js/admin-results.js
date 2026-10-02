@@ -22,7 +22,7 @@
     return admin;
   }
 
-  function reportError(res) { Reflx.util.showBanner("admin-results-error", api.messageFor(res.code)); }
+  function reportError(res) { Reflx.util.showBanner("admin-results-error", api.messageForResponse(res)); }
 
   function loadPending() {
     Reflx.util.hideBanner("admin-results-error");

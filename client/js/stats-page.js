@@ -62,11 +62,10 @@
 
   // ------------------------------------------------------------ SVG sparkline
 
-  function svgEl(tag, attrs) {
-    var node = document.createElementNS("http://www.w3.org/2000/svg", tag);
-    Object.keys(attrs || {}).forEach(function (k) { node.setAttribute(k, attrs[k]); });
-    return node;
-  }
+  // CI-16.8 (CR-UI-29): svgEl/svgIcon moved to Reflx.util (client/js/util.js) so
+  // library.js can reuse them without duplicating the pattern. Local aliases kept
+  // so the rest of this file's call sites are unchanged.
+  var svgEl = Reflx.util.svgEl;
 
   function buildSparkline(values) {
     var W = 300, H = 54, PAD = 4;
@@ -361,11 +360,7 @@
   var EXCLUDE_ICON_PATH = "M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z";
   var INCLUDE_ICON_PATHS = ["M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0z", "M9 9l6 6M15 9l-6 6"];
 
-  function svgIcon(paths) {
-    var svg = svgEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2" });
-    paths.forEach(function (d) { svg.appendChild(svgEl("path", { d: d })); });
-    return svg;
-  }
+  var svgIcon = Reflx.util.svgIcon;
 
   /**
    * Builds the per-result "Manage results" row list — one row per entry (both
@@ -405,7 +400,7 @@
             Reflx.util.hideBanner("stats-error");
             api.patchResultExclude(e.result_id, !isExcluded).then(function (res) {
               btn.disabled = false;
-              if (!res.ok) { Reflx.util.showBanner("stats-error", api.messageFor(res.code)); return; }
+              if (!res.ok) { Reflx.util.showBanner("stats-error", api.messageForResponse(res)); return; }
               onToggled(e.result_id, res.data.excluded);
             });
           }
@@ -602,7 +597,7 @@
     comparisonCache = {};
 
     api.listRTests().then(function (res) {
-      if (!res.ok) { box.innerHTML = ""; box.appendChild(Reflx.util.el("p", { class: "notice danger" }, [api.messageFor(res.code)])); return; }
+      if (!res.ok) { box.innerHTML = ""; box.appendChild(Reflx.util.el("p", { class: "notice danger" }, [api.messageForResponse(res)])); return; }
       var rtests = (res.data || []).filter(function (r) { return r.current_version; });
 
       var perTestVersionChecks = [];

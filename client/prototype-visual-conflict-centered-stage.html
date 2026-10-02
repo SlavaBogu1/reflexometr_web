@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mockup — CR-TEST-38: Visual Conflict centered stage + mapping hint</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .mockup-wrap { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    .mockup-label { font-size: 0.85rem; color: var(--color-text-dim); margin: 0 0 0.5rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .mockup-section { margin-bottom: 3rem; }
+    /* --- Ported from .crg-stage / .crg-shape-display / .crg-mapping (CR-TEST-32) for CR-TEST-38 --- */
+    .vc-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 320px;
+      background: var(--color-bg-alt);
+      border-radius: var(--radius, 8px);
+      border: 1px solid var(--color-border);
+      position: relative;
+      user-select: none;
+      gap: 1rem;
+    }
+    .vc-stage #trial-progress {
+      position: absolute; top: 1rem; left: 50%; transform: translateX(-50%);
+    }
+    .vc-phase-label {
+      position: absolute; top: 1rem; left: 50%; transform: translateX(-50%);
+      font-size: 0.95rem; color: var(--color-text);
+    }
+    .vc-shape-display {
+      color: var(--color-accent);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .vc-mapping {
+      position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%);
+    }
+    .vc-mapping-hint {
+      font-size: 0.85rem; color: var(--color-text-dim); white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-wrap">
+    <h1>CR-TEST-38 mockup — Visual Conflict centered stage + measurement-phase hint</h1>
+    <p class="field-desc">Reuses CR-TEST-32's (Choice Reaction Geometry) proven centered-stage +
+    persistent-mapping-hint CSS pattern (<code>.crg-stage</code>/<code>.crg-mapping</code>) ported to
+    Visual Conflict's own class names. Before: stage had no CSS at all, shape rendered top-left.</p>
+
+    <div class="mockup-section">
+      <p class="mockup-label">1. Pretrain phase (unchanged — centering only)</p>
+      <div class="vc-stage">
+        <span id="trial-progress" class="field-desc">Attempt 5 of 30</span>
+        <div class="vc-phase-label">Respond to COLOR: red → LEFT (←), green → RIGHT (→)</div>
+        <div class="vc-shape-display">
+          <svg xmlns="http://www.w3.org/2000/svg" width="112" height="112" viewBox="0 0 112 112">
+            <rect x="8" y="8" width="96" height="96" fill="#e5636b"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="mockup-section">
+      <p class="mockup-label">2. Measurement phase — centered shape + NEW persistent mapping hint (was blank before)</p>
+      <div class="vc-stage">
+        <span id="trial-progress" class="field-desc">Attempt 11 of 30</span>
+        <div class="vc-shape-display">
+          <svg xmlns="http://www.w3.org/2000/svg" width="112" height="112" viewBox="0 0 112 112">
+            <circle cx="56" cy="56" r="48" fill="#3fd0c9"/>
+          </svg>
+        </div>
+        <div class="vc-mapping">
+          <span class="vc-mapping-hint">Triangle → LEFT (←) &nbsp;|&nbsp; Circle → RIGHT (→)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mockup-section">
+      <p class="mockup-label">3. Measurement phase, neutral-condition trial (gray shape, hint still visible)</p>
+      <div class="vc-stage">
+        <span id="trial-progress" class="field-desc">Attempt 18 of 30</span>
+        <div class="vc-shape-display">
+          <svg xmlns="http://www.w3.org/2000/svg" width="112" height="112" viewBox="0 0 112 112">
+            <polygon points="56,8 8,104 104,104" fill="#9fb3c2"/>
+          </svg>
+        </div>
+        <div class="vc-mapping">
+          <span class="vc-mapping-hint">Triangle → LEFT (←) &nbsp;|&nbsp; Circle → RIGHT (→)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

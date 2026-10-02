@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mockup — CR-UI-29: Admin Library icon-button consistency</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .mockup-wrap { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+    .mockup-label { font-size: 0.85rem; color: var(--color-text-dim); margin: 2rem 0 0.5rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th { text-align: left; font-size: 0.8rem; color: var(--color-text-dim); text-transform: uppercase; letter-spacing: 0.03em; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border); }
+    td { padding: 0.75rem; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    th:nth-child(1), td:nth-child(1) { width: 24%; }
+    th:nth-child(2), td:nth-child(2) { width: 14%; }
+    th:nth-child(3), td:nth-child(3) { width: 16%; }
+    th:nth-child(4), td:nth-child(4) { width: 14%; }
+    th:nth-child(5), td:nth-child(5) { width: 22%; }
+    .lib-version-row { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem; }
+    .lib-version-dimmed { opacity: 0.55; }
+    /* --- New: shared small icon-button, ported from .manage-results-toggle-btn (stats-page.js) --- */
+    .icon-btn {
+      width: 1.8rem; height: 1.8rem; display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 4px; border: 1px solid var(--color-accent-dim); background: none; cursor: pointer;
+      color: var(--color-text-dim); flex: 0 0 auto;
+    }
+    .icon-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+    .icon-btn.danger { border-color: var(--color-danger); color: var(--color-danger); }
+    .icon-btn.danger:hover { background: var(--color-danger); color: #2b0507; }
+    .icon-btn svg { width: 1rem; height: 1rem; }
+    .btn-group { display: flex; gap: 0.4rem; align-items: center; }
+  </style>
+</head>
+<body>
+  <div class="mockup-wrap">
+    <h1>CR-UI-29 mockup — admin Library icon-button consistency</h1>
+    <p class="field-desc">Archive/Restore/Export/View/Delete converted to uniform small icon buttons
+    with <code>title</code> (native tooltip) + <code>aria-label</code> instead of full-text labels,
+    and all four grouped together in the Actions column (the Versions column now shows only the
+    version chip itself — the action buttons no longer live split across two columns).
+    Reuses the <code>.manage-results-toggle-btn</code> pattern already proven in
+    <code>stats-page.js</code> — same size, border, hover treatment; Delete keeps a distinct danger
+    color (border + hover-fill) rather than a differently-shaped button. Archive uses a lidded-box
+    glyph, intentionally distinct from Delete's trash-can glyph, so the two destructive-looking but
+    very different actions (soft-archive vs. permanent delete) are never visually confusable.</p>
+
+    <p class="mockup-label">Library table (current design — for comparison, not rendered live here)</p>
+    <p class="field-desc">Today: Archive/Export/View render as full-text <code>btn secondary small</code>
+    buttons (wrap across 2 rows per r-test); Delete renders as a full-text solid-red <code>btn danger
+    small</code> button. See CR-UI-29's backlog entry for the "before" screenshot reference.</p>
+
+    <p class="mockup-label">New design — icon buttons</p>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Tags</th><th>Current Version</th><th>Versions</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Simple Visual Reaction Time</td>
+          <td><span class="chip">visual</span></td>
+          <td><span class="chip version">v1</span></td>
+          <td>
+            <div class="lib-version-row">
+              <span class="chip version">v1</span>
+            </div>
+          </td>
+          <td>
+            <div class="btn-group">
+              <button class="icon-btn" title="Archive" aria-label="Archive">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><path d="M10 13h4"/></svg>
+              </button>
+              <button class="icon-btn" title="Export" aria-label="Export">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+              </button>
+              <button class="icon-btn" title="View" aria-label="View">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <button class="icon-btn danger" title="Delete r-test" aria-label="Delete r-test">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6h12z"/><path d="M10 11v6M14 11v6"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>Visual Conflict</td>
+          <td><span class="chip">visual</span></td>
+          <td><span class="chip version">v1</span></td>
+          <td>
+            <div class="lib-version-row lib-version-dimmed">
+              <span class="chip version">v1 (archived)</span>
+            </div>
+          </td>
+          <td>
+            <div class="btn-group">
+              <button class="icon-btn" title="Restore" aria-label="Restore">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+              </button>
+              <button class="icon-btn" title="Export" aria-label="Export">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+              </button>
+              <button class="icon-btn" title="View" aria-label="View">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <button class="icon-btn danger" title="Delete r-test" aria-label="Delete r-test">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6h12z"/><path d="M10 11v6M14 11v6"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="mockup-label">Icon detail (hover/tooltip state)</p>
+    <p class="field-desc">All buttons same size (1.8rem square), bordered, hover highlights to accent
+    color. Delete additionally uses danger coloring (border + hover-fill) to preserve its distinct
+    destructive weight. Each button's <code>title</code> attribute shows as a native browser tooltip
+    on hover (not rendered in this static mockup, but try it after implementation) — this is what
+    replaces the visible text label and what makes the design i18n-friendly (one glyph, any language).</p>
+  </div>
+</body>
+</html>
